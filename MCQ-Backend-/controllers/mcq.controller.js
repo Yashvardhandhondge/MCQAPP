@@ -261,6 +261,126 @@ const getYearsBySubjectAndChapter = async (req, res, next) => {
 };
 
 /**
+ * Get years with analytics (total questions and user attempts) for a specific subject and chapter
+ * GET /api/mcq/subjects/:subject/chapters/:chapter/years/analytics
+ */
+const getYearsWithAnalytics = async (req, res, next) => {
+  try {
+    const { subject, chapter } = req.params;
+    const userId = req.user._id;
+
+    // Validate subject
+    const validSubjects = ['Chemistry', 'Physics', 'Maths', 'Biology'];
+    if (!validSubjects.includes(subject)) {
+      return next(createError(400, 'Invalid subject. Must be one of: Chemistry, Physics, Maths, Biology'));
+    }
+
+    const Model = getModelBySubject(subject);
+    const decodedChapter = decodeURIComponent(chapter);
+    
+    // Use aggregation to get question counts per year
+    const questionCounts = await Model.aggregate([
+      {
+        $match: {
+          subject: subject,
+          chapter: decodedChapter
+        }
+      },
+      {
+        $group: {
+          _id: '$year',
+          totalQuestions: { $sum: 1 }
+        }
+      },
+      {
+        $match: {
+          totalQuestions: { $gt: 0 } // Only include years with at least 1 question
+        }
+      }
+    ]);
+
+    // Normalize years: convert all to strings to merge duplicates
+    const yearMap = new Map();
+    questionCounts.forEach(item => {
+      const normalizedYear = String(item._id);
+      if (!yearMap.has(normalizedYear)) {
+        yearMap.set(normalizedYear, {
+          year: normalizedYear,
+          totalQuestions: item.totalQuestions
+        });
+      } else {
+        // Merge duplicate years by adding question counts
+        yearMap.get(normalizedYear).totalQuestions += item.totalQuestions;
+      }
+    });
+
+    // Get user attempt counts per year
+    const userAttemptCounts = await UserAttempt.aggregate([
+      {
+        $match: {
+          user: userId,
+          subject: subject,
+          chapter: decodedChapter,
+        },
+      },
+      {
+        $group: {
+          _id: '$year',
+          userAttempts: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Create map for user attempts
+    const attemptCountMap = new Map();
+    userAttemptCounts.forEach(item => {
+      const normalizedYear = String(item._id);
+      attemptCountMap.set(normalizedYear, item.userAttempts);
+    });
+
+    // Combine data for all years
+    const yearsWithAnalytics = Array.from(yearMap.values())
+      .map(yearData => ({
+        year: yearData.year,
+        totalQuestions: yearData.totalQuestions,
+        userAttempts: attemptCountMap.get(yearData.year) || 0,
+      }))
+      .sort((a, b) => {
+        // Sort years: numeric years first (ascending), then string years (alphabetically)
+        const aNum = parseInt(a.year);
+        const bNum = parseInt(b.year);
+        
+        // If both are numbers, sort numerically
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+          return aNum - bNum;
+        }
+        
+        // If one is a number, it comes first
+        if (!isNaN(aNum)) return -1;
+        if (!isNaN(bNum)) return 1;
+        
+        // Both are strings, sort alphabetically
+        return a.year.localeCompare(b.year);
+      });
+
+    if (yearsWithAnalytics.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `No years found for subject: ${subject}, chapter: ${decodedChapter}`,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: yearsWithAnalytics,
+    });
+  } catch (error) {
+    console.error('Error getting years with analytics:', error);
+    return next(createError(500, 'Failed to fetch years analytics'));
+  }
+};
+
+/**
  * Get questions by subject and chapter (with optional pagination)
  */
 const getQuestionsBySubjectAndChapter = async (req, res, next) => {
@@ -688,6 +808,7 @@ module.exports = {
   getChaptersBySubject,
   getChaptersWithAnalytics,
   getYearsBySubjectAndChapter,
+  getYearsWithAnalytics,
   getQuestionsBySubjectAndChapter,
   getQuestionsBySubjectChapterAndYear,
   getQuestionsByIds,

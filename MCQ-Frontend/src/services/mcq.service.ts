@@ -10,6 +10,7 @@ import type {
     UserProgressResponse,
     UserStatsResponse,
     YearsResponse,
+    YearsAnalyticsResponse,
     TestsResponse,
     StartTestPayload,
     StartTestResponse,
@@ -90,6 +91,25 @@ export async function getYearsBySubjectAndChapter(
       `/api/mcq/subjects/${encodeURIComponent(subject)}/chapters/${encodeURIComponent(
         chapter,
       )}/years`,
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? YEARS_ERROR_MESSAGE);
+    }
+    throw new Error(YEARS_ERROR_MESSAGE);
+  }
+}
+
+export async function getYearsWithAnalytics(
+  subject: string,
+  chapter: string,
+): Promise<YearsAnalyticsResponse> {
+  try {
+    const response = await axiosInstance.get<YearsAnalyticsResponse>(
+      `/api/mcq/subjects/${encodeURIComponent(subject)}/chapters/${encodeURIComponent(
+        chapter,
+      )}/years/analytics`,
     );
     return response.data;
   } catch (error) {

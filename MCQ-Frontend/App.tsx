@@ -16,6 +16,7 @@ import StatsScreen from './src/screens/StatsScreen';
 import TestsScreen from './src/screens/TestsScreen';
 import CBTSimulatorScreen from './src/screens/CBTSimulatorScreen';
 import TestResultsScreen from './src/screens/TestResultsScreen';
+import PracticeByYearScreen from './src/screens/PracticeByYearScreen';
 import BottomTabBar from './src/components/ui/BottomTabBar';
 import { colors, typography } from './src/theme';
 
@@ -107,6 +108,15 @@ function AppStackNavigator() {
       <AppStack.Screen
         name="ChapterDetail"
         component={ChapterDetailScreen}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          animationDuration: 300,
+        }}
+      />
+      <AppStack.Screen
+        name="PracticeByYear"
+        component={PracticeByYearScreen}
         options={{
           headerShown: false,
           animation: 'slide_from_right',

@@ -5,6 +5,7 @@ const {
   getChaptersBySubject,
   getChaptersWithAnalytics,
   getYearsBySubjectAndChapter,
+  getYearsWithAnalytics,
   getQuestionsBySubjectAndChapter,
   getQuestionsBySubjectChapterAndYear,
   getQuestionsByIds,
@@ -197,6 +198,15 @@ router.get('/subjects/:subject/chapters', getChaptersBySubject);
  * @access  Private (requires authentication)
  */
 router.get('/subjects/:subject/chapters/analytics', getChaptersWithAnalytics);
+
+/**
+ * @route   GET /api/mcq/subjects/:subject/chapters/:chapter/years/analytics
+ * @desc    Get years with analytics (total questions and user attempts) for a specific subject and chapter
+ * @param   {string} subject - Subject name (Chemistry, Physics, Maths, Biology)
+ * @param   {string} chapter - Chapter name (URL encoded)
+ * @access  Private (requires authentication)
+ */
+router.get('/subjects/:subject/chapters/:chapter/years/analytics', getYearsWithAnalytics);
 
 /**
  * @route   GET /api/mcq/subjects/:subject/chapters/:chapter/years

@@ -34,6 +34,17 @@ export interface YearsResponse {
   data: string[];
 }
 
+export interface YearAnalytics {
+  year: string;
+  totalQuestions: number;
+  userAttempts: number;
+}
+
+export interface YearsAnalyticsResponse {
+  success: boolean;
+  data: YearAnalytics[];
+}
+
 export interface Question {
   _id: string;
   question: string;
