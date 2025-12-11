@@ -1,0 +1,864 @@
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import React, { useEffect, useState, useRef } from 'react';
+import {
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Animated,
+  ActivityIndicator,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import type { AppStackParamList } from '../navigation/types';
+import {
+  getQuestionsBySubjectAndChapter,
+  getQuestionsBySubjectChapterAndYear,
+  submitAnswer,
+  getQuestionSolution,
+} from '../services/mcq.service';
+import type { Question } from '../types/mcq';
+import { colors, radius, spacing, typography, shadow } from '../theme';
+import ModernCard from '../components/ui/ModernCard';
+import BackHeader from '../components/ui/BackHeader';
+import GradientButton from '../components/ui/GradientButton';
+
+const QUESTIONS_PER_PAGE = 5;
+
+export type QuestionsScreenProps = NativeStackScreenProps<AppStackParamList, 'Questions'>;
+
+interface QuestionState {
+  questionId: string;
+  selectedOption: string | null;
+  isCorrect: boolean | null;
+  isSubmitted: boolean;
+  isSubmitting: boolean;
+  solution?: string;
+  isLoadingSolution: boolean;
+  showSolution: boolean;
+}
+
+export default function QuestionsScreen({ route, navigation }: QuestionsScreenProps) {
+  const { subject, chapter, mode, year, randomQuestions } = route.params;
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [displayedCount, setDisplayedCount] = useState(QUESTIONS_PER_PAGE);
+  const [loading, setLoading] = useState(true);
+  const [questionStates, setQuestionStates] = useState<Map<string, QuestionState>>(new Map());
+
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        tension: 50,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchQuestions() {
+      setLoading(true);
+      try {
+        let questionsData: Question[] = [];
+
+        // If random mode with pre-loaded questions, use them directly
+        if (mode === 'random' && randomQuestions && randomQuestions.length > 0) {
+          questionsData = randomQuestions;
+        } else {
+          // Otherwise fetch questions normally
+          const response =
+            mode === 'year' && year
+              ? await getQuestionsBySubjectChapterAndYear(subject, chapter, year)
+              : await getQuestionsBySubjectAndChapter(subject, chapter);
+          questionsData = response.data || [];
+        }
+
+        if (isMounted) {
+          setQuestions(questionsData);
+          setDisplayedCount(QUESTIONS_PER_PAGE);
+          
+          // Initialize question states - don't load previous attempts
+          // Fresh start each time user visits the screen
+          const states = new Map<string, QuestionState>();
+          questionsData.forEach((q) => {
+            states.set(q._id, {
+              questionId: q._id,
+              selectedOption: null,
+              isCorrect: null,
+              isSubmitted: false,
+              isSubmitting: false,
+              solution: q.solution,
+              isLoadingSolution: false,
+              showSolution: false,
+            });
+          });
+          setQuestionStates(states);
+        }
+      } catch {
+        // Silently handle errors - just show empty list
+        if (isMounted) {
+          setQuestions([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchQuestions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [chapter, mode, subject, year, randomQuestions]);
+
+  // Reset question states when navigating away or when questions change
+  useEffect(() => {
+    return () => {
+      // Cleanup: reset states when component unmounts or dependencies change
+      setQuestionStates(new Map());
+    };
+  }, [chapter, mode, subject, year]);
+
+  const displayedQuestions = questions.slice(0, displayedCount);
+  const hasMore = displayedCount < questions.length;
+  const totalQuestions = questions.length;
+
+  const handleLoadMore = () => {
+    setDisplayedCount((prev) => Math.min(prev + QUESTIONS_PER_PAGE, totalQuestions));
+  };
+
+  const handleOptionSelect = async (questionId: string, selectedOption: string) => {
+    const state = questionStates.get(questionId);
+    
+    // Don't allow selection if currently submitting
+    if (state?.isSubmitting) {
+      return;
+    }
+    
+    // Allow re-selection even if already submitted (to update answer)
+    // If selecting a different option than previously submitted, reset submitted state
+    const isNewSelection = state?.selectedOption !== selectedOption;
+    
+    // Update state to show selection
+    setQuestionStates((prev) => {
+      const newMap = new Map(prev);
+      const currentState = newMap.get(questionId);
+      if (currentState) {
+        newMap.set(questionId, {
+          ...currentState,
+          selectedOption,
+          // Reset submitted state if selecting a different option
+          isSubmitted: isNewSelection ? false : currentState.isSubmitted,
+          isCorrect: isNewSelection ? null : currentState.isCorrect,
+        });
+      }
+      return newMap;
+    });
+
+    // Submit answer to backend
+    setQuestionStates((prev) => {
+      const newMap = new Map(prev);
+      const currentState = newMap.get(questionId);
+      if (currentState) {
+        newMap.set(questionId, {
+          ...currentState,
+          isSubmitting: true,
+        });
+      }
+      return newMap;
+    });
+
+    try {
+      const response = await submitAnswer({
+        questionId,
+        selectedOption,
+      });
+
+      // Update state with result
+      setQuestionStates((prev) => {
+        const newMap = new Map(prev);
+        const currentState = newMap.get(questionId);
+        if (currentState) {
+          newMap.set(questionId, {
+            ...currentState,
+            isCorrect: response.data.isCorrect,
+            isSubmitted: true,
+            isSubmitting: false,
+          });
+        }
+        return newMap;
+      });
+    } catch (error) {
+      // Revert selection on error
+      setQuestionStates((prev) => {
+        const newMap = new Map(prev);
+        const currentState = newMap.get(questionId);
+        if (currentState) {
+          newMap.set(questionId, {
+            ...currentState,
+            selectedOption: null,
+            isSubmitting: false,
+          });
+        }
+        return newMap;
+      });
+      
+      // You could show an error toast here
+      console.error('Failed to submit answer:', error);
+    }
+  };
+
+  const handleAskAI = async (questionId: string) => {
+    const state = questionStates.get(questionId);
+    if (!state || state.isLoadingSolution) {
+      return;
+    }
+
+    // If solution already loaded, just toggle display
+    if (state.solution) {
+      setQuestionStates((prev) => {
+        const newMap = new Map(prev);
+        const currentState = newMap.get(questionId);
+        if (currentState) {
+          newMap.set(questionId, {
+            ...currentState,
+            showSolution: !currentState.showSolution,
+          });
+        }
+        return newMap;
+      });
+      return;
+    }
+
+    // Start loading
+    setQuestionStates((prev) => {
+      const newMap = new Map(prev);
+      const currentState = newMap.get(questionId);
+      if (currentState) {
+        newMap.set(questionId, {
+          ...currentState,
+          isLoadingSolution: true,
+          showSolution: true,
+        });
+      }
+      return newMap;
+    });
+
+    try {
+      // Simulate AI thinking delay for better UX (minimum 1.5 seconds)
+      const [solutionResponse] = await Promise.all([
+        getQuestionSolution(questionId),
+        new Promise((resolve) => setTimeout(resolve, 1500)), // Minimum delay
+      ]);
+
+      // Update state with solution
+      setQuestionStates((prev) => {
+        const newMap = new Map(prev);
+        const currentState = newMap.get(questionId);
+        if (currentState) {
+          newMap.set(questionId, {
+            ...currentState,
+            solution: solutionResponse.data.solution,
+            isLoadingSolution: false,
+            showSolution: true,
+          });
+        }
+        return newMap;
+      });
+    } catch (error) {
+      console.error('Failed to get solution:', error);
+      // Revert loading state on error
+      setQuestionStates((prev) => {
+        const newMap = new Map(prev);
+        const currentState = newMap.get(questionId);
+        if (currentState) {
+          newMap.set(questionId, {
+            ...currentState,
+            isLoadingSolution: false,
+            showSolution: false,
+          });
+        }
+        return newMap;
+      });
+    }
+  };
+
+  const getOptionStyle = (questionId: string, option: string) => {
+    const state = questionStates.get(questionId);
+    if (!state || !state.isSubmitted) {
+      // Not submitted yet - show selected state
+      if (state?.selectedOption === option) {
+        return styles.optionSelected;
+      }
+      return styles.option;
+    }
+
+    // Submitted - show correct/incorrect states
+    const question = questions.find((q) => q._id === questionId);
+    const isCorrectAnswer = option === question?.correctanswrs;
+    const isSelected = state.selectedOption === option;
+
+    if (isCorrectAnswer) {
+      return styles.optionCorrect;
+    }
+    if (isSelected && !isCorrectAnswer) {
+      return styles.optionIncorrect;
+    }
+    return styles.optionDisabled;
+  };
+
+  const getOptionIcon = (questionId: string, option: string) => {
+    const state = questionStates.get(questionId);
+    if (!state || !state.isSubmitted) {
+      if (state?.selectedOption === option) {
+        return <Ionicons name="radio-button-on" size={20} color={colors.primary} />;
+      }
+      return <Ionicons name="radio-button-off" size={20} color={colors.authTextMuted} />;
+    }
+
+    const question = questions.find((q) => q._id === questionId);
+    const isCorrectAnswer = option === question?.correctanswrs;
+    const isSelected = state.selectedOption === option;
+
+    if (isCorrectAnswer) {
+      return <Ionicons name="checkmark-circle" size={20} color="#10B981" />;
+    }
+    if (isSelected && !isCorrectAnswer) {
+      return <Ionicons name="close-circle" size={20} color={colors.danger} />;
+    }
+    return null;
+  };
+
+  const headerTitle = mode === 'year' && year ? `${chapter} – ${year}` : chapter;
+  const headerSubtitle =
+    mode === 'year' && year
+      ? `${totalQuestions} questions from ${year}`
+      : `${totalQuestions} questions available`;
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <LinearGradient
+        colors={colors.gradientAuthLight as [string, string, ...string[]]}
+        style={styles.backgroundGradient}
+      >
+        <BackHeader
+          title={headerTitle}
+          subtitle={headerSubtitle}
+          onBack={() => navigation.goBack()}
+        />
+        <ScrollView
+          contentContainerStyle={styles.container}
+          showsVerticalScrollIndicator={false}
+        >
+          {loading ? (
+            <View style={styles.stateCard}>
+              <Animated.View style={{ opacity: fadeAnim }}>
+                <Ionicons name="hourglass-outline" size={48} color={colors.primary} />
+                <Text style={styles.stateText}>Loading questions...</Text>
+              </Animated.View>
+            </View>
+          ) : displayedQuestions.length === 0 ? (
+            <View style={styles.stateCard}>
+              <Animated.View style={{ opacity: fadeAnim }}>
+                <Ionicons name="document-outline" size={48} color={colors.authTextMuted} />
+                <Text style={styles.emptyText}>No questions found</Text>
+              </Animated.View>
+            </View>
+          ) : (
+            <>
+              <View style={styles.questionsList}>
+                {displayedQuestions.map((question, index) => (
+                  <Animated.View
+                    key={question._id}
+                    style={{
+                      opacity: fadeAnim,
+                      transform: [
+                        {
+                          translateY: slideAnim.interpolate({
+                            inputRange: [0, 30],
+                            outputRange: [0, 30 + index * 10],
+                          }),
+                        },
+                      ],
+                    }}
+                  >
+                    <ModernCard
+                      variant="elevated"
+                      padding="lg"
+                      style={styles.questionCard}
+                    >
+                      <View style={styles.questionHeader}>
+                        <View style={styles.questionNumber}>
+                          <Text style={styles.questionNumberText}>{index + 1}</Text>
+                        </View>
+                        <View style={styles.questionMeta}>
+                          <View style={styles.metaRow}>
+                            <Ionicons name="calendar" size={14} color={colors.primary} />
+                            <Text style={styles.questionYear}>{question.year}</Text>
+                          </View>
+                        </View>
+                      </View>
+                      <Text style={styles.questionText}>{question.question}</Text>
+                      
+                      {/* Options List */}
+                      <View style={styles.optionsContainer}>
+                        {question.options?.map((option, optionIndex) => {
+                          const state = questionStates.get(question._id);
+                          const isDisabled = state?.isSubmitted || state?.isSubmitting;
+                          
+                          return (
+                            <TouchableOpacity
+                              key={optionIndex}
+                              style={[
+                                getOptionStyle(question._id, option),
+                                isDisabled && styles.optionDisabledTouch,
+                              ]}
+                              onPress={() => handleOptionSelect(question._id, option)}
+                              disabled={isDisabled}
+                              activeOpacity={isDisabled ? 1 : 0.7}
+                            >
+                              <View style={styles.optionContent}>
+                                <View style={styles.optionIconContainer}>
+                                  {getOptionIcon(question._id, option)}
+                                </View>
+                                <Text
+                                  style={[
+                                    styles.optionText,
+                                    state?.selectedOption === option && styles.optionTextSelected,
+                                  ]}
+                                >
+                                  {option}
+                                </Text>
+                              </View>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+
+                      {/* Result Feedback */}
+                      {questionStates.get(question._id)?.isSubmitted && (
+                        <View style={styles.resultContainer}>
+                          {questionStates.get(question._id)?.isCorrect ? (
+                            <View style={styles.resultCorrect}>
+                              <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                              <Text style={styles.resultTextCorrect}>Correct!</Text>
+                            </View>
+                          ) : (
+                            <View style={styles.resultIncorrect}>
+                              <Ionicons name="close-circle" size={20} color={colors.danger} />
+                              <Text style={styles.resultTextIncorrect}>
+                                Incorrect. Correct answer: {question.correctanswrs}
+                              </Text>
+                            </View>
+                          )}
+
+                          {/* Ask AI Button */}
+                          <TouchableOpacity
+                            style={styles.askAIButton}
+                            onPress={() => handleAskAI(question._id)}
+                            disabled={questionStates.get(question._id)?.isLoadingSolution}
+                            activeOpacity={0.8}
+                          >
+                            <LinearGradient
+                              colors={['#667EEA', '#764BA2'] as [string, string, ...string[]]}
+                              style={styles.askAIGradient}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 1, y: 0 }}
+                            >
+                              {questionStates.get(question._id)?.isLoadingSolution ? (
+                                <>
+                                  <ActivityIndicator color="#FFFFFF" size="small" />
+                                  <Text style={styles.askAIText}>AI is thinking...</Text>
+                                </>
+                              ) : questionStates.get(question._id)?.showSolution ? (
+                                <>
+                                  <Ionicons name="eye-off" size={18} color="#FFFFFF" />
+                                  <Text style={styles.askAIText}>Hide Solution</Text>
+                                </>
+                              ) : (
+                                <>
+                                  <Ionicons name="sparkles" size={18} color="#FFFFFF" />
+                                  <Text style={styles.askAIText}>Ask AI</Text>
+                                </>
+                              )}
+                            </LinearGradient>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+
+                      {/* Solution Display */}
+                      {questionStates.get(question._id)?.showSolution && (
+                        <Animated.View
+                          style={[
+                            styles.solutionContainer,
+                            {
+                              opacity: fadeAnim,
+                            },
+                          ]}
+                        >
+                          <View style={styles.solutionHeader}>
+                            <View style={styles.solutionIconContainer}>
+                              <LinearGradient
+                                colors={['#667EEA', '#764BA2'] as [string, string, ...string[]]}
+                                style={styles.solutionIconGradient}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                              >
+                                <Ionicons name="bulb" size={20} color="#FFFFFF" />
+                              </LinearGradient>
+                            </View>
+                            <Text style={styles.solutionTitle}>AI Solution</Text>
+                          </View>
+                          {questionStates.get(question._id)?.isLoadingSolution ? (
+                            <View style={styles.solutionLoading}>
+                              <ActivityIndicator color={colors.primary} size="small" />
+                              <Text style={styles.solutionLoadingText}>
+                                AI is analyzing the question...
+                              </Text>
+                            </View>
+                          ) : questionStates.get(question._id)?.solution ? (
+                            <Text style={styles.solutionText}>
+                              {questionStates.get(question._id)?.solution}
+                            </Text>
+                          ) : null}
+                        </Animated.View>
+                      )}
+                    </ModernCard>
+                  </Animated.View>
+                ))}
+              </View>
+
+              {/* Load More Button */}
+              {hasMore && (
+                <Animated.View style={{ opacity: fadeAnim }}>
+                  <TouchableOpacity
+                    style={styles.loadMoreButton}
+                    onPress={handleLoadMore}
+                    activeOpacity={0.8}
+                  >
+                    <LinearGradient
+                      colors={colors.gradientPrimary as [string, string, ...string[]]}
+                      style={styles.loadMoreGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                    >
+                      <Text style={styles.loadMoreText}>
+                        Load More ({totalQuestions - displayedCount} remaining)
+                      </Text>
+                      <Ionicons name="chevron-down" size={20} color="#FFFFFF" />
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </Animated.View>
+              )}
+
+              {/* End of List Indicator */}
+              {!hasMore && totalQuestions > 0 && (
+                <View style={styles.endIndicator}>
+                  <Text style={styles.endIndicatorText}>
+                    Showing all {totalQuestions} {totalQuestions === 1 ? 'question' : 'questions'}
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+        </ScrollView>
+      </LinearGradient>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.authBackground,
+  },
+  backgroundGradient: {
+    flex: 1,
+  },
+  container: {
+    flexGrow: 1,
+    paddingHorizontal: spacing.xxl,
+    paddingTop: spacing.xl,
+    paddingBottom: 100,
+  },
+  questionsList: {
+    gap: spacing.md,
+  },
+  questionCard: {
+    marginBottom: spacing.sm,
+    borderRadius: radius.xl + 2,
+  },
+  questionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    gap: spacing.md,
+  },
+  questionNumber: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  questionNumberText: {
+    ...typography.subtitle,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  questionMeta: {
+    flex: 1,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  questionYear: {
+    ...typography.subtitle,
+    color: colors.authText,
+    fontWeight: '600',
+  },
+  questionSource: {
+    ...typography.caption,
+    color: colors.authTextMuted,
+  },
+  questionText: {
+    ...typography.body,
+    color: colors.authText,
+    lineHeight: 22,
+    marginBottom: spacing.md,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  optionsContainer: {
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  option: {
+    backgroundColor: colors.authSurface,
+    borderRadius: radius.lg,
+    padding: spacing.md + 2,
+    borderWidth: 2,
+    borderColor: colors.authBorder,
+  },
+  optionSelected: {
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.lg,
+    padding: spacing.md + 2,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  optionCorrect: {
+    backgroundColor: '#D1FAE5',
+    borderRadius: radius.lg,
+    padding: spacing.md + 2,
+    borderWidth: 2,
+    borderColor: '#10B981',
+  },
+  optionIncorrect: {
+    backgroundColor: '#FEE2E2',
+    borderRadius: radius.lg,
+    padding: spacing.md + 2,
+    borderWidth: 2,
+    borderColor: colors.danger,
+  },
+  optionDisabled: {
+    backgroundColor: colors.authSurface,
+    borderRadius: radius.lg,
+    padding: spacing.md + 2,
+    borderWidth: 2,
+    borderColor: colors.authBorder,
+    opacity: 0.6,
+  },
+  optionDisabledTouch: {
+    opacity: 1,
+  },
+  optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  optionIconContainer: {
+    width: 24,
+    alignItems: 'center',
+  },
+  optionText: {
+    ...typography.body,
+    color: colors.authText,
+    flex: 1,
+    fontSize: 15,
+  },
+  optionTextSelected: {
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  resultContainer: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+  },
+  resultCorrect: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: '#D1FAE5',
+    padding: spacing.md,
+    borderRadius: radius.md,
+  },
+  resultIncorrect: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: '#FEE2E2',
+    padding: spacing.md,
+    borderRadius: radius.md,
+  },
+  resultTextCorrect: {
+    ...typography.subtitle,
+    color: '#10B981',
+    fontWeight: '600',
+  },
+  resultTextIncorrect: {
+    ...typography.subtitle,
+    color: colors.danger,
+    fontWeight: '600',
+    flex: 1,
+  },
+  loadMoreButton: {
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    marginTop: spacing.xl,
+    ...shadow.lg,
+  },
+  loadMoreGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  loadMoreText: {
+    ...typography.subtitle,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  endIndicator: {
+    alignItems: 'center',
+    marginTop: spacing.xl,
+    paddingVertical: spacing.md,
+  },
+  endIndicatorText: {
+    ...typography.caption,
+    color: colors.authTextMuted,
+  },
+  stateCard: {
+    backgroundColor: colors.authSurface,
+    borderRadius: radius.xl + 4,
+    padding: spacing.xxxl,
+    alignItems: 'center',
+    marginTop: spacing.xl,
+    ...shadow.lg,
+    borderWidth: 1,
+    borderColor: colors.authBorder,
+  },
+  stateText: {
+    ...typography.body,
+    color: colors.authTextMuted,
+    marginTop: spacing.md,
+    textAlign: 'center',
+  },
+  emptyText: {
+    ...typography.body,
+    color: colors.authTextMuted,
+    marginTop: spacing.md,
+    textAlign: 'center',
+  },
+  askAIButton: {
+    marginTop: spacing.md,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    ...shadow.md,
+  },
+  askAIGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  askAIText: {
+    ...typography.subtitle,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  solutionContainer: {
+    marginTop: spacing.md,
+    backgroundColor: colors.authSurface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.authBorder,
+    ...shadow.sm,
+  },
+  solutionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  solutionIconContainer: {
+    marginRight: spacing.xs,
+  },
+  solutionIconGradient: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  solutionTitle: {
+    ...typography.h3,
+    color: colors.authText,
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  solutionLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+  },
+  solutionLoadingText: {
+    ...typography.body,
+    color: colors.authTextMuted,
+    fontStyle: 'italic',
+  },
+  solutionText: {
+    ...typography.body,
+    color: colors.authText,
+    lineHeight: 24,
+    fontSize: 15,
+  },
+});
