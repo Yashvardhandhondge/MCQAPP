@@ -27,6 +27,7 @@ import ProgressBar from '../components/ui/ProgressBar';
 import LineChart from '../components/charts/LineChart';
 import BarChart from '../components/charts/BarChart';
 import PieChart from '../components/charts/PieChart';
+import QuestionHeatmap from '../components/charts/QuestionHeatmap';
 
 const clampPercent = (value: number | null | undefined) => {
   if (typeof value !== 'number' || Number.isNaN(value)) {
@@ -148,6 +149,8 @@ export default function StatsScreen() {
   const [timeSeriesData, setTimeSeriesData] = useState<any>(null);
   const [loadingTimeSeries, setLoadingTimeSeries] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
+  const [dailyActivity, setDailyActivity] = useState<Array<{ date: string; totalAttempts: number; totalQuestions?: number }>>([]);
+  const [loadingDailyActivity, setLoadingDailyActivity] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -260,6 +263,35 @@ export default function StatsScreen() {
     };
   }, [selectedPeriod]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadDailyActivity = async () => {
+      setLoadingDailyActivity(true);
+      try {
+        const response = await getTimeSeriesAnalytics({ period: '1y', groupBy: 'day' });
+        if (isMounted) {
+          setDailyActivity(response.data.timeSeries || []);
+        }
+      } catch (requestError) {
+        console.error('Failed to load daily activity heatmap:', requestError);
+        if (isMounted) {
+          setDailyActivity([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingDailyActivity(false);
+        }
+      }
+    };
+
+    loadDailyActivity();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const chaptersBySubject = useMemo(() => {
     if (!progress) {
       return {} as Record<string, SubjectChapterStats[]>;
@@ -298,6 +330,16 @@ export default function StatsScreen() {
     });
     return grouped;
   }, [progress]);
+
+  const dailyActivityHeatmap = useMemo(() => {
+    if (!dailyActivity || dailyActivity.length === 0) {
+      return [] as Array<{ date: string; count: number }>;
+    }
+    return dailyActivity.map((item) => ({
+      date: item.date,
+      count: item.totalAttempts ?? item.totalQuestions ?? 0,
+    }));
+  }, [dailyActivity]);
 
   // Group test reports by subject
   const testReportsBySubject = useMemo(() => {
@@ -744,6 +786,24 @@ export default function StatsScreen() {
                     Start practicing to build your analytics!
                   </Text>
                 </View>
+              )}
+            </ModernCard>
+
+            {/* Daily Question Streaks */}
+            <ModernCard variant="elevated" padding="lg" style={styles.sectionCard}>
+              <View style={styles.sectionHeaderContainer}>
+                <View style={styles.sectionIconContainer}>
+                  <Ionicons name="calendar" size={24} color={colors.primary} />
+                </View>
+                <Text style={styles.sectionTitle}>Daily Question Streak</Text>
+              </View>
+
+              {loadingDailyActivity ? (
+                <View style={styles.chartLoading}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                </View>
+              ) : (
+                <QuestionHeatmap data={dailyActivityHeatmap} />
               )}
             </ModernCard>
 
