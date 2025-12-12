@@ -33,6 +33,16 @@ const userSchema = new mongoose.Schema(
       enum: ['student', 'admin'],
       default: 'student',
     },
+    group: {
+      type: String,
+      enum: ['PCM', 'PCB', 'PCMB'],
+      default: null,
+    },
+    subscription: {
+      type: String,
+      enum: ['free', 'premium'],
+      default: 'free',
+    },
   },
   {
     timestamps: true,

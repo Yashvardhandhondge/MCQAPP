@@ -113,9 +113,72 @@ const profile = (req, res) => {
   });
 };
 
+const updateGroup = async (req, res, next) => {
+  try {
+    const { group } = req.body;
+
+    if (!group) {
+      return next(createError(400, 'Group is required'));
+    }
+
+    const validGroups = ['PCM', 'PCB', 'PCMB'];
+    if (!validGroups.includes(group)) {
+      return next(createError(400, 'Invalid group. Must be one of: PCM, PCB, PCMB'));
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { group },
+      { new: true, runValidators: true }
+    );
+
+    if (!user) {
+      return next(createError(404, 'User not found'));
+    }
+
+    const response = buildAuthPayload(user);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Group updated successfully',
+      ...response,
+    });
+  } catch (error) {
+    console.error('Update group error:', error);
+    return next(error);
+  }
+};
+
+const upgradeSubscription = async (req, res, next) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { subscription: 'premium' },
+      { new: true, runValidators: true }
+    );
+
+    if (!user) {
+      return next(createError(404, 'User not found'));
+    }
+
+    const response = buildAuthPayload(user);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Subscription upgraded to premium successfully',
+      ...response,
+    });
+  } catch (error) {
+    console.error('Upgrade subscription error:', error);
+    return next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
   profile,
+  updateGroup,
+  upgradeSubscription,
 };
 

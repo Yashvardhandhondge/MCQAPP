@@ -6,15 +6,31 @@ const mongoose = require('mongoose');
 
 /**
  * Get dashboard summary with total questions and subject-wise counts
+ * Filters subjects based on user's group (PCM, PCB, PCMB)
  */
 const getDashboardSummary = async (req, res, next) => {
   try {
-    const subjects = ['Chemistry', 'Physics', 'Maths', 'Biology'];
+    const user = req.user;
+    const userGroup = user.group;
+
+    // Define subject groups
+    const groupSubjects = {
+      PCM: ['Chemistry', 'Physics', 'Maths'],
+      PCB: ['Chemistry', 'Physics', 'Biology'],
+      PCMB: ['Chemistry', 'Physics', 'Maths', 'Biology'],
+    };
+
+    // Get subjects based on user's group, default to all if no group selected
+    let subjectsToShow = ['Chemistry', 'Physics', 'Maths', 'Biology'];
+    if (userGroup && groupSubjects[userGroup]) {
+      subjectsToShow = groupSubjects[userGroup];
+    }
+
     const subjectData = [];
     let totalQuestions = 0;
 
     // Get count for each subject
-    for (const subject of subjects) {
+    for (const subject of subjectsToShow) {
       try {
         const Model = getModelBySubject(subject);
         const count = await Model.countDocuments();
