@@ -21,6 +21,7 @@ import type {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../navigation/types';
+import { useAuth } from '../context/AuthContext';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import ModernCard from '../components/ui/ModernCard';
 import ProgressBar from '../components/ui/ProgressBar';
@@ -137,6 +138,8 @@ const MetricCard = ({
 
 export default function StatsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  const { user } = useAuth();
+  const isPremium = user?.subscription === 'premium';
   const [progress, setProgress] = useState<UserProgressData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -758,25 +761,103 @@ export default function StatsScreen() {
                   icon="checkmark-circle-outline"
                   gradient={colors.gradientPrimary}
                 />
-                <MetricCard
-                  label="Correct"
-                  value={overallData.totalCorrect}
-                  icon="checkmark-done-circle-outline"
-                  gradient={colors.gradientAccent}
-                />
-                <MetricCard
-                  label="Accuracy"
-                  value={overallPercent}
-                  icon="trophy-outline"
-                  gradient={['#FFD700', '#FFA500']}
-                />
+                {isPremium ? (
+                  <>
+                    <MetricCard
+                      label="Correct"
+                      value={overallData.totalCorrect}
+                      icon="checkmark-done-circle-outline"
+                      gradient={colors.gradientAccent}
+                    />
+                    <MetricCard
+                      label="Accuracy"
+                      value={overallPercent}
+                      icon="trophy-outline"
+                      gradient={['#FFD700', '#FFA500']}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      style={{ flex: 1 }}
+                      onPress={() => navigation.navigate('PremiumPurchase')}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.lockedMetricCard}>
+                        <LinearGradient
+                          colors={['#64748B', '#475569'] as [string, string, ...string[]]}
+                          style={styles.lockedMetricGradient}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                        >
+                          <View style={styles.lockedMetricIconContainer}>
+                            <Ionicons name="lock-closed" size={20} color="#FFFFFF" />
+                          </View>
+                          <Text style={styles.lockedMetricLabel}>Correct</Text>
+                          <View style={styles.lockedMetricContent}>
+                            <Ionicons name="lock-closed" size={32} color="#FFFFFF" />
+                          </View>
+                        </LinearGradient>
+                      </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={{ flex: 1 }}
+                      onPress={() => navigation.navigate('PremiumPurchase')}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.lockedMetricCard}>
+                        <LinearGradient
+                          colors={['#64748B', '#475569'] as [string, string, ...string[]]}
+                          style={styles.lockedMetricGradient}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                        >
+                          <View style={styles.lockedMetricIconContainer}>
+                            <Ionicons name="lock-closed" size={20} color="#FFFFFF" />
+                          </View>
+                          <Text style={styles.lockedMetricLabel}>Accuracy</Text>
+                          <View style={styles.lockedMetricContent}>
+                            <Ionicons name="lock-closed" size={32} color="#FFFFFF" />
+                          </View>
+                        </LinearGradient>
+                      </View>
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
 
               <View style={styles.progressSection}>
-                <ProgressBar progress={overallPercent} height={12} variant="primary" />
-                <Text style={styles.accuracyCaption}>
-                  {formatAttempts(overallData.totalCorrect, overallData.totalAttempts)}
-                </Text>
+                <View style={styles.progressBarContainer}>
+                  <ProgressBar progress={overallPercent} height={12} variant="primary" />
+                  {!isPremium && (
+                    <TouchableOpacity
+                      onPress={() => navigation.navigate('PremiumPurchase')}
+                      activeOpacity={0.8}
+                      style={styles.blurOverlay}
+                    >
+                      <View style={styles.blurContent}>
+                        <Ionicons name="lock-closed" size={16} color={colors.primary} />
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {isPremium ? (
+                  <Text style={styles.accuracyCaption}>
+                    {formatAttempts(overallData.totalCorrect, overallData.totalAttempts)}
+                  </Text>
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('PremiumPurchase')}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.blurredTextContainer}>
+                      <Text style={[styles.accuracyCaption, styles.blurredText]}>
+                        {formatAttempts(overallData.totalCorrect, overallData.totalAttempts)}
+                      </Text>
+                      <Ionicons name="lock-closed" size={14} color={colors.primary} style={styles.blurLockIcon} />
+                    </View>
+                  </TouchableOpacity>
+                )}
               </View>
 
               {!hasAttempts && (
@@ -886,28 +967,50 @@ export default function StatsScreen() {
                   </View>
                   <Text style={styles.sectionTitle}>Subject Distribution</Text>
                 </View>
-                <PieChart
-                  data={progress.perSubject.map((item) => ({
-                    name: item.subject,
-                    value: item.totalAttempts,
-                    color:
-                      item.subject === 'Chemistry'
-                        ? '#8B5CF6'
-                        : item.subject === 'Physics'
-                        ? '#6366F1'
-                        : item.subject === 'Maths'
-                        ? '#10B981'
-                        : '#F59E0B',
-                    legendFontColor: colors.authText,
-                    legendFontSize: 12,
-                  }))}
-                  title="Questions by Subject"
-                />
+                {isPremium ? (
+                  <PieChart
+                    data={progress.perSubject.map((item) => ({
+                      name: item.subject,
+                      value: item.totalAttempts,
+                      color:
+                        item.subject === 'Chemistry'
+                          ? '#8B5CF6'
+                          : item.subject === 'Physics'
+                          ? '#6366F1'
+                          : item.subject === 'Maths'
+                          ? '#10B981'
+                          : '#F59E0B',
+                      legendFontColor: colors.authText,
+                      legendFontSize: 12,
+                    }))}
+                    title="Questions by Subject"
+                  />
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('PremiumPurchase')}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.lockedSectionContent}>
+                      <LinearGradient
+                        colors={['#64748B', '#475569'] as [string, string, ...string[]]}
+                        style={styles.lockedSectionGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <Ionicons name="lock-closed" size={48} color="#FFFFFF" />
+                        <Text style={styles.lockedSectionText}>Premium Feature</Text>
+                        <Text style={styles.lockedSectionSubtext}>
+                          Upgrade to unlock custom analytics
+                        </Text>
+                      </LinearGradient>
+                    </View>
+                  </TouchableOpacity>
+                )}
               </ModernCard>
             )}
 
             {/* Subject Performance Bar Chart */}
-            {progress && progress.perSubject.length > 0 && (
+            {progress && progress.perSubject.length > 0 && isPremium && (
               <ModernCard variant="elevated" padding="lg" style={styles.sectionCard}>
                 <View style={styles.sectionHeaderContainer}>
                   <View style={styles.sectionIconContainer}>
@@ -932,8 +1035,37 @@ export default function StatsScreen() {
                   <Ionicons name="library" size={24} color={colors.primary} />
                 </View>
                 <Text style={styles.sectionTitle}>By Subject</Text>
+                {!isPremium && (
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('PremiumPurchase')}
+                    style={styles.lockButton}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="lock-closed" size={20} color={colors.primary} />
+                  </TouchableOpacity>
+                )}
               </View>
-              {!progress || progress.perSubject.length === 0 ? (
+              {!isPremium ? (
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('PremiumPurchase')}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.lockedSectionContent}>
+                    <LinearGradient
+                      colors={['#64748B', '#475569'] as [string, string, ...string[]]}
+                      style={styles.lockedSectionGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons name="lock-closed" size={48} color="#FFFFFF" />
+                      <Text style={styles.lockedSectionText}>Premium Feature</Text>
+                      <Text style={styles.lockedSectionSubtext}>
+                        Upgrade to see subject-wise distribution
+                      </Text>
+                    </LinearGradient>
+                  </View>
+                </TouchableOpacity>
+              ) : !progress || progress.perSubject.length === 0 ? (
                 <View style={styles.emptyStateContainer}>
                   <Ionicons name="library-outline" size={40} color={colors.authTextMuted} />
                   <Text style={styles.emptyStateText}>No subject attempts yet</Text>
@@ -1029,8 +1161,39 @@ export default function StatsScreen() {
                   <Ionicons name="book" size={24} color={colors.primary} />
                 </View>
                 <Text style={styles.sectionTitle}>By Chapter</Text>
+                {!isPremium && (
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('PremiumPurchase')}
+                    style={styles.lockButton}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="lock-closed" size={20} color={colors.primary} />
+                  </TouchableOpacity>
+                )}
               </View>
-              {renderChapterSections()}
+              {!isPremium ? (
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('PremiumPurchase')}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.lockedSectionContent}>
+                    <LinearGradient
+                      colors={['#64748B', '#475569'] as [string, string, ...string[]]}
+                      style={styles.lockedSectionGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons name="lock-closed" size={48} color="#FFFFFF" />
+                      <Text style={styles.lockedSectionText}>Premium Feature</Text>
+                      <Text style={styles.lockedSectionSubtext}>
+                        Upgrade to see chapter-wise distribution
+                      </Text>
+                    </LinearGradient>
+                  </View>
+                </TouchableOpacity>
+              ) : (
+                renderChapterSections()
+              )}
             </ModernCard>
 
             {/* By Year */}
@@ -1040,8 +1203,39 @@ export default function StatsScreen() {
                   <Ionicons name="calendar" size={24} color={colors.primary} />
                 </View>
                 <Text style={styles.sectionTitle}>By Year</Text>
+                {!isPremium && (
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('PremiumPurchase')}
+                    style={styles.lockButton}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="lock-closed" size={20} color={colors.primary} />
+                  </TouchableOpacity>
+                )}
               </View>
-              {renderYearSections()}
+              {!isPremium ? (
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('PremiumPurchase')}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.lockedSectionContent}>
+                    <LinearGradient
+                      colors={['#64748B', '#475569'] as [string, string, ...string[]]}
+                      style={styles.lockedSectionGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons name="lock-closed" size={48} color="#FFFFFF" />
+                      <Text style={styles.lockedSectionText}>Premium Feature</Text>
+                      <Text style={styles.lockedSectionSubtext}>
+                        Upgrade to see year-wise distribution
+                      </Text>
+                    </LinearGradient>
+                  </View>
+                </TouchableOpacity>
+              ) : (
+                renderYearSections()
+              )}
             </ModernCard>
 
             {/* Test Reports & Analytics */}
@@ -1051,9 +1245,38 @@ export default function StatsScreen() {
                   <Ionicons name="document-text" size={24} color={colors.primary} />
                 </View>
                 <Text style={styles.sectionTitle}>Test Reports & Analytics</Text>
+                {!isPremium && (
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('PremiumPurchase')}
+                    style={styles.lockButton}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="lock-closed" size={20} color={colors.primary} />
+                  </TouchableOpacity>
+                )}
               </View>
               
-              {loadingReports ? (
+              {!isPremium ? (
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('PremiumPurchase')}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.lockedSectionContent}>
+                    <LinearGradient
+                      colors={['#64748B', '#475569'] as [string, string, ...string[]]}
+                      style={styles.lockedSectionGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons name="lock-closed" size={48} color="#FFFFFF" />
+                      <Text style={styles.lockedSectionText}>Premium Feature</Text>
+                      <Text style={styles.lockedSectionSubtext}>
+                        Upgrade to see test reports and analytics
+                      </Text>
+                    </LinearGradient>
+                  </View>
+                </TouchableOpacity>
+              ) : loadingReports ? (
                 <View style={styles.testReportsLoading}>
                   <ActivityIndicator size="small" color={colors.primary} />
                   <Text style={styles.testReportsLoadingText}>Loading test reports...</Text>
@@ -1383,6 +1606,9 @@ const styles = StyleSheet.create({
   },
   progressSection: {
     gap: spacing.sm,
+  },
+  progressBarContainer: {
+    position: 'relative',
   },
   accuracyCaption: {
     ...typography.caption,
@@ -2124,5 +2350,103 @@ const styles = StyleSheet.create({
     height: 220,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  lockedMetricCard: {
+    flex: 1,
+    borderRadius: radius.xl + 4,
+    overflow: 'hidden',
+    ...shadow.lg,
+  },
+  lockedMetricGradient: {
+    padding: spacing.lg,
+    alignItems: 'center',
+    minHeight: 120,
+    justifyContent: 'center',
+  },
+  lockedMetricIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    alignSelf: 'flex-end',
+  },
+  lockedMetricLabel: {
+    ...typography.caption,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  lockedMetricContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.xs,
+  },
+  lockedSectionContent: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    marginTop: spacing.md,
+  },
+  lockedSectionGradient: {
+    padding: spacing.xxl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 200,
+    gap: spacing.md,
+  },
+  lockedSectionText: {
+    ...typography.h3,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  lockedSectionSubtext: {
+    ...typography.body,
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
+    fontSize: 14,
+  },
+  lockButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  blurOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backdropFilter: 'blur(4px)',
+  },
+  blurContent: {
+    backgroundColor: colors.authSurface,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.authBorder,
+    ...shadow.sm,
+  },
+  blurredTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  blurredText: {
+    opacity: 0.4,
+  },
+  blurLockIcon: {
+    marginLeft: spacing.xs / 2,
   },
 });

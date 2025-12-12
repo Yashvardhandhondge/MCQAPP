@@ -9,10 +9,15 @@ import {
   TouchableOpacity,
   View,
   Animated,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { TabParamList } from '../navigation/types';
+import type { AppStackParamList } from '../navigation/types';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useAuth } from '../context/AuthContext';
 import { getChaptersWithAnalytics, getDashboard } from '../services/mcq.service';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import ModernCard from '../components/ui/ModernCard';
@@ -37,6 +42,9 @@ export type ChaptersScreenProps = NativeStackScreenProps<TabParamList, 'Chapters
 
 export default function ChaptersScreen({ route, navigation }: ChaptersScreenProps) {
   const { subject } = route.params || {};
+  const appNavigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  const { user } = useAuth();
+  const isPremium = user?.subscription === 'premium';
   const [chapters, setChapters] = useState<ChapterAnalytics[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -224,12 +232,16 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
       );
     }
 
+    // Filter chapters for free users (only first 3)
+    const displayChapters = isPremium ? chapters : chapters.slice(0, 3);
+
     return (
       <View style={styles.chapterList}>
-        {chapters.map((item, index) => {
+        {displayChapters.map((item, index) => {
           const progressPercentage = item.totalQuestions > 0 
             ? Math.round((item.userAttempts / item.totalQuestions) * 100) 
             : 0;
+          const isLocked = !isPremium && index >= 3;
           
           return (
             <Animated.View
@@ -248,6 +260,20 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
             >
               <TouchableOpacity
                 onPress={() => {
+                  if (isLocked) {
+                    Alert.alert(
+                      'Premium Feature',
+                      'This chapter is available for premium users only. Upgrade to premium to access all chapters.',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Upgrade Now',
+                          onPress: () => appNavigation.navigate('PremiumPurchase'),
+                        },
+                      ]
+                    );
+                    return;
+                  }
                   // Navigate to chapter detail using parent navigator
                   (navigation as any).getParent()?.navigate('ChapterDetail', {
                     subject,
@@ -259,36 +285,52 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
                 <ModernCard variant="elevated" padding="lg" style={styles.chapterCard}>
                   <View style={styles.chapterContent}>
                     <View style={styles.chapterIconContainer}>
-                      <Ionicons name="book" size={24} color={colors.primary} />
+                      {isLocked ? (
+                        <Ionicons name="lock-closed" size={24} color={colors.authTextMuted} />
+                      ) : (
+                        <Ionicons name="book" size={24} color={colors.primary} />
+                      )}
                     </View>
                     <View style={styles.chapterInfo}>
-                      <Text style={styles.chapterName}>{item.chapter}</Text>
-                      <View style={styles.chapterStats}>
-                        <View style={styles.statItem}>
-                          <Ionicons name="document-text" size={14} color={colors.authTextMuted} />
-                          <Text style={styles.statText}>
-                            {item.totalQuestions.toLocaleString()} available
-                          </Text>
-                        </View>
-                        <View style={styles.statItem}>
-                          <Ionicons name="checkmark-circle" size={14} color="#10B981" />
-                          <Text style={styles.statText}>
-                            {item.userAttempts.toLocaleString()} solved
-                          </Text>
-                        </View>
-                      </View>
-                      {item.totalQuestions > 0 && (
-                        <View style={styles.progressContainer}>
-                          <View style={styles.progressBar}>
-                            <View 
-                              style={[
-                                styles.progressFill, 
-                                { width: `${progressPercentage}%` }
-                              ]} 
-                            />
+                      <View style={styles.chapterNameRow}>
+                        <Text style={styles.chapterName}>{item.chapter}</Text>
+                        {isLocked && (
+                          <View style={styles.premiumBadge}>
+                            <Ionicons name="diamond" size={12} color={colors.primary} />
+                            <Text style={styles.premiumBadgeText}>Premium</Text>
                           </View>
-                          <Text style={styles.progressText}>{progressPercentage}% complete</Text>
-                        </View>
+                        )}
+                      </View>
+                      {!isLocked && (
+                        <>
+                          <View style={styles.chapterStats}>
+                            <View style={styles.statItem}>
+                              <Ionicons name="document-text" size={14} color={colors.authTextMuted} />
+                              <Text style={styles.statText}>
+                                {item.totalQuestions.toLocaleString()} available
+                              </Text>
+                            </View>
+                            <View style={styles.statItem}>
+                              <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                              <Text style={styles.statText}>
+                                {item.userAttempts.toLocaleString()} solved
+                              </Text>
+                            </View>
+                          </View>
+                          {item.totalQuestions > 0 && (
+                            <View style={styles.progressContainer}>
+                              <View style={styles.progressBar}>
+                                <View 
+                                  style={[
+                                    styles.progressFill, 
+                                    { width: `${progressPercentage}%` }
+                                  ]} 
+                                />
+                              </View>
+                              <Text style={styles.progressText}>{progressPercentage}% complete</Text>
+                            </View>
+                          )}
+                        </>
                       )}
                     </View>
                     <Ionicons name="chevron-forward" size={24} color={colors.authTextMuted} />
@@ -298,6 +340,30 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
             </Animated.View>
           );
         })}
+        {!isPremium && chapters.length > 3 && (
+          <ModernCard variant="elevated" padding="lg" style={styles.upgradeCard}>
+            <TouchableOpacity
+              onPress={() => appNavigation.navigate('PremiumPurchase')}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={colors.gradientPrimary}
+                style={styles.upgradeGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Ionicons name="diamond" size={24} color="#FFFFFF" />
+                <View style={styles.upgradeContent}>
+                  <Text style={styles.upgradeTitle}>Unlock All Chapters</Text>
+                  <Text style={styles.upgradeSubtitle}>
+                    Upgrade to premium to access {chapters.length - 3} more chapters
+                  </Text>
+                </View>
+                <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
+              </LinearGradient>
+            </TouchableOpacity>
+          </ModernCard>
+        )}
       </View>
     );
   }, [chapters, error, loading, navigation, subject, subjects, subjectsLoading, fadeAnim, slideAnim]);
@@ -444,11 +510,57 @@ const styles = StyleSheet.create({
   chapterInfo: {
     flex: 1,
   },
+  chapterNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
   chapterName: {
     ...typography.h3,
     color: colors.authText,
     fontWeight: '700',
-    marginBottom: spacing.xs,
+    flex: 1,
+  },
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs / 2,
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+    borderRadius: radius.sm,
+  },
+  premiumBadgeText: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600',
+    fontSize: 10,
+  },
+  upgradeCard: {
+    marginTop: spacing.md,
+    borderRadius: radius.xl + 2,
+    overflow: 'hidden',
+  },
+  upgradeGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  upgradeContent: {
+    flex: 1,
+  },
+  upgradeTitle: {
+    ...typography.h3,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    marginBottom: spacing.xs / 2,
+  },
+  upgradeSubtitle: {
+    ...typography.body,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 13,
   },
   chapterSubtitle: {
     ...typography.caption,

@@ -1,6 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import {
   ActivityIndicator,
   SafeAreaView,
@@ -10,10 +10,12 @@ import {
   TouchableOpacity,
   View,
   Animated,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { AppStackParamList } from '../navigation/types';
+import { useAuth } from '../context/AuthContext';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import ModernCard from '../components/ui/ModernCard';
 import GradientButton from '../components/ui/GradientButton';
@@ -21,15 +23,33 @@ import { getDistinctYears, generateRandomTest } from '../services/mcq.service';
 
 type FilterType = 'year' | 'subject';
 
-const SUBJECTS = [
+const ALL_SUBJECTS = [
   { name: 'Chemistry', icon: 'flask', color: '#8B5CF6' },
   { name: 'Physics', icon: 'nuclear', color: '#3B82F6' },
   { name: 'Maths', icon: 'calculator', color: '#10B981' },
   { name: 'Biology', icon: 'leaf', color: '#F59E0B' },
 ];
 
+// Subject groups mapping
+const GROUP_SUBJECTS: Record<string, string[]> = {
+  PCM: ['Chemistry', 'Physics', 'Maths'],
+  PCB: ['Chemistry', 'Physics', 'Biology'],
+  PCMB: ['Chemistry', 'Physics', 'Maths', 'Biology'],
+};
+
 export default function TestsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  const { user } = useAuth();
+  const isPremium = user?.subscription === 'premium';
+  
+  // Filter subjects based on user's group
+  const SUBJECTS = useMemo(() => {
+    if (!user?.group) {
+      return ALL_SUBJECTS;
+    }
+    const allowedSubjects = GROUP_SUBJECTS[user.group] || [];
+    return ALL_SUBJECTS.filter(subj => allowedSubjects.includes(subj.name));
+  }, [user?.group]);
   const [filter, setFilter] = useState<FilterType>('year');
   const [years, setYears] = useState<string[]>([]);
   const [loadingYears, setLoadingYears] = useState(false);
@@ -93,11 +113,38 @@ export default function TestsScreen() {
     }
   }, [filter]);
 
+  const checkTestLimit = async (): Promise<boolean> => {
+    if (isPremium) return true;
+    const { getTestCount, canTakeTest } = await import('../utils/testTracking');
+    const testCount = await getTestCount();
+    if (!canTakeTest(false, testCount)) {
+      Alert.alert(
+        'Test Limit Reached',
+        'You have reached the limit of 3 free tests. Upgrade to premium for unlimited tests.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Upgrade Now',
+            onPress: () => navigation.navigate('PremiumPurchase'),
+          },
+        ]
+      );
+      return false;
+    }
+    return true;
+  };
+
   const handleGenerateRandomTest = async () => {
+    if (!(await checkTestLimit())) return;
+    
     setGeneratingRandom(true);
     setError(null);
     try {
       const response = await generateRandomTest(25);
+      if (!isPremium) {
+        const { incrementTestCount } = await import('../utils/testTracking');
+        await incrementTestCount();
+      }
       navigation.navigate('CBT', {
         testId: response.data.sessionId,
         questions: response.data.questions,
@@ -111,10 +158,16 @@ export default function TestsScreen() {
   };
 
   const handleStartYearTest = async (year: string) => {
+    if (!(await checkTestLimit())) return;
+    
     setGeneratingYearTest(year);
     setError(null);
     try {
       const response = await generateRandomTest(25, year);
+      if (!isPremium) {
+        const { incrementTestCount } = await import('../utils/testTracking');
+        await incrementTestCount();
+      }
       navigation.navigate('CBT', {
         testId: response.data.sessionId,
         questions: response.data.questions,
@@ -128,10 +181,16 @@ export default function TestsScreen() {
   };
 
   const handleStartSubjectTest = async (subject: string) => {
+    if (!(await checkTestLimit())) return;
+    
     setGeneratingSubjectTest(subject);
     setError(null);
     try {
       const response = await generateRandomTest(25, undefined, subject);
+      if (!isPremium) {
+        const { incrementTestCount } = await import('../utils/testTracking');
+        await incrementTestCount();
+      }
       navigation.navigate('CBT', {
         testId: response.data.sessionId,
         questions: response.data.questions,

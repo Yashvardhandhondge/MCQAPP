@@ -17,6 +17,9 @@ import TestsScreen from './src/screens/TestsScreen';
 import CBTSimulatorScreen from './src/screens/CBTSimulatorScreen';
 import TestResultsScreen from './src/screens/TestResultsScreen';
 import PracticeByYearScreen from './src/screens/PracticeByYearScreen';
+import GroupSelectionScreen from './src/screens/GroupSelectionScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
+import PremiumPurchaseScreen from './src/screens/PremiumPurchaseScreen';
 import BottomTabBar from './src/components/ui/BottomTabBar';
 import { colors, typography } from './src/theme';
 
@@ -85,14 +88,28 @@ function TabNavigator() {
 
 // Main App Stack Navigator - wraps tabs and handles detail screens
 function AppStackNavigator() {
+  const { user } = useAuth();
+  
   return (
     <AppStack.Navigator
+      initialRouteName={user?.group ? 'MainTabs' : 'GroupSelection'}
       screenOptions={{
         ...appStackScreenOptions,
         animation: 'fade',
         animationDuration: 400,
       }}
     >
+      {/* Group Selection Screen - shown if user hasn't selected a group */}
+      <AppStack.Screen
+        name="GroupSelection"
+        component={GroupSelectionScreen}
+        options={{
+          headerShown: false,
+          animation: 'fade',
+          animationDuration: 300,
+        }}
+      />
+      
       {/* Main tabs */}
       <AppStack.Screen
         name="MainTabs"
@@ -150,13 +167,37 @@ function AppStackNavigator() {
           animationDuration: 300,
         }}
       />
+      <AppStack.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          animationDuration: 300,
+        }}
+      />
+      <AppStack.Screen
+        name="PremiumPurchase"
+        component={PremiumPurchaseScreen}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          animationDuration: 300,
+        }}
+      />
     </AppStack.Navigator>
   );
 }
 
 function RootNavigator() {
   const { user } = useAuth();
-  return user ? <AppStackNavigator /> : <AuthStackNavigator />;
+  
+  if (!user) {
+    return <AuthStackNavigator />;
+  }
+  
+  // Always show AppStackNavigator - it will handle group selection logic
+  return <AppStackNavigator />;
 }
 
 export default function App() {

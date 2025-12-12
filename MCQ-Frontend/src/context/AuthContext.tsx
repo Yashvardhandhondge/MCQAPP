@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
-import { login as loginRequest, register as registerRequest } from '../services/auth.service';
+import { login as loginRequest, register as registerRequest, updateUserGroup as updateUserGroupRequest, upgradeSubscription as upgradeSubscriptionRequest } from '../services/auth.service';
 import { setAuthToken } from '../services/http';
 import type { AuthResponse, User } from '../types/auth';
 
@@ -10,6 +10,8 @@ interface AuthContextValue {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (fullName: string, email: string, password: string) => Promise<void>;
+  updateUserGroup: (group: 'PCM' | 'PCB' | 'PCMB') => Promise<void>;
+  upgradeSubscription: () => Promise<void>;
   logout: () => void;
 }
 
@@ -83,6 +85,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applyAuthResponse, handleAuthError],
   );
 
+  const updateUserGroup = useCallback(
+    async (group: 'PCM' | 'PCB' | 'PCMB') => {
+      console.log('📝 [AUTH CONTEXT] Update group called', { group });
+      setLoading(true);
+      try {
+        const response = await updateUserGroupRequest(group);
+        console.log('✅ [AUTH CONTEXT] Update group request successful, applying response...');
+        applyAuthResponse(response);
+        console.log('✅ [AUTH CONTEXT] Update group complete');
+      } catch (error) {
+        console.error('❌ [AUTH CONTEXT] Update group failed', error);
+        handleAuthError(error, 'Unable to update group');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [applyAuthResponse, handleAuthError],
+  );
+
+  const upgradeSubscription = useCallback(
+    async () => {
+      console.log('💎 [AUTH CONTEXT] Upgrade subscription called');
+      setLoading(true);
+      try {
+        const response = await upgradeSubscriptionRequest();
+        console.log('✅ [AUTH CONTEXT] Upgrade subscription request successful, applying response...');
+        applyAuthResponse(response);
+        // Reset test count when upgrading to premium
+        try {
+          const { resetTestCount } = await import('../utils/testTracking');
+          await resetTestCount();
+        } catch (err) {
+          console.warn('Failed to reset test count:', err);
+        }
+        console.log('✅ [AUTH CONTEXT] Upgrade subscription complete');
+      } catch (error) {
+        console.error('❌ [AUTH CONTEXT] Upgrade subscription failed', error);
+        handleAuthError(error, 'Unable to upgrade subscription');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [applyAuthResponse, handleAuthError],
+  );
+
   const logout = useCallback(() => {
     console.log('🚪 [AUTH CONTEXT] Logout called');
     setUser(null);
@@ -98,9 +145,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       login,
       register,
+      updateUserGroup,
+      upgradeSubscription,
       logout,
     }),
-    [loading, login, logout, register, token, user],
+    [loading, login, logout, register, updateUserGroup, upgradeSubscription, token, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

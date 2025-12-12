@@ -3,6 +3,8 @@ export interface User {
   fullName: string;
   email: string;
   role: string;
+  group?: 'PCM' | 'PCB' | 'PCMB' | null;
+  subscription?: 'free' | 'premium';
 }
 
 export interface AuthResponse {

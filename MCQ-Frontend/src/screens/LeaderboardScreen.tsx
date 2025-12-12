@@ -11,13 +11,21 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { AppStackParamList } from '../navigation/types';
+import { useAuth } from '../context/AuthContext';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import { getLeaderboard } from '../services/mcq.service';
 import type { LeaderboardEntry } from '../types/mcq';
+import ModernCard from '../components/ui/ModernCard';
 
 type Timeframe = 'month' | 'all-time';
 
 export default function LeaderboardScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  const { user } = useAuth();
+  const isPremium = user?.subscription === 'premium';
   const [timeframe, setTimeframe] = useState<Timeframe>('month');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -196,15 +204,57 @@ export default function LeaderboardScreen() {
             </View>
 
             {/* Leaderboard List */}
-            {leaderboard.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="trophy-outline" size={64} color={colors.authTextMuted} />
-                <Text style={styles.emptyText}>No leaderboard data available</Text>
-                <Text style={styles.emptySubtext}>Start practicing to appear on the leaderboard!</Text>
-              </View>
-            ) : (
-              <View style={styles.leaderboardList}>
-                {leaderboard.map((entry, index) => {
+            {(() => {
+              // Filter leaderboard: show only current user if not premium
+              const displayLeaderboard = isPremium 
+                ? leaderboard 
+                : leaderboard.filter(entry => entry.isCurrentUser);
+
+              if (displayLeaderboard.length === 0) {
+                return (
+                  <View style={styles.emptyContainer}>
+                    <Ionicons name="trophy-outline" size={64} color={colors.authTextMuted} />
+                    <Text style={styles.emptyText}>No leaderboard data available</Text>
+                    <Text style={styles.emptySubtext}>Start practicing to appear on the leaderboard!</Text>
+                  </View>
+                );
+              }
+
+              return (
+                <>
+                  {/* Premium Prompt for Non-Premium Users */}
+                  {!isPremium && (
+                    <TouchableOpacity
+                      onPress={() => navigation.navigate('PremiumPurchase')}
+                      activeOpacity={0.8}
+                      style={styles.premiumPromptCard}
+                    >
+                      <LinearGradient
+                        colors={colors.gradientPrimary as [string, string, ...string[]]}
+                        style={styles.premiumPromptGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <View style={styles.premiumPromptContent}>
+                          <View style={styles.premiumPromptIconContainer}>
+                            <Ionicons name="diamond" size={40} color="#FFFFFF" />
+                          </View>
+                          <View style={styles.premiumPromptTextContainer}>
+                            <Text style={styles.premiumPromptTitle}>
+                              Purchase Premium
+                            </Text>
+                            <Text style={styles.premiumPromptSubtitle}>
+                              See your position with 1000's of other users
+                            </Text>
+                          </View>
+                          <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
+                        </View>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  )}
+
+                  <View style={styles.leaderboardList}>
+                    {displayLeaderboard.map((entry, index) => {
                   const gradient = getRankGradient(entry.rank, entry.isCurrentUser);
                   const isTopThree = entry.rank <= 3;
                   const rankIcon =
@@ -293,9 +343,11 @@ export default function LeaderboardScreen() {
                       )}
                     </Animated.View>
                   );
-                })}
-              </View>
-            )}
+                    })}
+                  </View>
+                </>
+              );
+            })()}
           </Animated.View>
         </ScrollView>
       </LinearGradient>
@@ -576,5 +628,44 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.authTextMuted,
     textAlign: 'center',
+  },
+  premiumPromptCard: {
+    marginBottom: spacing.xl,
+    borderRadius: radius.xl + 4,
+    overflow: 'hidden',
+    ...shadow.lg,
+  },
+  premiumPromptGradient: {
+    padding: spacing.xl,
+  },
+  premiumPromptContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+  },
+  premiumPromptIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.xl + 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.md,
+  },
+  premiumPromptTextContainer: {
+    flex: 1,
+  },
+  premiumPromptTitle: {
+    ...typography.h2,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    marginBottom: spacing.xs,
+    fontSize: 22,
+  },
+  premiumPromptSubtitle: {
+    ...typography.body,
+    color: 'rgba(255, 255, 255, 0.95)',
+    fontSize: 15,
+    lineHeight: 22,
   },
 });

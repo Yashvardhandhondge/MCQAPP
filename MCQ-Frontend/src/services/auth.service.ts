@@ -99,3 +99,46 @@ export async function getProfile(): Promise<ProfileResponse> {
     throw new Error(extractErrorMessage(error));
   }
 }
+
+export async function updateUserGroup(group: 'PCM' | 'PCB' | 'PCMB'): Promise<AuthResponse> {
+  console.log('📝 [UPDATE GROUP] Updating user group...', {
+    group,
+    endpoint: '/api/auth/profile/group',
+  });
+
+  try {
+    const { data } = await axiosInstance.put<AuthResponse>('/api/auth/profile/group', {
+      group,
+    });
+    
+    console.log('✅ [UPDATE GROUP SUCCESS]', {
+      user: data.user,
+      group: data.user.group,
+    });
+
+    return data;
+  } catch (error) {
+    console.error('❌ [UPDATE GROUP FAILED]', error);
+    throw new Error(extractErrorMessage(error));
+  }
+}
+
+export async function upgradeSubscription(): Promise<AuthResponse> {
+  console.log('💎 [UPGRADE SUBSCRIPTION] Upgrading subscription...', {
+    endpoint: '/api/auth/profile/subscription/upgrade',
+  });
+
+  try {
+    const { data } = await axiosInstance.put<AuthResponse>('/api/auth/profile/subscription/upgrade');
+    
+    console.log('✅ [UPGRADE SUBSCRIPTION SUCCESS]', {
+      user: data.user,
+      subscription: data.user.subscription,
+    });
+
+    return data;
+  } catch (error) {
+    console.error('❌ [UPGRADE SUBSCRIPTION FAILED]', error);
+    throw new Error(extractErrorMessage(error));
+  }
+}

@@ -3,6 +3,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -85,7 +86,8 @@ const computeCurrentStreakFromActivities = (dates: string[]) => {
 
 export default function DashboardScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const isPremium = user?.subscription === 'premium';
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -238,10 +240,33 @@ export default function DashboardScreen() {
   };
 
   const handleStartMockTest = async () => {
+    if (!isPremium) {
+      const { getTestCount, canTakeTest } = await import('../utils/testTracking');
+      const testCount = await getTestCount();
+      if (!canTakeTest(false, testCount)) {
+        Alert.alert(
+          'Test Limit Reached',
+          'You have reached the limit of 3 free tests. Upgrade to premium for unlimited tests.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Upgrade Now',
+              onPress: () => navigation.navigate('PremiumPurchase'),
+            },
+          ]
+        );
+        return;
+      }
+    }
+
     setGeneratingMockTest(true);
     setError(null);
     try {
       const response = await generateRandomTest(25);
+      if (!isPremium) {
+        const { incrementTestCount } = await import('../utils/testTracking');
+        await incrementTestCount();
+      }
       navigation.navigate('CBT', {
         testId: response.data.sessionId,
         questions: response.data.questions,
@@ -279,7 +304,7 @@ export default function DashboardScreen() {
                 </Text>
                 <Text style={styles.subheading}>Ready to ace {examName} {targetYear}?</Text>
               </View>
-              <TouchableOpacity onPress={logout} style={styles.profileButton} activeOpacity={0.7}>
+              <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.profileButton} activeOpacity={0.7}>
                 <LinearGradient colors={colors.gradientPrimary} style={styles.profileGradient}>
                   <Ionicons name="person" size={20} color="#FFFFFF" />
                 </LinearGradient>
@@ -351,6 +376,8 @@ export default function DashboardScreen() {
                 icon="checkmark-circle"
                 gradient={colors.gradientAccent}
                 delay={150}
+                locked={!isPremium}
+                onPress={() => !isPremium && navigation.navigate('PremiumPurchase')}
               />
             </View>
 
@@ -361,6 +388,8 @@ export default function DashboardScreen() {
                 icon="trophy"
                 gradient={colors.gradientGold}
                 delay={200}
+                locked={!isPremium}
+                onPress={() => !isPremium && navigation.navigate('PremiumPurchase')}
               />
               <StatCard
                 title="Study Streak"
@@ -369,6 +398,8 @@ export default function DashboardScreen() {
                 icon="flame"
                 gradient={['#F59E0B', '#EF4444']}
                 delay={250}
+                locked={!isPremium}
+                onPress={() => !isPremium && navigation.navigate('PremiumPurchase')}
               />
             </View>
 

@@ -12,6 +12,7 @@ export type TabParamList = {
 };
 
 export type AppStackParamList = {
+  GroupSelection: undefined;
   MainTabs: undefined;
   ChapterDetail: { subject: string; chapter: string };
   PracticeByYear: { subject: string; chapter: string };
@@ -29,4 +30,6 @@ export type AppStackParamList = {
   TestResults: {
     sessionId: string;
   };
+  Profile: undefined;
+  PremiumPurchase: undefined;
 };
