@@ -12,6 +12,18 @@ export const axiosInstance = axios.create({
 // Request interceptor for logging
 axiosInstance.interceptors.request.use(
   (config) => {
+    // Prevent cached 304 responses by busting cache on GETs
+    if ((config.method || 'get').toLowerCase() === 'get') {
+      Object.assign(config.headers, {
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache',
+      });
+      config.params = {
+        ...(config.params || {}),
+        _ts: Date.now(),
+      };
+    }
+
     console.log('🚀 [REQUEST]', {
       method: config.method?.toUpperCase(),
       url: config.url,

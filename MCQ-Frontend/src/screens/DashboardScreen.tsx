@@ -41,6 +41,48 @@ const SUBJECT_COLORS: Record<string, string[]> = {
   Biology: ['#F59E0B', '#D97706'],
 };
 
+const formatDateToYMD = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+const normalizeActivityDates = (dates: string[]) =>
+  (dates || [])
+    .map((date) => {
+      if (typeof date === 'string') {
+        const dateOnly = date.split('T')[0].split(' ')[0];
+        if (dateOnly.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          return dateOnly;
+        }
+        const parsed = new Date(date);
+        if (!isNaN(parsed.getTime())) {
+          return formatDateToYMD(parsed);
+        }
+      }
+      return null;
+    })
+    .filter((normalizedDate): normalizedDate is string => normalizedDate !== null);
+
+const computeCurrentStreakFromActivities = (dates: string[]) => {
+  if (!dates || dates.length === 0) return 0;
+
+  const activitySet = new Set(dates);
+  const today = new Date();
+  const todayKey = formatDateToYMD(today);
+  const cursor = new Date(today);
+
+  if (!activitySet.has(todayKey)) {
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  let streak = 0;
+  while (true) {
+    const key = formatDateToYMD(cursor);
+    if (!activitySet.has(key)) break;
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return streak;
+};
+
 export default function DashboardScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { user, logout } = useAuth();
@@ -64,6 +106,18 @@ export default function DashboardScreen() {
   const [timeSeriesData, setTimeSeriesData] = useState<any>(null);
   const [loadingTimeSeries, setLoadingTimeSeries] = useState(false);
   const [generatingMockTest, setGeneratingMockTest] = useState(false);
+
+  const normalizedActivityDates = useMemo(
+    () => normalizeActivityDates(studyStreak.activityDates),
+    [studyStreak.activityDates]
+  );
+
+  const activityDatesSet = useMemo(() => new Set(normalizedActivityDates), [normalizedActivityDates]);
+
+  const computedCurrentStreak = useMemo(
+    () => computeCurrentStreakFromActivities(normalizedActivityDates),
+    [normalizedActivityDates]
+  );
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -170,7 +224,7 @@ export default function DashboardScreen() {
   const examName = examConfig?.examName ?? 'MHT CET';
 
   // Study streak and today's progress from backend
-  const currentStreak = studyStreak.streak || 0;
+  const currentStreak = Math.max(computedCurrentStreak, studyStreak.streak || 0);
   const dailyGoal = 50;
   const todayProgress = studyStreak.todayProgress;
   const goalProgress = Math.min(100, (todayProgress / dailyGoal) * 100);
@@ -411,29 +465,7 @@ export default function DashboardScreen() {
                     const lastDay = new Date(currentYear, currentMonth + 1, 0);
                     const daysInMonth = lastDay.getDate();
                     const startingDayOfWeek = firstDay.getDay();
-                    // Normalize activity dates to ensure matching (handle any potential format issues)
-                    const normalizedActivityDates = studyStreak.activityDates.map((date) => {
-                      // Ensure date is in YYYY-MM-DD format
-                      if (typeof date === 'string') {
-                        // Remove time component if present
-                        const dateOnly = date.split('T')[0].split(' ')[0];
-                        // Ensure it's in YYYY-MM-DD format
-                        if (dateOnly.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                          return dateOnly;
-                        }
-                        // Try to parse and reformat if needed
-                        const parsed = new Date(date);
-                        if (!isNaN(parsed.getTime())) {
-                          const year = parsed.getFullYear();
-                          const month = String(parsed.getMonth() + 1).padStart(2, '0');
-                          const day = String(parsed.getDate()).padStart(2, '0');
-                          return `${year}-${month}-${day}`;
-                        }
-                      }
-                      return null;
-                    }).filter((date): date is string => date !== null && typeof date === 'string');
-                    const activityDatesSet = new Set(normalizedActivityDates);
-                    const todayStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                    const todayStr = formatDateToYMD(now);
                     
                     // Debug: Log activity dates for troubleshooting (can be removed later)
                     // console.log('Activity dates:', Array.from(activityDatesSet));
@@ -448,7 +480,7 @@ export default function DashboardScreen() {
 
                     // Days of the month
                     for (let day = 1; day <= daysInMonth; day++) {
-                      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                      const dateStr = formatDateToYMD(new Date(currentYear, currentMonth, day));
                       // Create date objects at midnight for accurate comparison
                       const dayDate = new Date(currentYear, currentMonth, day, 0, 0, 0, 0);
                       const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
@@ -492,7 +524,7 @@ export default function DashboardScreen() {
               <View style={styles.streakRow}>
                 <View style={styles.streakItem}>
                   <Text style={styles.streakLabel}>Current Streak 🔥</Text>
-                  <Text style={styles.streakValue}>{studyStreak.streak}</Text>
+                  <Text style={styles.streakValue}>{currentStreak}</Text>
                 </View>
                 <View style={styles.streakItem}>
                   <Text style={styles.streakLabel}>Max Streak 🔥</Text>
@@ -502,7 +534,7 @@ export default function DashboardScreen() {
             </ModernCard>
 
             {/* Weekly Performance Trend */}
-            {timeSeriesData && timeSeriesData.timeSeries.length > 0 && (
+            {/* {timeSeriesData && timeSeriesData.timeSeries.length > 0 && (
               <ModernCard variant="elevated" padding="lg" style={styles.performanceCard}>
                 <View style={styles.cardHeader}>
                   <View style={styles.chartHeader}>
@@ -529,10 +561,10 @@ export default function DashboardScreen() {
                   </Text>
                 </View>
               </ModernCard>
-            )}
+            )} */}
 
             {/* Subject Performance Comparison */}
-            {stats && stats.perSubject.length > 0 && (
+            {/* {stats && stats.perSubject.length > 0 && (
               <ModernCard variant="elevated" padding="lg" style={styles.performanceCard}>
                 <View style={styles.cardHeader}>
                   <View style={styles.chartHeader}>
@@ -560,7 +592,7 @@ export default function DashboardScreen() {
                   height={200}
                 />
               </ModernCard>
-            )}
+            )} */}
 
             {/* Subject Progress */}
             {stats && stats.perSubject.length > 0 && (
@@ -619,7 +651,7 @@ export default function DashboardScreen() {
                   <TouchableOpacity
                     key={subject.name}
                     onPress={() =>
-                      navigation.navigate('MainTabs', {
+                      (navigation as any).getParent()?.navigate('MainTabs', {
                         screen: 'Chapters',
                         params: { subject: subject.name },
                       })
@@ -639,7 +671,7 @@ export default function DashboardScreen() {
                       </View>
                       <View style={styles.subjectProgressContainer}>
                         <LinearGradient
-                          colors={gradientColors}
+                          colors={gradientColors || colors.gradientPrimary}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 0 }}
                           style={[styles.subjectProgressBar, { width: `${ratio * 100}%` }]}
