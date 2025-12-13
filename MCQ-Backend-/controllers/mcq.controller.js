@@ -5,6 +5,37 @@ const TestSession = require('../models/TestSession');
 const mongoose = require('mongoose');
 
 /**
+ * Helper function to check if a chapter is locked for a non-premium user
+ * Non-premium users can only access the first 3 chapters (index 0-2) of each subject
+ * @param {Object} user - The user object
+ * @param {string} subject - The subject name
+ * @param {string} chapter - The chapter name
+ * @param {Object} Model - The Mongoose model for the subject
+ * @returns {Promise<boolean>} - Returns true if chapter is locked, false if accessible
+ */
+const isChapterLocked = async (user, subject, chapter, Model) => {
+  // Premium users have access to all chapters
+  if (user.subscription === 'premium') {
+    return false;
+  }
+
+  // Get all chapters for the subject, sorted alphabetically
+  const allChapters = await Model.distinct('chapter');
+  const sortedChapters = allChapters.sort((a, b) => a.localeCompare(b));
+
+  // Find the index of the requested chapter
+  const chapterIndex = sortedChapters.findIndex((ch) => ch === chapter);
+
+  // If chapter not found, consider it locked (shouldn't happen, but safety check)
+  if (chapterIndex === -1) {
+    return true;
+  }
+
+  // Non-premium users can only access first 3 chapters (index 0, 1, 2)
+  return chapterIndex >= 3;
+};
+
+/**
  * Get dashboard summary with total questions and subject-wise counts
  * Filters subjects based on user's group (PCM, PCB, PCMB)
  */
@@ -403,6 +434,7 @@ const getQuestionsBySubjectAndChapter = async (req, res, next) => {
   try {
     const { subject, chapter } = req.params;
     const { page = 1, limit = 50 } = req.query;
+    const user = req.user;
 
     // Validate subject
     const validSubjects = ['Chemistry', 'Physics', 'Maths', 'Biology'];
@@ -420,6 +452,12 @@ const getQuestionsBySubjectAndChapter = async (req, res, next) => {
 
     const Model = getModelBySubject(subject);
     const decodedChapter = decodeURIComponent(chapter);
+
+    // Check if chapter is locked for non-premium users
+    const locked = await isChapterLocked(user, subject, decodedChapter, Model);
+    if (locked) {
+      return next(createError(403, 'This chapter is available for premium users only. Please upgrade to premium to access all chapters.'));
+    }
     
     const filter = {
       subject: subject,
@@ -468,6 +506,7 @@ const getQuestionsBySubjectChapterAndYear = async (req, res, next) => {
   try {
     const { subject, chapter, year } = req.params;
     const { page = 1, limit = 50 } = req.query;
+    const user = req.user;
 
     // If year is not in params, check query params (for backward compatibility)
     const yearParam = year || req.query.year;
@@ -492,6 +531,12 @@ const getQuestionsBySubjectChapterAndYear = async (req, res, next) => {
     const Model = getModelBySubject(subject);
     const decodedChapter = decodeURIComponent(chapter);
     const decodedYear = decodeURIComponent(yearParam);
+
+    // Check if chapter is locked for non-premium users
+    const locked = await isChapterLocked(user, subject, decodedChapter, Model);
+    if (locked) {
+      return next(createError(403, 'This chapter is available for premium users only. Please upgrade to premium to access all chapters.'));
+    }
     
     // Normalize year: convert to string for consistent matching
     const normalizedYear = String(decodedYear);
@@ -642,7 +687,8 @@ const generatePracticeTest = async (req, res, next) => {
 const generateChapterPractice = async (req, res, next) => {
   try {
     const { subject, chapter } = req.params;
-    const userId = req.user._id;
+    const user = req.user;
+    const userId = user._id;
     const limit = parseInt(req.query.limit) || 20;
 
     // Validate subject
@@ -658,6 +704,12 @@ const generateChapterPractice = async (req, res, next) => {
 
     const Model = getModelBySubject(subject);
     const decodedChapter = decodeURIComponent(chapter);
+
+    // Check if chapter is locked for non-premium users
+    const locked = await isChapterLocked(user, subject, decodedChapter, Model);
+    if (locked) {
+      return next(createError(403, 'This chapter is available for premium users only. Please upgrade to premium to access all chapters.'));
+    }
 
     // Get all questions for this chapter
     const allQuestions = await Model.find({

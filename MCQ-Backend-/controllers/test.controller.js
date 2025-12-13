@@ -1,7 +1,38 @@
 const createError = require('http-errors');
-const { getAllModels } = require('../models/Mcq');
+const { getAllModels, getModelBySubject } = require('../models/Mcq');
 const TestSession = require('../models/TestSession');
 const UserAttempt = require('../models/UserAttempt');
+
+/**
+ * Helper function to check if a chapter is locked for a non-premium user
+ * Non-premium users can only access the first 3 chapters (index 0-2) of each subject
+ * @param {Object} user - The user object
+ * @param {string} subject - The subject name
+ * @param {string} chapter - The chapter name
+ * @param {Object} Model - The Mongoose model for the subject
+ * @returns {Promise<boolean>} - Returns true if chapter is locked, false if accessible
+ */
+const isChapterLocked = async (user, subject, chapter, Model) => {
+  // Premium users have access to all chapters
+  if (user.subscription === 'premium') {
+    return false;
+  }
+
+  // Get all chapters for the subject, sorted alphabetically
+  const allChapters = await Model.distinct('chapter');
+  const sortedChapters = allChapters.sort((a, b) => a.localeCompare(b));
+
+  // Find the index of the requested chapter
+  const chapterIndex = sortedChapters.findIndex((ch) => ch === chapter);
+
+  // If chapter not found, consider it locked (shouldn't happen, but safety check)
+  if (chapterIndex === -1) {
+    return true;
+  }
+
+  // Non-premium users can only access first 3 chapters (index 0, 1, 2)
+  return chapterIndex >= 3;
+};
 
 /**
  * Get all available PYQ tests grouped by year and shift
@@ -418,14 +449,14 @@ const generateRandomTest = async (req, res, next) => {
  */
 const startTestSession = async (req, res, next) => {
   try {
-    const userId = req.user._id;
+    const user = req.user;
+    const userId = user._id;
     const { year, shift, subject, chapter, testType = 'pyq', limit = 200 } = req.body;
 
     if (testType === 'pyq' && (!year || !shift)) {
       return next(createError(400, 'Year and shift are required for PYQ tests'));
     }
 
-    const { getAllModels, getModelBySubject } = require('../models/Mcq');
     const allModels = getAllModels();
     const subjects = ['Chemistry', 'Physics', 'Maths', 'Biology'];
 
@@ -474,8 +505,16 @@ const startTestSession = async (req, res, next) => {
     } else if (testType === 'chapter' && subject && chapter) {
       // Chapter practice test
       const Model = getModelBySubject(subject);
+      
+      // Check if chapter is locked for non-premium users
+      const decodedChapter = decodeURIComponent(chapter);
+      const locked = await isChapterLocked(user, subject, decodedChapter, Model);
+      if (locked) {
+        return next(createError(403, 'This chapter is available for premium users only. Please upgrade to premium to access all chapters.'));
+      }
+      
       questionModel = subject;
-      const questions = await Model.find({ subject, chapter })
+      const questions = await Model.find({ subject, chapter: decodedChapter })
         .limit(parseInt(limit))
         .lean();
       questionIds.push(...questions.map((q) => q._id));

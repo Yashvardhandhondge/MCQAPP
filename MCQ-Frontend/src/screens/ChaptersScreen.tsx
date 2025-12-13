@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   View,
   Animated,
-  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +21,7 @@ import { getChaptersWithAnalytics, getDashboard } from '../services/mcq.service'
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import ModernCard from '../components/ui/ModernCard';
 import BackHeader from '../components/ui/BackHeader';
+import PremiumLockModal from '../components/ui/PremiumLockModal';
 import type { SubjectSummary, ChapterAnalytics } from '../types/mcq';
 
 const SUBJECT_ICONS: Record<string, string> = {
@@ -50,6 +50,7 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
   const [error, setError] = useState<string | null>(null);
   const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
   const [subjectsLoading, setSubjectsLoading] = useState(false);
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -232,15 +233,15 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
       );
     }
 
-    // Filter chapters for free users (only first 3)
-    const displayChapters = isPremium ? chapters : chapters.slice(0, 3);
-
+    // Show ALL chapters for both premium and non-premium users
+    // For non-premium users: first 3 are unlocked, rest are locked
     return (
       <View style={styles.chapterList}>
-        {displayChapters.map((item, index) => {
+        {chapters.map((item, index) => {
           const progressPercentage = item.totalQuestions > 0 
             ? Math.round((item.userAttempts / item.totalQuestions) * 100) 
             : 0;
+          // First 3 chapters (index 0-2) are unlocked for non-premium users
           const isLocked = !isPremium && index >= 3;
           
           return (
@@ -261,17 +262,7 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
               <TouchableOpacity
                 onPress={() => {
                   if (isLocked) {
-                    Alert.alert(
-                      'Premium Feature',
-                      'This chapter is available for premium users only. Upgrade to premium to access all chapters.',
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        {
-                          text: 'Upgrade Now',
-                          onPress: () => appNavigation.navigate('PremiumPurchase'),
-                        },
-                      ]
-                    );
+                    setPremiumModalVisible(true);
                     return;
                   }
                   // Navigate to chapter detail using parent navigator
@@ -301,7 +292,18 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
                           </View>
                         )}
                       </View>
-                      {!isLocked && (
+                      {isLocked ? (
+                        // Locked chapter: show only question count
+                        <View style={styles.chapterStats}>
+                          <View style={styles.statItem}>
+                            <Ionicons name="document-text" size={14} color={colors.authTextMuted} />
+                            <Text style={styles.statText}>
+                              {item.totalQuestions.toLocaleString()} available
+                            </Text>
+                          </View>
+                        </View>
+                      ) : (
+                        // Unlocked chapter: show full stats
                         <>
                           <View style={styles.chapterStats}>
                             <View style={styles.statItem}>
@@ -340,33 +342,9 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
             </Animated.View>
           );
         })}
-        {!isPremium && chapters.length > 3 && (
-          <ModernCard variant="elevated" padding="lg" style={styles.upgradeCard}>
-            <TouchableOpacity
-              onPress={() => appNavigation.navigate('PremiumPurchase')}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={colors.gradientPrimary}
-                style={styles.upgradeGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
-                <Ionicons name="diamond" size={24} color="#FFFFFF" />
-                <View style={styles.upgradeContent}>
-                  <Text style={styles.upgradeTitle}>Unlock All Chapters</Text>
-                  <Text style={styles.upgradeSubtitle}>
-                    Upgrade to premium to access {chapters.length - 3} more chapters
-                  </Text>
-                </View>
-                <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
-              </LinearGradient>
-            </TouchableOpacity>
-          </ModernCard>
-        )}
       </View>
     );
-  }, [chapters, error, loading, navigation, subject, subjects, subjectsLoading, fadeAnim, slideAnim]);
+  }, [chapters, error, loading, navigation, subject, subjects, subjectsLoading, fadeAnim, slideAnim, isPremium, appNavigation]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -399,6 +377,11 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
             {content}
           </Animated.View>
         </ScrollView>
+        <PremiumLockModal
+          visible={premiumModalVisible}
+          onClose={() => setPremiumModalVisible(false)}
+          onBuyPremium={() => appNavigation.navigate('PremiumPurchase')}
+        />
       </LinearGradient>
     </SafeAreaView>
   );
@@ -536,31 +519,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '600',
     fontSize: 10,
-  },
-  upgradeCard: {
-    marginTop: spacing.md,
-    borderRadius: radius.xl + 2,
-    overflow: 'hidden',
-  },
-  upgradeGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.lg,
-    gap: spacing.md,
-  },
-  upgradeContent: {
-    flex: 1,
-  },
-  upgradeTitle: {
-    ...typography.h3,
-    color: '#FFFFFF',
-    fontWeight: '700',
-    marginBottom: spacing.xs / 2,
-  },
-  upgradeSubtitle: {
-    ...typography.body,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 13,
   },
   chapterSubtitle: {
     ...typography.caption,
