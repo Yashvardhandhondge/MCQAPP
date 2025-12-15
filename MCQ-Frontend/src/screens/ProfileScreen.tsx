@@ -182,6 +182,82 @@ export default function ProfileScreen() {
               )}
             </ModernCard>
 
+            {/* Premium Upgrade Banner */}
+            {user?.subscription !== 'premium' && (
+              <TouchableOpacity
+                onPress={() => navigation.navigate('PremiumPurchase')}
+                style={styles.premiumBanner}
+                activeOpacity={0.9}
+              >
+                <LinearGradient
+                  colors={['#FFD700', '#FFA500', '#FF6B35'] as [string, string, ...string[]]}
+                  style={styles.premiumBannerGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View style={styles.premiumBannerContent}>
+                    <View style={styles.premiumIconContainer}>
+                      <Ionicons name="diamond" size={32} color="#FFFFFF" />
+                    </View>
+                    <View style={styles.premiumTextContainer}>
+                      <Text style={styles.premiumBannerTitle}>Upgrade to Premium</Text>
+                      <Text style={styles.premiumBannerSubtitle}>
+                        Unlock all features and excel in your exams
+                      </Text>
+                    </View>
+                    <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+
+            {/* Premium Status Badge (for premium users) */}
+            {user?.subscription === 'premium' && (
+              <ModernCard variant="elevated" padding="lg" style={styles.premiumStatusCard}>
+                <View style={styles.premiumStatusContent}>
+                  <LinearGradient
+                    colors={['#FFD700', '#FFA500'] as [string, string, ...string[]]}
+                    style={styles.premiumStatusIcon}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <Ionicons name="diamond" size={28} color="#FFFFFF" />
+                  </LinearGradient>
+                  <View style={styles.premiumStatusTextContainer}>
+                    <Text style={styles.premiumStatusTitle}>Premium Member</Text>
+                    <Text style={styles.premiumStatusSubtitle}>
+                      You have access to all premium features
+                    </Text>
+                  </View>
+                </View>
+              </ModernCard>
+            )}
+
+            {/* Saved Questions Card */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('SavedQuestions')}
+              style={styles.savedQuestionsCard}
+              activeOpacity={0.9}
+            >
+              <ModernCard variant="elevated" padding="lg" style={styles.savedQuestionsCardContent}>
+                <LinearGradient
+                  colors={[colors.primary, '#6366F1'] as [string, string, ...string[]]}
+                  style={styles.savedQuestionsIcon}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Ionicons name="bookmark" size={28} color="#FFFFFF" />
+                </LinearGradient>
+                <View style={styles.savedQuestionsTextContainer}>
+                  <Text style={styles.savedQuestionsTitle}>Saved Questions</Text>
+                  <Text style={styles.savedQuestionsSubtitle}>
+                    View and practice your saved questions
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={24} color={colors.authTextMuted} />
+              </ModernCard>
+            </TouchableOpacity>
+
             {/* Logout Button */}
             <TouchableOpacity
               onPress={handleLogout}
@@ -396,5 +472,116 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 16,
+  },
+  premiumBanner: {
+    borderRadius: radius.xl + 2,
+    overflow: 'hidden',
+    marginBottom: spacing.xl,
+    ...shadow.xl,
+  },
+  premiumBannerGradient: {
+    padding: spacing.xl,
+  },
+  premiumBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  premiumIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.md,
+  },
+  premiumTextContainer: {
+    flex: 1,
+  },
+  premiumBannerTitle: {
+    ...typography.h3,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 18,
+    marginBottom: spacing.xs / 2,
+  },
+  premiumBannerSubtitle: {
+    ...typography.body,
+    color: 'rgba(255, 255, 255, 0.95)',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  premiumStatusCard: {
+    marginBottom: spacing.xl,
+    backgroundColor: colors.authSurface,
+    borderWidth: 1,
+    borderColor: '#FFD700',
+    borderRadius: radius.xl + 2,
+  },
+  premiumStatusContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  premiumStatusIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.md,
+  },
+  premiumStatusTextContainer: {
+    flex: 1,
+  },
+  premiumStatusTitle: {
+    ...typography.h3,
+    color: colors.authText,
+    fontWeight: '700',
+    fontSize: 18,
+    marginBottom: spacing.xs / 2,
+  },
+  premiumStatusSubtitle: {
+    ...typography.body,
+    color: colors.authTextMuted,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  savedQuestionsCard: {
+    marginBottom: spacing.xl,
+  },
+  savedQuestionsCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.authSurface,
+    borderWidth: 1,
+    borderColor: colors.authBorder,
+    borderRadius: radius.xl + 2,
+  },
+  savedQuestionsIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.md,
+  },
+  savedQuestionsTextContainer: {
+    flex: 1,
+  },
+  savedQuestionsTitle: {
+    ...typography.h3,
+    color: colors.authText,
+    fontWeight: '700',
+    fontSize: 18,
+    marginBottom: spacing.xs / 2,
+  },
+  savedQuestionsSubtitle: {
+    ...typography.body,
+    color: colors.authTextMuted,
+    fontSize: 13,
+    lineHeight: 18,
   },
 });

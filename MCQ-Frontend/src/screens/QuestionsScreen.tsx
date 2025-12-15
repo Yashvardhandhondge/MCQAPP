@@ -18,6 +18,9 @@ import {
   getQuestionsBySubjectChapterAndYear,
   submitAnswer,
   getQuestionSolution,
+  saveQuestion,
+  unsaveQuestion,
+  getSavedStatus,
 } from '../services/mcq.service';
 import type { Question } from '../types/mcq';
 import { colors, radius, spacing, typography, shadow } from '../theme';
@@ -38,6 +41,8 @@ interface QuestionState {
   solution?: string;
   isLoadingSolution: boolean;
   showSolution: boolean;
+  isSaved: boolean;
+  isSaving: boolean;
 }
 
 export default function QuestionsScreen({ route, navigation }: QuestionsScreenProps) {
@@ -94,6 +99,20 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
           // Initialize question states - don't load previous attempts
           // Fresh start each time user visits the screen
           const states = new Map<string, QuestionState>();
+          
+          // Check saved status for all questions
+          const savedStatusPromises = questionsData.map(async (q) => {
+            try {
+              const statusResponse = await getSavedStatus(q._id);
+              return { questionId: q._id, isSaved: statusResponse.data.isSaved };
+            } catch {
+              return { questionId: q._id, isSaved: false };
+            }
+          });
+          
+          const savedStatuses = await Promise.all(savedStatusPromises);
+          const savedStatusMap = new Map(savedStatuses.map(s => [s.questionId, s.isSaved]));
+          
           questionsData.forEach((q) => {
             states.set(q._id, {
               questionId: q._id,
@@ -104,6 +123,8 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
               solution: q.solution,
               isLoadingSolution: false,
               showSolution: false,
+              isSaved: savedStatusMap.get(q._id) || false,
+              isSaving: false,
             });
           });
           setQuestionStates(states);
@@ -221,6 +242,72 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
       
       // You could show an error toast here
       console.error('Failed to submit answer:', error);
+    }
+  };
+
+  const handleSaveQuestion = async (questionId: string) => {
+    const state = questionStates.get(questionId);
+    if (!state || state.isSaving) {
+      return;
+    }
+
+    // Update saving state
+    setQuestionStates((prev) => {
+      const newMap = new Map(prev);
+      const currentState = newMap.get(questionId);
+      if (currentState) {
+        newMap.set(questionId, {
+          ...currentState,
+          isSaving: true,
+        });
+      }
+      return newMap;
+    });
+
+    try {
+      if (state.isSaved) {
+        await unsaveQuestion(questionId);
+        setQuestionStates((prev) => {
+          const newMap = new Map(prev);
+          const currentState = newMap.get(questionId);
+          if (currentState) {
+            newMap.set(questionId, {
+              ...currentState,
+              isSaved: false,
+              isSaving: false,
+            });
+          }
+          return newMap;
+        });
+      } else {
+        await saveQuestion(questionId);
+        setQuestionStates((prev) => {
+          const newMap = new Map(prev);
+          const currentState = newMap.get(questionId);
+          if (currentState) {
+            newMap.set(questionId, {
+              ...currentState,
+              isSaved: true,
+              isSaving: false,
+            });
+          }
+          return newMap;
+        });
+      }
+    } catch (error) {
+      console.error('Failed to save/unsave question:', error);
+      // Revert saving state on error
+      setQuestionStates((prev) => {
+        const newMap = new Map(prev);
+        const currentState = newMap.get(questionId);
+        if (currentState) {
+          newMap.set(questionId, {
+            ...currentState,
+            isSaving: false,
+          });
+        }
+        return newMap;
+      });
     }
   };
 
@@ -413,6 +500,20 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                             <Text style={styles.questionYear}>{question.year}</Text>
                           </View>
                         </View>
+                        <TouchableOpacity
+                          onPress={() => handleSaveQuestion(question._id)}
+                          disabled={questionStates.get(question._id)?.isSaving}
+                          style={styles.saveButton}
+                          activeOpacity={0.7}
+                        >
+                          {questionStates.get(question._id)?.isSaving ? (
+                            <ActivityIndicator size="small" color={colors.primary} />
+                          ) : questionStates.get(question._id)?.isSaved ? (
+                            <Ionicons name="bookmark" size={24} color={colors.primary} />
+                          ) : (
+                            <Ionicons name="bookmark-outline" size={24} color={colors.authTextMuted} />
+                          )}
+                        </TouchableOpacity>
                       </View>
                       <Text style={styles.questionText}>{question.question}</Text>
                       
@@ -860,5 +961,9 @@ const styles = StyleSheet.create({
     color: colors.authText,
     lineHeight: 24,
     fontSize: 15,
+  },
+  saveButton: {
+    padding: spacing.xs,
+    marginLeft: spacing.sm,
   },
 });

@@ -20,6 +20,9 @@ import PracticeByYearScreen from './src/screens/PracticeByYearScreen';
 import GroupSelectionScreen from './src/screens/GroupSelectionScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import PremiumPurchaseScreen from './src/screens/PremiumPurchaseScreen';
+import SavedQuestionsScreen from './src/screens/SavedQuestionsScreen';
+import SavedQuestionsChaptersScreen from './src/screens/SavedQuestionsChaptersScreen';
+import SavedQuestionsListScreen from './src/screens/SavedQuestionsListScreen';
 import BottomTabBar from './src/components/ui/BottomTabBar';
 import { colors, typography } from './src/theme';
 
@@ -179,6 +182,33 @@ function AppStackNavigator() {
       <AppStack.Screen
         name="PremiumPurchase"
         component={PremiumPurchaseScreen}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          animationDuration: 300,
+        }}
+      />
+      <AppStack.Screen
+        name="SavedQuestions"
+        component={SavedQuestionsScreen}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          animationDuration: 300,
+        }}
+      />
+      <AppStack.Screen
+        name="SavedQuestionsChapters"
+        component={SavedQuestionsChaptersScreen}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          animationDuration: 300,
+        }}
+      />
+      <AppStack.Screen
+        name="SavedQuestionsList"
+        component={SavedQuestionsListScreen}
         options={{
           headerShown: false,
           animation: 'slide_from_right',

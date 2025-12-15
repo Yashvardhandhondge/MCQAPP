@@ -151,9 +151,23 @@ const updateGroup = async (req, res, next) => {
 
 const upgradeSubscription = async (req, res, next) => {
   try {
+    const { group } = req.body;
+
+    // Build update object - always upgrade to premium
+    const updateData = { subscription: 'premium' };
+
+    // If group is provided, validate and update it
+    if (group) {
+      const validGroups = ['PCM', 'PCB', 'PCMB'];
+      if (!validGroups.includes(group)) {
+        return next(createError(400, 'Invalid group. Must be one of: PCM, PCB, PCMB'));
+      }
+      updateData.group = group;
+    }
+
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { subscription: 'premium' },
+      updateData,
       { new: true, runValidators: true }
     );
 
@@ -165,7 +179,9 @@ const upgradeSubscription = async (req, res, next) => {
 
     return res.status(200).json({
       success: true,
-      message: 'Subscription upgraded to premium successfully',
+      message: group 
+        ? `Subscription upgraded to premium and group updated to ${group} successfully`
+        : 'Subscription upgraded to premium successfully',
       ...response,
     });
   } catch (error) {

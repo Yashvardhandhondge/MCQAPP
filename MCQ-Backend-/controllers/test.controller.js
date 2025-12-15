@@ -314,7 +314,7 @@ const generateRandomTest = async (req, res, next) => {
     const { questionCount = 25, year, subject } = req.body; // Optional filters
 
     // Validate question count
-    const count = Math.max(10, Math.min(50, parseInt(questionCount) || 25));
+    const count = Math.max(10, Math.min(100, parseInt(questionCount) || 25));
 
     const allModels = getAllModels();
     const subjects = ['Chemistry', 'Physics', 'Maths', 'Biology'];

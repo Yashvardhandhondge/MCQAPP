@@ -40,6 +40,15 @@ const {
 const {
   getQuestionSolution,
 } = require('../controllers/solution.controller');
+const {
+  saveQuestion,
+  unsaveQuestion,
+  getSavedQuestions,
+  getSavedStatus,
+  getSavedQuestionsBySubjects,
+  getSavedQuestionsByChapters,
+  getSavedQuestionsBySubjectAndChapter,
+} = require('../controllers/savedQuestions.controller');
 
 const router = express.Router();
 
@@ -302,5 +311,62 @@ router.get('/me/streak', getStudyStreakAndTodayProgress);
  * @access  Private (requires authentication)
  */
 router.get('/me/analytics/time-series', getTimeSeriesAnalytics);
+
+/**
+ * @route   POST /api/mcq/questions/:questionId/save
+ * @desc    Save a question for the current user
+ * @param   {string} questionId - ID of the question to save
+ * @access  Private (requires authentication)
+ */
+router.post('/questions/:questionId/save', saveQuestion);
+
+/**
+ * @route   DELETE /api/mcq/questions/:questionId/save
+ * @desc    Unsave a question for the current user
+ * @param   {string} questionId - ID of the question to unsave
+ * @access  Private (requires authentication)
+ */
+router.delete('/questions/:questionId/save', unsaveQuestion);
+
+/**
+ * @route   GET /api/mcq/questions/:questionId/saved-status
+ * @desc    Check if a question is saved for the current user
+ * @param   {string} questionId - ID of the question to check
+ * @access  Private (requires authentication)
+ */
+router.get('/questions/:questionId/saved-status', getSavedStatus);
+
+/**
+ * @route   GET /api/mcq/me/saved-questions
+ * @desc    Get all saved questions for the current user
+ * @query   {number} page - Optional page number (default: 1)
+ * @query   {number} limit - Optional limit per page (default: 50, max: 100)
+ * @access  Private (requires authentication)
+ */
+router.get('/me/saved-questions', getSavedQuestions);
+
+/**
+ * @route   GET /api/mcq/me/saved-questions/subjects
+ * @desc    Get saved questions grouped by subject
+ * @access  Private (requires authentication)
+ */
+router.get('/me/saved-questions/subjects', getSavedQuestionsBySubjects);
+
+/**
+ * @route   GET /api/mcq/me/saved-questions/subjects/:subject/chapters
+ * @desc    Get saved questions grouped by chapters for a specific subject
+ * @param   {string} subject - Subject name (Chemistry, Physics, Maths, Biology)
+ * @access  Private (requires authentication)
+ */
+router.get('/me/saved-questions/subjects/:subject/chapters', getSavedQuestionsByChapters);
+
+/**
+ * @route   GET /api/mcq/me/saved-questions/subjects/:subject/chapters/:chapter/questions
+ * @desc    Get saved questions for a specific subject and chapter with user attempts
+ * @param   {string} subject - Subject name (Chemistry, Physics, Maths, Biology)
+ * @param   {string} chapter - Chapter name (URL encoded)
+ * @access  Private (requires authentication)
+ */
+router.get('/me/saved-questions/subjects/:subject/chapters/:chapter/questions', getSavedQuestionsBySubjectAndChapter);
 
 module.exports = router;

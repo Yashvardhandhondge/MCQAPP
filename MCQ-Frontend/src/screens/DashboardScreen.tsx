@@ -376,8 +376,6 @@ export default function DashboardScreen() {
                 icon="checkmark-circle"
                 gradient={colors.gradientAccent}
                 delay={150}
-                locked={!isPremium}
-                onPress={() => !isPremium && navigation.navigate('PremiumPurchase')}
               />
             </View>
 
@@ -388,8 +386,6 @@ export default function DashboardScreen() {
                 icon="trophy"
                 gradient={colors.gradientGold}
                 delay={200}
-                locked={!isPremium}
-                onPress={() => !isPremium && navigation.navigate('PremiumPurchase')}
               />
               <StatCard
                 title="Study Streak"
@@ -398,8 +394,6 @@ export default function DashboardScreen() {
                 icon="flame"
                 gradient={['#F59E0B', '#EF4444']}
                 delay={250}
-                locked={!isPremium}
-                onPress={() => !isPremium && navigation.navigate('PremiumPurchase')}
               />
             </View>
 

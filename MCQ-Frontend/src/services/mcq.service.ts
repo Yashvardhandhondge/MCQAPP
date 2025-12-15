@@ -22,6 +22,12 @@ import type {
     ExamConfigResponse,
     StudyStreakResponse,
     SolutionResponse,
+    SavedQuestionResponse,
+    SaveQuestionResponse,
+    SavedStatusResponse,
+    SavedQuestionsBySubjectResponse,
+    SavedQuestionsByChapterResponse,
+    SavedQuestionsWithAttemptsResponse,
 } from '../types/mcq';
 import { axiosInstance } from './http';
 
@@ -280,7 +286,7 @@ export async function generateRandomTest(
 ): Promise<StartTestResponse> {
   try {
     const payload: { questionCount: number; year?: string; subject?: string } = {
-      questionCount: Math.max(10, Math.min(50, questionCount)),
+      questionCount: Math.max(10, Math.min(100, questionCount)),
     };
     if (year) payload.year = year;
     if (subject) payload.subject = subject;
@@ -432,5 +438,112 @@ export async function getTimeSeriesAnalytics(params?: {
       throw new Error(error.response?.data?.message ?? 'Failed to load analytics');
     }
     throw new Error('Failed to load analytics');
+  }
+}
+
+// Saved Questions functions
+export async function saveQuestion(questionId: string): Promise<SaveQuestionResponse> {
+  try {
+    const response = await axiosInstance.post<SaveQuestionResponse>(
+      `/api/mcq/questions/${encodeURIComponent(questionId)}/save`,
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to save question');
+    }
+    throw new Error('Failed to save question');
+  }
+}
+
+export async function unsaveQuestion(questionId: string): Promise<SaveQuestionResponse> {
+  try {
+    const response = await axiosInstance.delete<SaveQuestionResponse>(
+      `/api/mcq/questions/${encodeURIComponent(questionId)}/save`,
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to unsave question');
+    }
+    throw new Error('Failed to unsave question');
+  }
+}
+
+export async function getSavedQuestions(params?: {
+  page?: number;
+  limit?: number;
+}): Promise<SavedQuestionResponse> {
+  try {
+    const response = await axiosInstance.get<SavedQuestionResponse>(
+      '/api/mcq/me/saved-questions',
+      { params },
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to load saved questions');
+    }
+    throw new Error('Failed to load saved questions');
+  }
+}
+
+export async function getSavedStatus(questionId: string): Promise<SavedStatusResponse> {
+  try {
+    const response = await axiosInstance.get<SavedStatusResponse>(
+      `/api/mcq/questions/${encodeURIComponent(questionId)}/saved-status`,
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to check saved status');
+    }
+    throw new Error('Failed to check saved status');
+  }
+}
+
+// Saved Questions grouped endpoints
+export async function getSavedQuestionsBySubjects(): Promise<SavedQuestionsBySubjectResponse> {
+  try {
+    const response = await axiosInstance.get<SavedQuestionsBySubjectResponse>(
+      '/api/mcq/me/saved-questions/subjects',
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to load saved questions by subjects');
+    }
+    throw new Error('Failed to load saved questions by subjects');
+  }
+}
+
+export async function getSavedQuestionsByChapters(subject: string): Promise<SavedQuestionsByChapterResponse> {
+  try {
+    const response = await axiosInstance.get<SavedQuestionsByChapterResponse>(
+      `/api/mcq/me/saved-questions/subjects/${encodeURIComponent(subject)}/chapters`,
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to load saved questions by chapters');
+    }
+    throw new Error('Failed to load saved questions by chapters');
+  }
+}
+
+export async function getSavedQuestionsBySubjectAndChapter(
+  subject: string,
+  chapter: string,
+): Promise<SavedQuestionsWithAttemptsResponse> {
+  try {
+    const response = await axiosInstance.get<SavedQuestionsWithAttemptsResponse>(
+      `/api/mcq/me/saved-questions/subjects/${encodeURIComponent(subject)}/chapters/${encodeURIComponent(chapter)}/questions`,
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to load saved questions');
+    }
+    throw new Error('Failed to load saved questions');
   }
 }

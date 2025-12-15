@@ -11,7 +11,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (fullName: string, email: string, password: string) => Promise<void>;
   updateUserGroup: (group: 'PCM' | 'PCB' | 'PCMB') => Promise<void>;
-  upgradeSubscription: () => Promise<void>;
+  upgradeSubscription: (group?: 'PCM' | 'PCB' | 'PCMB') => Promise<void>;
   logout: () => void;
 }
 
@@ -105,11 +105,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const upgradeSubscription = useCallback(
-    async () => {
-      console.log('💎 [AUTH CONTEXT] Upgrade subscription called');
+    async (group?: 'PCM' | 'PCB' | 'PCMB') => {
+      console.log('💎 [AUTH CONTEXT] Upgrade subscription called', { group });
       setLoading(true);
       try {
-        const response = await upgradeSubscriptionRequest();
+        const response = await upgradeSubscriptionRequest(group);
         console.log('✅ [AUTH CONTEXT] Upgrade subscription request successful, applying response...');
         applyAuthResponse(response);
         // Reset test count when upgrading to premium

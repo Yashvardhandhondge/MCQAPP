@@ -301,3 +301,64 @@ export interface SolutionResponse {
   success: boolean;
   data: SolutionData;
 }
+
+// Saved Questions types
+export interface SavedQuestionResponse {
+  success: boolean;
+  data: Question[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalQuestions: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
+export interface SaveQuestionResponse {
+  success: boolean;
+  message: string;
+  data: {
+    isSaved: boolean;
+  };
+}
+
+export interface SavedStatusResponse {
+  success: boolean;
+  data: {
+    isSaved: boolean;
+  };
+}
+
+export interface SavedQuestionWithAttempt extends Question {
+  userAttempt: {
+    selectedOption: string;
+    isCorrect: boolean;
+    answeredAt: string;
+  } | null;
+}
+
+export interface SavedQuestionsBySubject {
+  subject: string;
+  questionCount: number;
+}
+
+export interface SavedQuestionsBySubjectResponse {
+  success: boolean;
+  data: SavedQuestionsBySubject[];
+}
+
+export interface SavedQuestionsByChapter {
+  chapter: string;
+  questionCount: number;
+}
+
+export interface SavedQuestionsByChapterResponse {
+  success: boolean;
+  data: SavedQuestionsByChapter[];
+}
+
+export interface SavedQuestionsWithAttemptsResponse {
+  success: boolean;
+  data: SavedQuestionWithAttempt[];
+}

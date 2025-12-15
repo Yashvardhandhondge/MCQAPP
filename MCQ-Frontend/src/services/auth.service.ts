@@ -123,17 +123,21 @@ export async function updateUserGroup(group: 'PCM' | 'PCB' | 'PCMB'): Promise<Au
   }
 }
 
-export async function upgradeSubscription(): Promise<AuthResponse> {
+export async function upgradeSubscription(group?: 'PCM' | 'PCB' | 'PCMB'): Promise<AuthResponse> {
   console.log('💎 [UPGRADE SUBSCRIPTION] Upgrading subscription...', {
     endpoint: '/api/auth/profile/subscription/upgrade',
+    group,
   });
 
   try {
-    const { data } = await axiosInstance.put<AuthResponse>('/api/auth/profile/subscription/upgrade');
+    const { data } = await axiosInstance.put<AuthResponse>('/api/auth/profile/subscription/upgrade', {
+      ...(group && { group }),
+    });
     
     console.log('✅ [UPGRADE SUBSCRIPTION SUCCESS]', {
       user: data.user,
       subscription: data.user.subscription,
+      group: data.user.group,
     });
 
     return data;

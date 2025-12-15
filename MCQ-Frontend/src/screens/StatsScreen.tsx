@@ -761,103 +761,27 @@ export default function StatsScreen() {
                   icon="checkmark-circle-outline"
                   gradient={colors.gradientPrimary}
                 />
-                {isPremium ? (
-                  <>
-                    <MetricCard
-                      label="Correct"
-                      value={overallData.totalCorrect}
-                      icon="checkmark-done-circle-outline"
-                      gradient={colors.gradientAccent}
-                    />
-                    <MetricCard
-                      label="Accuracy"
-                      value={overallPercent}
-                      icon="trophy-outline"
-                      gradient={['#FFD700', '#FFA500']}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <TouchableOpacity
-                      style={{ flex: 1 }}
-                      onPress={() => navigation.navigate('PremiumPurchase')}
-                      activeOpacity={0.8}
-                    >
-                      <View style={styles.lockedMetricCard}>
-                        <LinearGradient
-                          colors={['#64748B', '#475569'] as [string, string, ...string[]]}
-                          style={styles.lockedMetricGradient}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                        >
-                          <View style={styles.lockedMetricIconContainer}>
-                            <Ionicons name="lock-closed" size={20} color="#FFFFFF" />
-                          </View>
-                          <Text style={styles.lockedMetricLabel}>Correct</Text>
-                          <View style={styles.lockedMetricContent}>
-                            <Ionicons name="lock-closed" size={32} color="#FFFFFF" />
-                          </View>
-                        </LinearGradient>
-                      </View>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={{ flex: 1 }}
-                      onPress={() => navigation.navigate('PremiumPurchase')}
-                      activeOpacity={0.8}
-                    >
-                      <View style={styles.lockedMetricCard}>
-                        <LinearGradient
-                          colors={['#64748B', '#475569'] as [string, string, ...string[]]}
-                          style={styles.lockedMetricGradient}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                        >
-                          <View style={styles.lockedMetricIconContainer}>
-                            <Ionicons name="lock-closed" size={20} color="#FFFFFF" />
-                          </View>
-                          <Text style={styles.lockedMetricLabel}>Accuracy</Text>
-                          <View style={styles.lockedMetricContent}>
-                            <Ionicons name="lock-closed" size={32} color="#FFFFFF" />
-                          </View>
-                        </LinearGradient>
-                      </View>
-                    </TouchableOpacity>
-                  </>
-                )}
+                <MetricCard
+                  label="Correct"
+                  value={overallData.totalCorrect}
+                  icon="checkmark-done-circle-outline"
+                  gradient={colors.gradientAccent}
+                />
+                <MetricCard
+                  label="Accuracy"
+                  value={overallPercent}
+                  icon="trophy-outline"
+                  gradient={['#FFD700', '#FFA500']}
+                />
               </View>
 
               <View style={styles.progressSection}>
                 <View style={styles.progressBarContainer}>
                   <ProgressBar progress={overallPercent} height={12} variant="primary" />
-                  {!isPremium && (
-                    <TouchableOpacity
-                      onPress={() => navigation.navigate('PremiumPurchase')}
-                      activeOpacity={0.8}
-                      style={styles.blurOverlay}
-                    >
-                      <View style={styles.blurContent}>
-                        <Ionicons name="lock-closed" size={16} color={colors.primary} />
-                      </View>
-                    </TouchableOpacity>
-                  )}
                 </View>
-                {isPremium ? (
-                  <Text style={styles.accuracyCaption}>
-                    {formatAttempts(overallData.totalCorrect, overallData.totalAttempts)}
-                  </Text>
-                ) : (
-                  <TouchableOpacity
-                    onPress={() => navigation.navigate('PremiumPurchase')}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.blurredTextContainer}>
-                      <Text style={[styles.accuracyCaption, styles.blurredText]}>
-                        {formatAttempts(overallData.totalCorrect, overallData.totalAttempts)}
-                      </Text>
-                      <Ionicons name="lock-closed" size={14} color={colors.primary} style={styles.blurLockIcon} />
-                    </View>
-                  </TouchableOpacity>
-                )}
+                <Text style={styles.accuracyCaption}>
+                  {formatAttempts(overallData.totalCorrect, overallData.totalAttempts)}
+                </Text>
               </View>
 
               {!hasAttempts && (

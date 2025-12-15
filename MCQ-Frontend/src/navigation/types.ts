@@ -32,4 +32,7 @@ export type AppStackParamList = {
   };
   Profile: undefined;
   PremiumPurchase: undefined;
+  SavedQuestions: undefined;
+  SavedQuestionsChapters: { subject: string };
+  SavedQuestionsList: { subject: string; chapter: string };
 };
