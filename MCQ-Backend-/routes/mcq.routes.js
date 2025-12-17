@@ -49,11 +49,26 @@ const {
   getSavedQuestionsByChapters,
   getSavedQuestionsBySubjectAndChapter,
 } = require('../controllers/savedQuestions.controller');
+const {
+  reportQuestion,
+  getReportedQuestionsBySubjects,
+  getReportedQuestionsByChapters,
+  getReportedQuestionsForReview,
+  resolveReport,
+} = require('../controllers/questionReport.controller');
+const { adminAuthGuard } = require('../middleware/admin.middleware');
+const { getUserStats, getAllUsers } = require('../controllers/admin.controller');
+const { getPremiumContent, updatePremiumContent } = require('../controllers/premiumContent.controller');
 
 const router = express.Router();
 
 /**
- * Apply auth middleware to all routes in this router
+ * Public endpoints (no auth required)
+ */
+router.get('/premium-content', getPremiumContent);
+
+/**
+ * Apply auth middleware to all routes below
  * Only authenticated users can access MCQ endpoints
  */
 router.use(authGuard);
@@ -368,5 +383,77 @@ router.get('/me/saved-questions/subjects/:subject/chapters', getSavedQuestionsBy
  * @access  Private (requires authentication)
  */
 router.get('/me/saved-questions/subjects/:subject/chapters/:chapter/questions', getSavedQuestionsBySubjectAndChapter);
+
+/**
+ * @route   POST /api/mcq/questions/:questionId/report
+ * @desc    Report a question
+ * @param   {string} questionId - ID of the question to report
+ * @body    {string} reportType - Type of report: 'wrong-question', 'wrong-options', 'invalid-question'
+ * @body    {string} details - Detailed description of the issue
+ * @access  Private (requires authentication)
+ */
+router.post('/questions/:questionId/report', reportQuestion);
+
+/**
+ * @route   GET /api/mcq/admin/reports/subjects
+ * @desc    Get reported questions grouped by subject (Admin only)
+ * @access  Private (requires admin role)
+ */
+router.get('/admin/reports/subjects', ...adminAuthGuard, getReportedQuestionsBySubjects);
+
+/**
+ * @route   GET /api/mcq/admin/reports/subjects/:subject/chapters
+ * @desc    Get reported questions grouped by chapters for a subject (Admin only)
+ * @param   {string} subject - Subject name (Chemistry, Physics, Maths, Biology)
+ * @access  Private (requires admin role)
+ */
+router.get('/admin/reports/subjects/:subject/chapters', ...adminAuthGuard, getReportedQuestionsByChapters);
+
+/**
+ * @route   GET /api/mcq/admin/reports/subjects/:subject/chapters/:chapter/reviews
+ * @desc    Get reported questions for review (Admin only)
+ * @param   {string} subject - Subject name (Chemistry, Physics, Maths, Biology)
+ * @param   {string} chapter - Chapter name (URL encoded)
+ * @access  Private (requires admin role)
+ */
+router.get('/admin/reports/subjects/:subject/chapters/:chapter/reviews', ...adminAuthGuard, getReportedQuestionsForReview);
+
+/**
+ * @route   PUT /api/mcq/admin/reports/:reportId/resolve
+ * @desc    Resolve or dismiss a report (Admin only)
+ * @param   {string} reportId - ID of the report
+ * @body    {string} action - 'update' or 'dismiss'
+ * @body    {object} questionUpdates - Optional updates to the question
+ * @body    {string} adminNotes - Optional admin notes
+ * @access  Private (requires admin role)
+ */
+router.put('/admin/reports/:reportId/resolve', ...adminAuthGuard, resolveReport);
+
+/**
+ * @route   GET /api/mcq/admin/stats/users
+ * @desc    Get user statistics (Admin only)
+ * @access  Private (requires admin role)
+ */
+router.get('/admin/stats/users', ...adminAuthGuard, getUserStats);
+
+/**
+ * @route   GET /api/mcq/admin/users
+ * @desc    Get all users with pagination (Admin only)
+ * @query   {number} page - Page number (default: 1)
+ * @query   {number} limit - Items per page (default: 50)
+ * @query   {string} subscription - Filter by subscription (free/premium)
+ * @query   {string} group - Filter by group (PCM/PCB/PCMB)
+ * @query   {string} role - Filter by role (student/admin)
+ * @access  Private (requires admin role)
+ */
+router.get('/admin/users', ...adminAuthGuard, getAllUsers);
+
+/**
+ * @route   PUT /api/mcq/admin/premium-content
+ * @desc    Update premium purchase page content (Admin only)
+ * @body    {object} - Premium content object
+ * @access  Private (requires admin role)
+ */
+router.put('/admin/premium-content', ...adminAuthGuard, updatePremiumContent);
 
 module.exports = router;

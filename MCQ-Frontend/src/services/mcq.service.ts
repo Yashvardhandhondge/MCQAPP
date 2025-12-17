@@ -28,6 +28,8 @@ import type {
     SavedQuestionsBySubjectResponse,
     SavedQuestionsByChapterResponse,
     SavedQuestionsWithAttemptsResponse,
+    ReportQuestionPayload,
+    ReportQuestionResponse,
 } from '../types/mcq';
 import { axiosInstance } from './http';
 
@@ -545,5 +547,56 @@ export async function getSavedQuestionsBySubjectAndChapter(
       throw new Error(error.response?.data?.message ?? 'Failed to load saved questions');
     }
     throw new Error('Failed to load saved questions');
+  }
+}
+
+// Premium Content functions
+export async function getPremiumContent(): Promise<{
+  success: boolean;
+  data: {
+    heroBadgeText: string;
+    heroTitle: string;
+    heroSubtitle: string;
+    valueTitle: string;
+    valueDescription: string;
+    features: Array<{ icon: string; text: string }>;
+    pricingPlans: Array<{
+      id: string;
+      name: string;
+      description: string;
+      price: number;
+      gradient: [string, string];
+      icon: string;
+      isPopular: boolean;
+    }>;
+  };
+}> {
+  try {
+    const response = await axiosInstance.get('/api/mcq/premium-content');
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to load premium content');
+    }
+    throw new Error('Failed to load premium content');
+  }
+}
+
+// Question Report functions
+export async function reportQuestion(
+  questionId: string,
+  payload: ReportQuestionPayload,
+): Promise<ReportQuestionResponse> {
+  try {
+    const response = await axiosInstance.post<ReportQuestionResponse>(
+      `/api/mcq/questions/${encodeURIComponent(questionId)}/report`,
+      payload,
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to report question');
+    }
+    throw new Error('Failed to report question');
   }
 }

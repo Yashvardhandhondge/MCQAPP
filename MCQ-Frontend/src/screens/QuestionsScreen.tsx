@@ -21,12 +21,14 @@ import {
   saveQuestion,
   unsaveQuestion,
   getSavedStatus,
+  getUserAttemptsByQuestions,
 } from '../services/mcq.service';
 import type { Question } from '../types/mcq';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import ModernCard from '../components/ui/ModernCard';
 import BackHeader from '../components/ui/BackHeader';
 import GradientButton from '../components/ui/GradientButton';
+import ReportQuestionModal from '../components/ui/ReportQuestionModal';
 
 const QUESTIONS_PER_PAGE = 5;
 
@@ -51,6 +53,9 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
   const [displayedCount, setDisplayedCount] = useState(QUESTIONS_PER_PAGE);
   const [loading, setLoading] = useState(true);
   const [questionStates, setQuestionStates] = useState<Map<string, QuestionState>>(new Map());
+  const [showWithAttempts, setShowWithAttempts] = useState(false);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [reportingQuestionId, setReportingQuestionId] = useState<string | null>(null);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -96,8 +101,7 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
           setQuestions(questionsData);
           setDisplayedCount(QUESTIONS_PER_PAGE);
           
-          // Initialize question states - don't load previous attempts
-          // Fresh start each time user visits the screen
+          // Initialize question states
           const states = new Map<string, QuestionState>();
           
           // Check saved status for all questions
@@ -113,20 +117,64 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
           const savedStatuses = await Promise.all(savedStatusPromises);
           const savedStatusMap = new Map(savedStatuses.map(s => [s.questionId, s.isSaved]));
           
-          questionsData.forEach((q) => {
-            states.set(q._id, {
-              questionId: q._id,
-              selectedOption: null,
-              isCorrect: null,
-              isSubmitted: false,
-              isSubmitting: false,
-              solution: q.solution,
-              isLoadingSolution: false,
-              showSolution: false,
-              isSaved: savedStatusMap.get(q._id) || false,
-              isSaving: false,
+          // If showWithAttempts is enabled, fetch previous attempts
+          if (showWithAttempts) {
+            try {
+              const questionIds = questionsData.map(q => q._id);
+              const attemptsResponse = await getUserAttemptsByQuestions(questionIds);
+              const attemptsMap = attemptsResponse.data;
+              
+              questionsData.forEach((q) => {
+                const attempt = attemptsMap[q._id];
+                states.set(q._id, {
+                  questionId: q._id,
+                  selectedOption: attempt?.selectedOption || null,
+                  isCorrect: attempt?.isCorrect ?? null,
+                  isSubmitted: attempt?.isSubmitted || false,
+                  isSubmitting: false,
+                  solution: q.solution,
+                  isLoadingSolution: false,
+                  showSolution: false,
+                  isSaved: savedStatusMap.get(q._id) || false,
+                  isSaving: false,
+                });
+              });
+            } catch (error) {
+              // If fetching attempts fails, initialize without attempts
+              console.error('Failed to fetch attempts:', error);
+              questionsData.forEach((q) => {
+                states.set(q._id, {
+                  questionId: q._id,
+                  selectedOption: null,
+                  isCorrect: null,
+                  isSubmitted: false,
+                  isSubmitting: false,
+                  solution: q.solution,
+                  isLoadingSolution: false,
+                  showSolution: false,
+                  isSaved: savedStatusMap.get(q._id) || false,
+                  isSaving: false,
+                });
+              });
+            }
+          } else {
+            // Fresh start - no previous attempts
+            questionsData.forEach((q) => {
+              states.set(q._id, {
+                questionId: q._id,
+                selectedOption: null,
+                isCorrect: null,
+                isSubmitted: false,
+                isSubmitting: false,
+                solution: q.solution,
+                isLoadingSolution: false,
+                showSolution: false,
+                isSaved: savedStatusMap.get(q._id) || false,
+                isSaving: false,
+              });
             });
-          });
+          }
+          
           setQuestionStates(states);
         }
       } catch {
@@ -146,7 +194,7 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
     return () => {
       isMounted = false;
     };
-  }, [chapter, mode, subject, year, randomQuestions]);
+  }, [chapter, mode, subject, year, randomQuestions, showWithAttempts]);
 
   // Reset question states when navigating away or when questions change
   useEffect(() => {
@@ -449,6 +497,37 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
           subtitle={headerSubtitle}
           onBack={() => navigation.goBack()}
         />
+        {/* Toggle Button for Showing Attempts */}
+        <View style={styles.toggleContainer}>
+          <TouchableOpacity
+            onPress={() => setShowWithAttempts(!showWithAttempts)}
+            activeOpacity={0.8}
+            style={styles.toggleButton}
+          >
+            <LinearGradient
+              colors={showWithAttempts ? (colors.gradientPrimary as [string, string, ...string[]]) : ([colors.authSurface, colors.authSurface] as [string, string, ...string[]])}
+              style={[
+                styles.toggleGradient,
+                { borderColor: showWithAttempts ? colors.primary : colors.authBorder }
+              ]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Ionicons 
+                name={showWithAttempts ? "checkmark-circle" : "refresh"} 
+                size={20} 
+                color={showWithAttempts ? "#FFFFFF" : colors.authTextMuted} 
+                style={{ marginRight: spacing.xs }}
+              />
+              <Text style={[
+                styles.toggleText,
+                showWithAttempts && styles.toggleTextActive
+              ]}>
+                {showWithAttempts ? 'Showing My Attempts' : 'Show My Attempts'}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
         <ScrollView
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}
@@ -500,20 +579,33 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                             <Text style={styles.questionYear}>{question.year}</Text>
                           </View>
                         </View>
-                        <TouchableOpacity
-                          onPress={() => handleSaveQuestion(question._id)}
-                          disabled={questionStates.get(question._id)?.isSaving}
-                          style={styles.saveButton}
-                          activeOpacity={0.7}
-                        >
-                          {questionStates.get(question._id)?.isSaving ? (
-                            <ActivityIndicator size="small" color={colors.primary} />
-                          ) : questionStates.get(question._id)?.isSaved ? (
-                            <Ionicons name="bookmark" size={24} color={colors.primary} />
-                          ) : (
-                            <Ionicons name="bookmark-outline" size={24} color={colors.authTextMuted} />
-                          )}
-                        </TouchableOpacity>
+                        <View style={styles.headerActions}>
+                          <TouchableOpacity
+                            onPress={() => {
+                              console.log('Report button pressed for question:', question._id);
+                              setReportingQuestionId(question._id);
+                              setReportModalVisible(true);
+                            }}
+                            style={styles.reportButton}
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons name="flag-outline" size={20} color={colors.danger} />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => handleSaveQuestion(question._id)}
+                            disabled={questionStates.get(question._id)?.isSaving}
+                            style={styles.saveButton}
+                            activeOpacity={0.7}
+                          >
+                            {questionStates.get(question._id)?.isSaving ? (
+                              <ActivityIndicator size="small" color={colors.primary} />
+                            ) : questionStates.get(question._id)?.isSaved ? (
+                              <Ionicons name="bookmark" size={24} color={colors.primary} />
+                            ) : (
+                              <Ionicons name="bookmark-outline" size={24} color={colors.authTextMuted} />
+                            )}
+                          </TouchableOpacity>
+                        </View>
                       </View>
                       <Text style={styles.questionText}>{question.question}</Text>
                       
@@ -521,7 +613,8 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                       <View style={styles.optionsContainer}>
                         {question.options?.map((option, optionIndex) => {
                           const state = questionStates.get(question._id);
-                          const isDisabled = state?.isSubmitted || state?.isSubmitting;
+                          // Allow interaction if showing previous attempts (for reattempts) or if not submitted yet
+                          const isDisabled = (!showWithAttempts && state?.isSubmitted) || state?.isSubmitting;
                           
                           return (
                             <TouchableOpacity
@@ -551,6 +644,14 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                           );
                         })}
                       </View>
+
+                      {/* Previous Attempt Indicator */}
+                      {showWithAttempts && questionStates.get(question._id)?.isSubmitted && (
+                        <View style={styles.previousAttemptBadge}>
+                          <Ionicons name="time-outline" size={14} color={colors.primary} />
+                          <Text style={styles.previousAttemptText}>Previous Attempt</Text>
+                        </View>
+                      )}
 
                       {/* Result Feedback */}
                       {questionStates.get(question._id)?.isSubmitted && (
@@ -680,6 +781,16 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
           )}
         </ScrollView>
       </LinearGradient>
+      {reportingQuestionId && (
+        <ReportQuestionModal
+          visible={reportModalVisible}
+          questionId={reportingQuestionId}
+          onClose={() => {
+            setReportModalVisible(false);
+            setReportingQuestionId(null);
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -962,8 +1073,60 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     fontSize: 15,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  reportButton: {
+    padding: spacing.xs,
+  },
   saveButton: {
     padding: spacing.xs,
-    marginLeft: spacing.sm,
+  },
+  previousAttemptBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.md,
+    alignSelf: 'flex-start',
+    marginBottom: spacing.sm,
+  },
+  previousAttemptText: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  toggleContainer: {
+    paddingHorizontal: spacing.xxl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  toggleButton: {
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    ...shadow.md,
+  },
+  toggleGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderWidth: 2,
+  },
+  toggleText: {
+    ...typography.subtitle,
+    color: colors.authTextMuted,
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  toggleTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
 });

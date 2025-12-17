@@ -23,6 +23,26 @@ const authGuard = async (req, res, next) => {
     }
 
     const decoded = verifyToken(token);
+    
+    // Check if it's the hardcoded super admin
+    const SUPER_ADMIN_ID = '000000000000000000000001';
+    if (decoded.id === SUPER_ADMIN_ID) {
+      // Create virtual super admin user object
+      req.user = {
+        _id: SUPER_ADMIN_ID,
+        fullName: 'Super Admin',
+        email: 'yashclass@gmail.com',
+        role: 'admin',
+        group: null,
+        subscription: 'premium',
+        savedQuestions: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      return next();
+    }
+
+    // Normal user - check database
     const user = await User.findById(decoded.id);
 
     if (!user) {

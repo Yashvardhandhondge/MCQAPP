@@ -72,6 +72,52 @@ const login = async (req, res, next) => {
       return next(createError(400, 'Email and password are required'));
     }
 
+    // Hardcoded Super Admin credentials
+    const SUPER_ADMIN_EMAIL = 'yashclass@gmail.com';
+    const SUPER_ADMIN_PASSWORD = '12345678';
+    const SUPER_ADMIN_ID = '000000000000000000000001'; // Hardcoded ObjectId
+
+    // Check if it's the hardcoded super admin
+    if (email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() && password === SUPER_ADMIN_PASSWORD) {
+      console.log('Super admin login detected');
+      
+      // Create a virtual user object for super admin
+      const superAdminUser = {
+        _id: SUPER_ADMIN_ID,
+        fullName: 'Super Admin',
+        email: SUPER_ADMIN_EMAIL,
+        role: 'admin',
+        group: null,
+        subscription: 'premium',
+        savedQuestions: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        toJSON: function() {
+          return {
+            _id: this._id,
+            fullName: this.fullName,
+            email: this.email,
+            role: this.role,
+            group: this.group,
+            subscription: this.subscription,
+            savedQuestions: this.savedQuestions,
+            createdAt: this.createdAt,
+            updatedAt: this.updatedAt,
+          };
+        }
+      };
+
+      const response = buildAuthPayload(superAdminUser);
+      console.log('Super admin login successful');
+
+      return res.status(200).json({
+        success: true,
+        message: 'Logged in successfully',
+        ...response,
+      });
+    }
+
+    // Normal user login - check database
     const user = await User.findOne({ email }).select('+password');
     console.log('User found in database:', user ? 'YES' : 'NO');
 

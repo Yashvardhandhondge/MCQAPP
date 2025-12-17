@@ -362,3 +362,19 @@ export interface SavedQuestionsWithAttemptsResponse {
   success: boolean;
   data: SavedQuestionWithAttempt[];
 }
+
+// Question Report types
+export type ReportType = 'wrong-question' | 'wrong-options' | 'invalid-question';
+
+export interface ReportQuestionPayload {
+  reportType: ReportType;
+  details: string;
+}
+
+export interface ReportQuestionResponse {
+  success: boolean;
+  message: string;
+  data: {
+    reportId: string;
+  };
+}

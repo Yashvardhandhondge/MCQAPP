@@ -19,72 +19,118 @@ import { useAuth } from '../context/AuthContext';
 import type { AppStackParamList } from '../navigation/types';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import ModernCard from '../components/ui/ModernCard';
-
-const PRICING_PLANS = [
-  {
-    id: 'PCM',
-    name: 'PCM',
-    description: 'Physics, Chemistry, Mathematics',
-    price: 399,
-    gradient: ['#6366F1', '#4F46E5'],
-    icon: 'calculator',
-  },
-  {
-    id: 'PCB',
-    name: 'PCB',
-    description: 'Physics, Chemistry, Biology',
-    price: 399,
-    gradient: ['#8B5CF6', '#7C3AED'],
-    icon: 'flask',
-  },
-  {
-    id: 'PCMB',
-    name: 'PCMB',
-    description: 'Physics, Chemistry, Mathematics, Biology',
-    price: 499,
-    gradient: ['#10B981', '#059669'],
-    icon: 'school',
-  },
-];
-
-const FEATURES = [
-  { icon: 'library', text: '4000+ questions for each subject' },
-  { icon: 'calendar', text: 'Include all PYQ from 2015' },
-  { icon: 'analytics', text: 'Solid analytics' },
-  { icon: 'trophy', text: 'Compete with your peers' },
-  { icon: 'sparkles', text: 'AI analyzed solutions for all questions' },
-];
+import { getPremiumContent } from '../services/mcq.service';
 
 export default function PremiumPurchaseScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { user, upgradeSubscription, loading } = useAuth();
   const [purchasing, setPurchasing] = useState(false);
+  const [content, setContent] = useState<{
+    heroBadgeText: string;
+    heroTitle: string;
+    heroSubtitle: string;
+    valueTitle: string;
+    valueDescription: string;
+    features: Array<{ icon: string; text: string }>;
+    pricingPlans: Array<{
+      id: string;
+      name: string;
+      description: string;
+      price: number;
+      gradient: [string, string];
+      icon: string;
+      isPopular: boolean;
+    }>;
+  } | null>(null);
+  const [contentLoading, setContentLoading] = useState(true);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
 
   useEffect(() => {
-    // Entrance animations
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    // Fetch premium content
+    async function loadContent() {
+      try {
+        setContentLoading(true);
+        const response = await getPremiumContent();
+        setContent(response.data);
+      } catch (error) {
+        console.error('Failed to load premium content:', error);
+        // Fallback to default content
+        setContent({
+          heroBadgeText: 'Ace Your 2026 Exams',
+          heroTitle: 'Your Complete\nMCQ Preparation Solution',
+          heroSubtitle: 'Join 1,000+ students preparing for Maharashtra competitive exams',
+          valueTitle: 'Save 80-90% on Study Materials',
+          valueDescription: 'Get comprehensive question banks, PYQs, and solutions at a fraction of book costs',
+          features: [
+            { icon: 'library', text: '4000+ questions for each subject' },
+            { icon: 'calendar', text: 'Include all PYQ from 2015' },
+            { icon: 'analytics', text: 'Solid analytics' },
+            { icon: 'trophy', text: 'Compete with your peers' },
+            { icon: 'sparkles', text: 'AI analyzed solutions for all questions' },
+          ],
+          pricingPlans: [
+            {
+              id: 'PCM',
+              name: 'PCM',
+              description: 'Physics, Chemistry, Mathematics',
+              price: 399,
+              gradient: ['#6366F1', '#4F46E5'],
+              icon: 'calculator',
+              isPopular: false,
+            },
+            {
+              id: 'PCB',
+              name: 'PCB',
+              description: 'Physics, Chemistry, Biology',
+              price: 399,
+              gradient: ['#8B5CF6', '#7C3AED'],
+              icon: 'flask',
+              isPopular: false,
+            },
+            {
+              id: 'PCMB',
+              name: 'PCMB',
+              description: 'Physics, Chemistry, Mathematics, Biology',
+              price: 499,
+              gradient: ['#10B981', '#059669'],
+              icon: 'school',
+              isPopular: true,
+            },
+          ],
+        });
+      } finally {
+        setContentLoading(false);
+      }
+    }
+    loadContent();
   }, []);
 
-  const handlePurchase = useCallback(async (planId: string) => {
-    if (purchasing || loading) return;
+  useEffect(() => {
+    if (content) {
+      // Entrance animations
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          tension: 50,
+          friction: 7,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [content]);
 
-    const plan = PRICING_PLANS.find(p => p.id === planId);
+  const handlePurchase = useCallback(async (planId: string) => {
+    if (purchasing || loading || !content) return;
+
+    const plan = content.pricingPlans.find(p => p.id === planId);
     const planName = plan?.name || planId;
 
     Alert.alert(
@@ -124,9 +170,22 @@ export default function PremiumPurchaseScreen() {
       ],
       { cancelable: true }
     );
-  }, [purchasing, loading, upgradeSubscription, navigation, user?.group]);
+  }, [purchasing, loading, upgradeSubscription, navigation, user?.group, content]);
 
-  const selectedPlan = user?.group ? PRICING_PLANS.find(p => p.id === user.group) : PRICING_PLANS[0];
+  if (contentLoading || !content) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <LinearGradient colors={colors.gradientAuthLight as [string, string, ...string[]]} style={styles.backgroundGradient}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>Loading...</Text>
+          </View>
+        </LinearGradient>
+      </SafeAreaView>
+    );
+  }
+
+  const selectedPlan = user?.group ? content.pricingPlans.find(p => p.id === user.group) : content.pricingPlans[0];
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -160,13 +219,13 @@ export default function PremiumPurchaseScreen() {
             <View style={styles.heroSection}>
               <View style={styles.heroBadge}>
                 <Ionicons name="rocket" size={16} color={colors.primary} />
-                <Text style={styles.heroBadgeText}>Ace Your 2026 Exams</Text>
+                <Text style={styles.heroBadgeText}>{content.heroBadgeText}</Text>
               </View>
               <Text style={styles.heroTitle}>
-                Your Complete{'\n'}MCQ Preparation Solution
+                {content.heroTitle.replace(/\\n/g, '\n')}
               </Text>
               <Text style={styles.heroSubtitle}>
-                Join 1,000+ students preparing for Maharashtra competitive exams
+                {content.heroSubtitle}
               </Text>
             </View>
 
@@ -184,9 +243,9 @@ export default function PremiumPurchaseScreen() {
                   </LinearGradient>
                 </View>
                 <View style={styles.valueTextWrapper}>
-                  <Text style={styles.valueTitle}>Save 80-90% on Study Materials</Text>
+                  <Text style={styles.valueTitle}>{content.valueTitle}</Text>
                   <Text style={styles.valueDescription}>
-                    Get comprehensive question banks, PYQs, and solutions at a fraction of book costs
+                    {content.valueDescription}
                   </Text>
                 </View>
               </View>
@@ -194,7 +253,7 @@ export default function PremiumPurchaseScreen() {
 
             {/* Features Grid */}
             <View style={styles.featuresGrid}>
-              {FEATURES.map((feature, index) => (
+              {content.features.map((feature, index) => (
                 <View key={index} style={styles.featureCard}>
                   <View style={styles.featureIconContainer}>
                     <Ionicons name={feature.icon as any} size={24} color={colors.primary} />
@@ -210,7 +269,7 @@ export default function PremiumPurchaseScreen() {
                 <Text style={styles.pricingTitle}>Select Your Stream</Text>
                 <Text style={styles.pricingSubtitle}>Choose the plan that matches your exam preparation</Text>
               </View>
-              {PRICING_PLANS.map((plan, index) => {
+              {content.pricingPlans.map((plan, index) => {
                 const isSelected = user?.group === plan.id;
                 return (
                   <TouchableOpacity
@@ -239,7 +298,7 @@ export default function PremiumPurchaseScreen() {
                             <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
                           </View>
                         )}
-                        {plan.id === 'PCMB' && !isSelected && (
+                        {plan.isPopular && !isSelected && (
                           <View style={styles.popularBadge}>
                             <Text style={styles.popularBadgeText}>Popular</Text>
                           </View>
@@ -596,6 +655,16 @@ const styles = StyleSheet.create({
     color: colors.authTextMuted,
     fontSize: 14,
     lineHeight: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  loadingText: {
+    ...typography.body,
+    color: colors.authTextMuted,
   },
 });
 

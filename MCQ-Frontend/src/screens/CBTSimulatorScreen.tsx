@@ -20,6 +20,7 @@ import { colors, radius, spacing, typography, shadow } from '../theme';
 import ModernCard from '../components/ui/ModernCard';
 import GradientButton from '../components/ui/GradientButton';
 import BackHeader from '../components/ui/BackHeader';
+import ReportQuestionModal from '../components/ui/ReportQuestionModal';
 import { getQuestionsByIds, submitTestSession } from '../services/mcq.service';
 import type { Question } from '../types/mcq';
 
@@ -46,6 +47,7 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
   const [timeLeft, setTimeLeft] = useState(5400); // 90 minutes in seconds
   const [submitting, setSubmitting] = useState(false);
   const [showQuestionsOverlay, setShowQuestionsOverlay] = useState(false);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -605,6 +607,13 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
           </Animated.View>
         )}
       </LinearGradient>
+      {currentQuestion?._id && (
+        <ReportQuestionModal
+          visible={reportModalVisible}
+          questionId={currentQuestion._id}
+          onClose={() => setReportModalVisible(false)}
+        />
+      )}
     </View>
   );
 }
@@ -849,7 +858,13 @@ const styles = StyleSheet.create({
   selectedIconContainer: {
     marginLeft: spacing.xs,
   },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.lg,
+  },
   markForReviewButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -860,7 +875,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.authInputBg,
     borderWidth: 2,
     borderColor: colors.warning,
-    marginTop: spacing.lg,
+  },
+  reportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.lg,
+    backgroundColor: colors.authInputBg,
+    borderWidth: 2,
+    borderColor: colors.danger,
+  },
+  reportButtonText: {
+    ...typography.subtitle,
+    color: colors.danger,
+    fontWeight: '600',
   },
   markForReviewButtonActive: {
     backgroundColor: colors.warning,
