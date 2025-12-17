@@ -13,16 +13,22 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { AppStackParamList } from '../navigation/types';
+import { useAuth } from '../context/AuthContext';
 import { generateChapterPractice } from '../services/mcq.service';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import ModernCard from '../components/ui/ModernCard';
 import BackHeader from '../components/ui/BackHeader';
+import PremiumLockModal from '../components/ui/PremiumLockModal';
 
 export type ChapterDetailScreenProps = NativeStackScreenProps<AppStackParamList, 'ChapterDetail'>;
 
 export default function ChapterDetailScreen({ route, navigation }: ChapterDetailScreenProps) {
-  const { subject, chapter } = route.params;
+  const { subject, chapter, chapterIndex } = route.params;
   const [generatingPractice, setGeneratingPractice] = useState(false);
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
+  const { user } = useAuth();
+  const isPremium = user?.subscription === 'premium';
+  const isWithinFreeChapters = isPremium || chapterIndex <= 2; // first 3 chapters (0,1,2) are free for non-premium
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -46,6 +52,13 @@ export default function ChapterDetailScreen({ route, navigation }: ChapterDetail
 
 
   const handleSolveAll = async () => {
+    // Enforce free limit for non-premium users:
+    // Only the first 3 chapters (by order in the chapters list) are fully unlocked.
+    if (!isWithinFreeChapters) {
+      setPremiumModalVisible(true);
+      return;
+    }
+
     setGeneratingPractice(true);
     try {
       // Generate random practice test with unattempted questions and create test session
@@ -67,12 +80,20 @@ export default function ChapterDetailScreen({ route, navigation }: ChapterDetail
       }
     } catch (error) {
       console.error('Failed to generate practice:', error);
-      // Fallback to regular mode on error
-      navigation.navigate('Questions', {
-        subject,
-        chapter,
-        mode: 'all',
-      });
+
+      // If backend indicates this chapter is premium-only, show premium modal
+      const message =
+        (error as Error)?.message?.toLowerCase?.() ?? '';
+      if (message.includes('premium')) {
+        setPremiumModalVisible(true);
+      } else {
+        // Fallback to regular mode on non-premium-related errors
+        navigation.navigate('Questions', {
+          subject,
+          chapter,
+          mode: 'all',
+        });
+      }
     } finally {
       setGeneratingPractice(false);
     }
@@ -82,6 +103,7 @@ export default function ChapterDetailScreen({ route, navigation }: ChapterDetail
     navigation.navigate('PracticeByYear', {
       subject,
       chapter,
+      chapterIndex,
     });
   };
 
@@ -174,6 +196,14 @@ export default function ChapterDetailScreen({ route, navigation }: ChapterDetail
             </TouchableOpacity>
           </Animated.View>
         </ScrollView>
+        <PremiumLockModal
+          visible={premiumModalVisible}
+          onClose={() => setPremiumModalVisible(false)}
+          onBuyPremium={() => {
+            setPremiumModalVisible(false);
+            navigation.navigate('PremiumPurchase');
+          }}
+        />
       </LinearGradient>
     </SafeAreaView>
   );

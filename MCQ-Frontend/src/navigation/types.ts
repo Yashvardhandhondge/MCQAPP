@@ -14,8 +14,8 @@ export type TabParamList = {
 export type AppStackParamList = {
   GroupSelection: undefined;
   MainTabs: undefined;
-  ChapterDetail: { subject: string; chapter: string };
-  PracticeByYear: { subject: string; chapter: string };
+  ChapterDetail: { subject: string; chapter: string; chapterIndex: number };
+  PracticeByYear: { subject: string; chapter: string; chapterIndex: number };
   Questions: {
     subject: string;
     chapter: string;

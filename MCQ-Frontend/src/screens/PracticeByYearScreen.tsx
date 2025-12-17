@@ -13,19 +13,24 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { AppStackParamList } from '../navigation/types';
+import { useAuth } from '../context/AuthContext';
 import { getYearsWithAnalytics } from '../services/mcq.service';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import ModernCard from '../components/ui/ModernCard';
 import BackHeader from '../components/ui/BackHeader';
+import PremiumLockModal from '../components/ui/PremiumLockModal';
 import type { YearAnalytics } from '../types/mcq';
 
 export type PracticeByYearScreenProps = NativeStackScreenProps<AppStackParamList, 'PracticeByYear'>;
 
 export default function PracticeByYearScreen({ route, navigation }: PracticeByYearScreenProps) {
-  const { subject, chapter } = route.params;
+  const { subject, chapter, chapterIndex } = route.params;
   const [years, setYears] = useState<YearAnalytics[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
+  const { user } = useAuth();
+  const isPremium = user?.subscription === 'premium';
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -79,7 +84,29 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
     };
   }, [chapter, subject]);
 
-  const handleYearClick = (year: string) => {
+  const handleYearClick = async (year: string, index: number) => {
+    // Premium users have full access
+    if (isPremium) {
+      navigation.navigate('Questions', {
+        subject,
+        chapter,
+        mode: 'year',
+        year,
+      });
+      return;
+    }
+
+    const isNonPremium = !isPremium;
+    const isWithinFreeChapters = !isNonPremium || chapterIndex <= 2; // first 3 chapters by order
+
+    // For non-premium users:
+    // - For the first 3 chapters (by index), all years are unlocked.
+    // - For later chapters, only the first year (index 0) is unlocked.
+    if (isNonPremium && !isWithinFreeChapters && index > 0) {
+      setPremiumModalVisible(true);
+      return;
+    }
+
     navigation.navigate('Questions', {
       subject,
       chapter,
@@ -116,12 +143,20 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
       );
     }
 
+    const isNonPremium = !isPremium;
+    const isWithinFreeChapters = !isNonPremium || chapterIndex <= 2;
+
     return (
       <View style={styles.yearList}>
         {years.map((item, index) => {
-          const progressPercentage = item.totalQuestions > 0 
-            ? Math.round((item.userAttempts / item.totalQuestions) * 100) 
+          const progressPercentage = item.totalQuestions > 0
+            ? Math.round((item.userAttempts / item.totalQuestions) * 100)
             : 0;
+
+          // For non-premium users:
+          // - For the first 3 chapters (by order): all years are unlocked.
+          // - After that, for later chapters: only the first year (index 0) is unlocked.
+          const isLocked = isNonPremium && !isWithinFreeChapters && index > 0;
           
           return (
             <Animated.View
@@ -139,16 +174,42 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
               }}
             >
               <TouchableOpacity
-                onPress={() => handleYearClick(item.year)}
+                onPress={() => handleYearClick(item.year, index)}
                 activeOpacity={0.8}
               >
-                <ModernCard variant="elevated" padding="lg" style={styles.yearCard}>
+                <ModernCard
+                  variant="elevated"
+                  padding="lg"
+                  style={[
+                    styles.yearCard,
+                    isLocked && styles.lockedCard,
+                  ]}
+                >
                   <View style={styles.yearContent}>
                     <View style={styles.yearIconContainer}>
-                      <Ionicons name="calendar" size={24} color={colors.primary} />
+                      <Ionicons
+                        name={isLocked ? 'lock-closed' : 'calendar'}
+                        size={24}
+                        color={isLocked ? colors.authTextMuted : colors.primary}
+                      />
                     </View>
                     <View style={styles.yearInfo}>
-                      <Text style={styles.yearName}>{item.year}</Text>
+                      <View style={styles.yearHeaderRow}>
+                        <Text
+                          style={[
+                            styles.yearName,
+                            isLocked && styles.lockedText,
+                          ]}
+                        >
+                          {item.year}
+                        </Text>
+                        {isLocked && (
+                          <View style={styles.premiumBadge}>
+                            <Ionicons name="diamond" size={12} color={colors.primary} />
+                            <Text style={styles.premiumBadgeText}>Premium</Text>
+                          </View>
+                        )}
+                      </View>
                       <View style={styles.yearStats}>
                         <View style={styles.statItem}>
                           <Ionicons name="document-text" size={14} color={colors.authTextMuted} />
@@ -212,6 +273,14 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
             {renderContent()}
           </Animated.View>
         </ScrollView>
+        <PremiumLockModal
+          visible={premiumModalVisible}
+          onClose={() => setPremiumModalVisible(false)}
+          onBuyPremium={() => {
+            setPremiumModalVisible(false);
+            navigation.navigate('PremiumPurchase');
+          }}
+        />
       </LinearGradient>
     </SafeAreaView>
   );
@@ -238,6 +307,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     borderRadius: radius.xl + 2,
   },
+  lockedCard: {
+    opacity: 0.7,
+  },
   yearContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -255,11 +327,19 @@ const styles = StyleSheet.create({
   yearInfo: {
     flex: 1,
   },
+  yearHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   yearName: {
     ...typography.h3,
     color: colors.authText,
     fontWeight: '700',
     marginBottom: spacing.xs,
+  },
+  lockedText: {
+    color: colors.authTextMuted,
   },
   yearStats: {
     flexDirection: 'row',
@@ -298,6 +378,21 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 11,
     fontWeight: '600',
+  },
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs / 2,
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+    borderRadius: radius.sm,
+  },
+  premiumBadgeText: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600',
+    fontSize: 10,
   },
   stateCard: {
     backgroundColor: colors.authSurface,

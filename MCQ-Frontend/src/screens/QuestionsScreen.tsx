@@ -29,6 +29,7 @@ import ModernCard from '../components/ui/ModernCard';
 import BackHeader from '../components/ui/BackHeader';
 import GradientButton from '../components/ui/GradientButton';
 import ReportQuestionModal from '../components/ui/ReportQuestionModal';
+import PremiumLockModal from '../components/ui/PremiumLockModal';
 
 const QUESTIONS_PER_PAGE = 5;
 
@@ -56,6 +57,7 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
   const [showWithAttempts, setShowWithAttempts] = useState(false);
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [reportingQuestionId, setReportingQuestionId] = useState<string | null>(null);
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -177,8 +179,20 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
           
           setQuestionStates(states);
         }
-      } catch {
-        // Silently handle errors - just show empty list
+      } catch (error) {
+        // If backend says this chapter is premium-only, show premium modal instead of silent failure.
+        // mcq.service wraps axios errors into a regular Error with a message, so we inspect the message.
+        const message = (error as Error)?.message?.toLowerCase?.() ?? '';
+
+        if (message.includes('premium')) {
+          if (isMounted) {
+            setPremiumModalVisible(true);
+          }
+        } else {
+          console.error('Failed to load questions:', error);
+        }
+
+        // In all error cases, show empty list
         if (isMounted) {
           setQuestions([]);
         }
@@ -791,6 +805,14 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
           }}
         />
       )}
+      <PremiumLockModal
+        visible={premiumModalVisible}
+        onClose={() => setPremiumModalVisible(false)}
+        onBuyPremium={() => {
+          setPremiumModalVisible(false);
+          navigation.navigate('PremiumPurchase');
+        }}
+      />
     </SafeAreaView>
   );
 }

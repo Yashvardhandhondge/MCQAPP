@@ -233,16 +233,12 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
       );
     }
 
-    // Show ALL chapters for both premium and non-premium users
-    // For non-premium users: first 3 are unlocked, rest are locked
     return (
       <View style={styles.chapterList}>
         {chapters.map((item, index) => {
           const progressPercentage = item.totalQuestions > 0 
             ? Math.round((item.userAttempts / item.totalQuestions) * 100) 
             : 0;
-          // First 3 chapters (index 0-2) are unlocked for non-premium users
-          const isLocked = !isPremium && index >= 3;
           
           return (
             <Animated.View
@@ -261,14 +257,12 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
             >
               <TouchableOpacity
                 onPress={() => {
-                  if (isLocked) {
-                    setPremiumModalVisible(true);
-                    return;
-                  }
-                  // Navigate to chapter detail using parent navigator
+                  // Navigate to chapter detail using parent navigator.
+                  // We pass the chapterIndex so non-premium limits can be applied to the first 3 chapters only.
                   (navigation as any).getParent()?.navigate('ChapterDetail', {
                     subject,
                     chapter: item.chapter,
+                    chapterIndex: index,
                   });
                 }}
                 activeOpacity={0.8}
@@ -276,24 +270,13 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
                 <ModernCard variant="elevated" padding="lg" style={styles.chapterCard}>
                   <View style={styles.chapterContent}>
                     <View style={styles.chapterIconContainer}>
-                      {isLocked ? (
-                        <Ionicons name="lock-closed" size={24} color={colors.authTextMuted} />
-                      ) : (
-                        <Ionicons name="book" size={24} color={colors.primary} />
-                      )}
+                      <Ionicons name="book" size={24} color={colors.primary} />
                     </View>
                     <View style={styles.chapterInfo}>
                       <View style={styles.chapterNameRow}>
                         <Text style={styles.chapterName}>{item.chapter}</Text>
-                        {isLocked && (
-                          <View style={styles.premiumBadge}>
-                            <Ionicons name="diamond" size={12} color={colors.primary} />
-                            <Text style={styles.premiumBadgeText}>Premium</Text>
-                          </View>
-                        )}
                       </View>
-                      {isLocked ? (
-                        // Locked chapter: show only question count
+                      <>
                         <View style={styles.chapterStats}>
                           <View style={styles.statItem}>
                             <Ionicons name="document-text" size={14} color={colors.authTextMuted} />
@@ -301,39 +284,27 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
                               {item.totalQuestions.toLocaleString()} available
                             </Text>
                           </View>
-                        </View>
-                      ) : (
-                        // Unlocked chapter: show full stats
-                        <>
-                          <View style={styles.chapterStats}>
-                            <View style={styles.statItem}>
-                              <Ionicons name="document-text" size={14} color={colors.authTextMuted} />
-                              <Text style={styles.statText}>
-                                {item.totalQuestions.toLocaleString()} available
-                              </Text>
-                            </View>
-                            <View style={styles.statItem}>
-                              <Ionicons name="checkmark-circle" size={14} color="#10B981" />
-                              <Text style={styles.statText}>
-                                {item.userAttempts.toLocaleString()} solved
-                              </Text>
-                            </View>
+                          <View style={styles.statItem}>
+                            <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                            <Text style={styles.statText}>
+                              {item.userAttempts.toLocaleString()} solved
+                            </Text>
                           </View>
-                          {item.totalQuestions > 0 && (
-                            <View style={styles.progressContainer}>
-                              <View style={styles.progressBar}>
-                                <View 
-                                  style={[
-                                    styles.progressFill, 
-                                    { width: `${progressPercentage}%` }
-                                  ]} 
-                                />
-                              </View>
-                              <Text style={styles.progressText}>{progressPercentage}% complete</Text>
+                        </View>
+                        {item.totalQuestions > 0 && (
+                          <View style={styles.progressContainer}>
+                            <View style={styles.progressBar}>
+                              <View 
+                                style={[
+                                  styles.progressFill, 
+                                  { width: `${progressPercentage}%` }
+                                ]} 
+                              />
                             </View>
-                          )}
-                        </>
-                      )}
+                            <Text style={styles.progressText}>{progressPercentage}% complete</Text>
+                          </View>
+                        )}
+                      </>
                     </View>
                     <Ionicons name="chevron-forward" size={24} color={colors.authTextMuted} />
                   </View>
