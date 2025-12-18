@@ -12,6 +12,8 @@ interface AuthContextValue {
   register: (fullName: string, email: string, password: string) => Promise<void>;
   updateUserGroup: (group: 'PCM' | 'PCB' | 'PCMB') => Promise<void>;
   upgradeSubscription: (group?: 'PCM' | 'PCB' | 'PCMB') => Promise<void>;
+  // Local-only profile updates (e.g. name, avatar) without hitting backend
+  updateProfile: (updates: Partial<Pick<User, 'fullName' | 'avatarUrl'>>) => void;
   logout: () => void;
 }
 
@@ -130,6 +132,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applyAuthResponse, handleAuthError],
   );
 
+  const updateProfile = useCallback((updates: Partial<Pick<User, 'fullName' | 'avatarUrl'>>) => {
+    setUser((prev) => (prev ? { ...prev, ...updates } : prev));
+  }, []);
+
   const logout = useCallback(() => {
     console.log('🚪 [AUTH CONTEXT] Logout called');
     setUser(null);
@@ -147,9 +153,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       updateUserGroup,
       upgradeSubscription,
+      updateProfile,
       logout,
     }),
-    [loading, login, logout, register, updateUserGroup, upgradeSubscription, token, user],
+    [loading, login, logout, register, updateUserGroup, upgradeSubscription, updateProfile, token, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
