@@ -31,6 +31,7 @@ export type AppStackParamList = {
     sessionId: string;
   };
   Profile: undefined;
+  EditProfile: undefined;
   PremiumPurchase: undefined;
   SavedQuestions: undefined;
   SavedQuestionsChapters: { subject: string };

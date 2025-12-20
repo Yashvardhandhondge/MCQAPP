@@ -19,6 +19,7 @@ import TestResultsScreen from './src/screens/TestResultsScreen';
 import PracticeByYearScreen from './src/screens/PracticeByYearScreen';
 import GroupSelectionScreen from './src/screens/GroupSelectionScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import EditProfileScreen from './src/screens/EditProfileScreen';
 import PremiumPurchaseScreen from './src/screens/PremiumPurchaseScreen';
 import SavedQuestionsScreen from './src/screens/SavedQuestionsScreen';
 import SavedQuestionsChaptersScreen from './src/screens/SavedQuestionsChaptersScreen';
@@ -173,6 +174,15 @@ function AppStackNavigator() {
       <AppStack.Screen
         name="Profile"
         component={ProfileScreen}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          animationDuration: 300,
+        }}
+      />
+      <AppStack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
         options={{
           headerShown: false,
           animation: 'slide_from_right',

@@ -5,6 +5,8 @@ export interface User {
   role: string;
   group?: 'PCM' | 'PCB' | 'PCMB' | null;
   subscription?: 'free' | 'premium';
+  // Optional profile image URL (local or remote) for avatar
+  avatarUrl?: string | null;
 }
 
 export interface AuthResponse {

@@ -1,19 +1,10 @@
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useRef, useEffect } from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  Animated,
-  StatusBar,
-  Alert,
-} from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated, StatusBar, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useAuth } from '../context/AuthContext';
 import type { AppStackParamList } from '../navigation/types';
 import { colors, radius, spacing, typography, shadow } from '../theme';
@@ -88,195 +79,128 @@ export default function ProfileScreen() {
 
   const groupInfo = user?.group ? GROUP_INFO[user.group] : null;
 
+  const selectedStreamLabel = groupInfo?.label ?? 'Select your stream';
+  const selectedStreamDescription = groupInfo?.description ?? 'PCM / PCB / PCMB';
+  const hasAvatar = !!user?.avatarUrl;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" />
-      <LinearGradient colors={colors.gradientAuthLight as [string, string, ...string[]]} style={styles.backgroundGradient}>
-        <ScrollView
-          contentContainerStyle={styles.container}
-          showsVerticalScrollIndicator={false}
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          }}
         >
-          <Animated.View
-            style={{
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            }}
-          >
-            {/* Header */}
-            <LinearGradient
-              colors={colors.gradientPrimary as [string, string, ...string[]]}
-              style={styles.headerGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
+          {/* Simple header row */}
+          <View style={styles.headerRow}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.headerBackButton}
+              activeOpacity={0.8}
             >
-              <View style={styles.headerContent}>
-                <TouchableOpacity
-                  onPress={() => navigation.goBack()}
-                  style={styles.backButton}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
-                </TouchableOpacity>
-                <View style={styles.headerIconContainer}>
-                  <Ionicons name="person" size={36} color="#FFFFFF" />
-                </View>
-                <View style={styles.headerTextContainer}>
-                  <Text style={styles.title}>Profile</Text>
-                  <Text style={styles.subtitle}>Your account information</Text>
-                </View>
-              </View>
-            </LinearGradient>
+              <Ionicons name="arrow-back" size={22} color={colors.primary} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Profile</Text>
+          </View>
 
-            {/* Profile Card */}
-            <ModernCard variant="elevated" padding="lg" style={styles.profileCard}>
-              {/* Avatar */}
-              <View style={styles.avatarContainer}>
-                <LinearGradient
-                  colors={colors.gradientPrimary}
-                  style={styles.avatar}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Text style={styles.avatarText}>
-                    {user?.fullName?.charAt(0).toUpperCase() || 'U'}
-                  </Text>
-                </LinearGradient>
-              </View>
-
-              {/* User Name */}
-              <Text style={styles.userName}>{user?.fullName || 'User'}</Text>
-
-              {/* Email */}
-              <View style={styles.infoRow}>
-                <View style={styles.infoIconContainer}>
-                  <Ionicons name="mail-outline" size={20} color={colors.primary} />
-                </View>
-                <Text style={styles.infoText}>{user?.email || 'No email'}</Text>
-              </View>
-
-              {/* Category/Group */}
-              {groupInfo ? (
-                <View style={styles.groupContainer}>
-                  <LinearGradient
-                    colors={groupInfo.gradient as [string, string, ...string[]]}
-                    style={styles.groupBadge}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                  >
-                    <View style={styles.groupIconContainer}>
-                      <Ionicons name={groupInfo.icon as any} size={24} color="#FFFFFF" />
-                    </View>
-                    <View style={styles.groupTextContainer}>
-                      <Text style={styles.groupLabel}>{groupInfo.label}</Text>
-                      <Text style={styles.groupDescription}>{groupInfo.description}</Text>
-                    </View>
-                  </LinearGradient>
-                </View>
-              ) : (
-                <View style={styles.noGroupContainer}>
-                  <View style={styles.noGroupIconContainer}>
-                    <Ionicons name="information-circle-outline" size={20} color={colors.authTextMuted} />
+          {/* Main profile card */}
+          <ModernCard variant="elevated" padding="lg" style={styles.profilePanel}>
+              {/* Avatar overlapping the header */}
+              <View style={styles.avatarWrapper}>
+                {hasAvatar ? (
+                  <View style={styles.avatarOuter}>
+                    <Image
+                      source={{ uri: user?.avatarUrl ?? undefined }}
+                      style={styles.avatarImage}
+                      contentFit="cover"
+                    />
                   </View>
-                  <Text style={styles.noGroupText}>No category selected</Text>
-                </View>
-              )}
-            </ModernCard>
-
-            {/* Premium Upgrade Banner */}
-            {user?.subscription !== 'premium' && (
-              <TouchableOpacity
-                onPress={() => navigation.navigate('PremiumPurchase')}
-                style={styles.premiumBanner}
-                activeOpacity={0.9}
-              >
-                <LinearGradient
-                  colors={['#FFD700', '#FFA500', '#FF6B35'] as [string, string, ...string[]]}
-                  style={styles.premiumBannerGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <View style={styles.premiumBannerContent}>
-                    <View style={styles.premiumIconContainer}>
-                      <Ionicons name="diamond" size={32} color="#FFFFFF" />
-                    </View>
-                    <View style={styles.premiumTextContainer}>
-                      <Text style={styles.premiumBannerTitle}>Upgrade to Premium</Text>
-                      <Text style={styles.premiumBannerSubtitle}>
-                        Unlock all features and excel in your exams
-                      </Text>
-                    </View>
-                    <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            )}
-
-            {/* Premium Status Badge (for premium users) */}
-            {user?.subscription === 'premium' && (
-              <ModernCard variant="elevated" padding="lg" style={styles.premiumStatusCard}>
-                <View style={styles.premiumStatusContent}>
+                ) : (
                   <LinearGradient
-                    colors={['#FFD700', '#FFA500'] as [string, string, ...string[]]}
-                    style={styles.premiumStatusIcon}
+                    colors={colors.gradientPrimary as [string, string, ...string[]]}
+                    style={styles.avatarPlaceholder}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                   >
-                    <Ionicons name="diamond" size={28} color="#FFFFFF" />
+                    <Ionicons name="person" size={42} color="#FFFFFF" />
                   </LinearGradient>
-                  <View style={styles.premiumStatusTextContainer}>
-                    <Text style={styles.premiumStatusTitle}>Premium Member</Text>
-                    <Text style={styles.premiumStatusSubtitle}>
-                      You have access to all premium features
+                )}
+              </View>
+
+              {/* Name under avatar */}
+              <Text style={styles.panelNameText}>{user?.fullName || 'User'}</Text>
+
+              {/* Info rows like the design */}
+              <View style={styles.infoSection}>
+                {/* Name row */}
+                <View style={styles.infoRow}>
+                  <Ionicons name="person-outline" size={20} color={colors.primary} />
+                  <Text style={styles.infoRowText}>{user?.fullName || 'Add your name'}</Text>
+                </View>
+
+                {/* Stream row (PCM / PCB / PCMB) */}
+                <View style={styles.infoRow}>
+                  <Ionicons name="school-outline" size={20} color={colors.primary} />
+                  <View style={styles.infoRowTextContainer}>
+                    <Text style={styles.infoRowText}>{selectedStreamLabel}</Text>
+                    <Text style={styles.infoRowSubText}>{selectedStreamDescription}</Text>
+                  </View>
+                </View>
+
+                {/* Saved questions row */}
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('SavedQuestions')}
+                  activeOpacity={0.8}
+                  style={styles.infoRow}
+                >
+                  <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
+                  <Text style={styles.infoRowText}>Saved questions</Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={18}
+                    color={colors.authTextMuted}
+                    style={styles.infoRowChevron}
+                  />
+                </TouchableOpacity>
+
+                {/* Email row */}
+                <View style={styles.infoRow}>
+                  <Ionicons name="mail-outline" size={20} color={colors.primary} />
+                  <View style={styles.infoRowTextContainer}>
+                    <Text style={styles.infoRowText}>{user?.email || 'Add your email'}</Text>
+                  </View>
+                </View>
+
+                {/* Subscription / password-style row */}
+                <View style={styles.infoRow}>
+                  <Ionicons name="eye-outline" size={20} color={colors.primary} />
+                  <View style={styles.infoRowTextContainer}>
+                    <Text style={styles.infoRowText}>Subscription</Text>
+                    <Text style={styles.infoRowSubText}>
+                      {user?.subscription === 'premium' ? 'Premium member' : 'Free plan'}
                     </Text>
                   </View>
                 </View>
-              </ModernCard>
-            )}
+              </View>
 
-            {/* Saved Questions Card */}
-            <TouchableOpacity
-              onPress={() => navigation.navigate('SavedQuestions')}
-              style={styles.savedQuestionsCard}
-              activeOpacity={0.9}
-            >
-              <ModernCard variant="elevated" padding="lg" style={styles.savedQuestionsCardContent}>
-                <LinearGradient
-                  colors={[colors.primary, '#6366F1'] as [string, string, ...string[]]}
-                  style={styles.savedQuestionsIcon}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
+              {/* Logout button only */}
+              <View style={styles.actionsRow}>
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  style={styles.logoutButton}
+                  onPress={handleLogout}
                 >
-                  <Ionicons name="bookmark" size={28} color="#FFFFFF" />
-                </LinearGradient>
-                <View style={styles.savedQuestionsTextContainer}>
-                  <Text style={styles.savedQuestionsTitle}>Saved Questions</Text>
-                  <Text style={styles.savedQuestionsSubtitle}>
-                    View and practice your saved questions
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={24} color={colors.authTextMuted} />
-              </ModernCard>
-            </TouchableOpacity>
-
-            {/* Logout Button */}
-            <TouchableOpacity
-              onPress={handleLogout}
-              style={styles.logoutButton}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={['#EF4444', '#DC2626'] as [string, string, ...string[]]}
-                style={styles.logoutGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
-                <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
-                <Text style={styles.logoutText}>Logout</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </Animated.View>
-        </ScrollView>
-      </LinearGradient>
+                  <Text style={styles.logoutButtonText}>Logout</Text>
+                </TouchableOpacity>
+              </View>
+            </ModernCard>
+        </Animated.View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -286,70 +210,58 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.authBackground,
   },
-  backgroundGradient: {
-    flex: 1,
-  },
-  container: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.xxxl,
-    paddingBottom: 100,
-  },
-  headerGradient: {
-    borderRadius: radius.xl + 6,
-    padding: spacing.xxl,
-    marginBottom: spacing.xxl,
-    ...shadow.xl,
-  },
-  headerContent: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: spacing.xl,
   },
-  backButton: {
+  headerBackButton: {
     width: 40,
     height: 40,
-    borderRadius: radius.lg,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: radius.full,
+    backgroundColor: colors.authSurface,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
   },
-  headerIconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: radius.xl + 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.lg,
+  headerTitle: {
+    ...typography.h2,
+    color: colors.authText,
+    fontWeight: '700',
   },
-  headerTextContainer: {
-    flex: 1,
+  scrollContainer: {
+    flexGrow: 1,
+    paddingHorizontal: spacing.xxl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.xxxl,
   },
-  title: {
-    ...typography.h1,
-    color: '#FFFFFF',
-    fontWeight: '800',
-    marginBottom: spacing.xs,
-    fontSize: 28,
-  },
-  subtitle: {
-    ...typography.subtitle,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 16,
-  },
-  profileCard: {
-    marginBottom: spacing.xl,
+  profilePanel: {
+    marginTop: 0,
+    paddingTop: spacing.xxxl,
+    borderRadius: radius.xxl,
     backgroundColor: colors.authSurface,
     borderWidth: 1,
     borderColor: colors.authBorder,
-    borderRadius: radius.xl + 2,
+    ...shadow.lg,
   },
-  avatarContainer: {
-    marginBottom: spacing.lg,
+  avatarWrapper: {
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
   },
-  avatar: {
+  avatarOuter: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    overflow: 'hidden',
+    backgroundColor: colors.authSurface,
+    ...shadow.lg,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarPlaceholder: {
     width: 120,
     height: 120,
     borderRadius: 60,
@@ -357,231 +269,64 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...shadow.lg,
   },
-  avatarText: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  userName: {
+  panelNameText: {
     ...typography.h2,
     color: colors.authText,
-    marginBottom: spacing.lg,
     textAlign: 'center',
     fontWeight: '700',
+    marginBottom: spacing.lg,
+  },
+  infoSection: {
+    marginTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.authBorder,
+    paddingTop: spacing.lg,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: '100%',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    backgroundColor: colors.authInputBg,
     borderRadius: radius.lg,
-    marginBottom: spacing.md,
-    gap: spacing.md,
+    backgroundColor: colors.authInputBg,
+    marginBottom: spacing.sm,
   },
-  infoIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
-    backgroundColor: colors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
+  infoRowTextContainer: {
+    flex: 1,
+    marginLeft: spacing.md,
   },
-  infoText: {
+  infoRowText: {
     ...typography.body,
     color: colors.authText,
-    flex: 1,
     fontWeight: '500',
   },
-  groupContainer: {
-    width: '100%',
-    marginTop: spacing.sm,
-  },
-  groupBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.lg,
-    borderRadius: radius.xl,
-    gap: spacing.md,
-    ...shadow.md,
-  },
-  groupIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.lg,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  groupTextContainer: {
-    flex: 1,
-  },
-  groupLabel: {
-    ...typography.h3,
-    color: '#FFFFFF',
-    fontWeight: '700',
-    marginBottom: spacing.xs / 2,
-  },
-  groupDescription: {
-    ...typography.body,
-    color: '#FFFFFF',
-    opacity: 0.9,
-    fontSize: 14,
-  },
-  noGroupContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.sm,
-    padding: spacing.md,
-    backgroundColor: colors.authInputBg,
-    borderRadius: radius.lg,
-    gap: spacing.md,
-    justifyContent: 'center',
-  },
-  noGroupIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.md,
-    backgroundColor: colors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  noGroupText: {
-    ...typography.body,
+  infoRowSubText: {
+    ...typography.small,
     color: colors.authTextMuted,
-    fontWeight: '500',
+    marginTop: 2,
+  },
+  infoRowChevron: {
+    marginLeft: 'auto',
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: spacing.xl,
+    gap: spacing.md,
   },
   logoutButton: {
-    borderRadius: radius.xl + 2,
-    overflow: 'hidden',
-    marginTop: spacing.lg,
-    marginBottom: spacing.xl,
-    ...shadow.lg,
-  },
-  logoutGradient: {
-    flexDirection: 'row',
+    flex: 1,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.authBorder,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    gap: spacing.sm,
+    backgroundColor: '#FFFFFF',
   },
-  logoutText: {
+  logoutButtonText: {
     ...typography.subtitle,
-    color: '#FFFFFF',
+    color: colors.danger,
     fontWeight: '600',
-    fontSize: 16,
-  },
-  premiumBanner: {
-    borderRadius: radius.xl + 2,
-    overflow: 'hidden',
-    marginBottom: spacing.xl,
-    ...shadow.xl,
-  },
-  premiumBannerGradient: {
-    padding: spacing.xl,
-  },
-  premiumBannerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  premiumIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.lg,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadow.md,
-  },
-  premiumTextContainer: {
-    flex: 1,
-  },
-  premiumBannerTitle: {
-    ...typography.h3,
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 18,
-    marginBottom: spacing.xs / 2,
-  },
-  premiumBannerSubtitle: {
-    ...typography.body,
-    color: 'rgba(255, 255, 255, 0.95)',
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  premiumStatusCard: {
-    marginBottom: spacing.xl,
-    backgroundColor: colors.authSurface,
-    borderWidth: 1,
-    borderColor: '#FFD700',
-    borderRadius: radius.xl + 2,
-  },
-  premiumStatusContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  premiumStatusIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadow.md,
-  },
-  premiumStatusTextContainer: {
-    flex: 1,
-  },
-  premiumStatusTitle: {
-    ...typography.h3,
-    color: colors.authText,
-    fontWeight: '700',
-    fontSize: 18,
-    marginBottom: spacing.xs / 2,
-  },
-  premiumStatusSubtitle: {
-    ...typography.body,
-    color: colors.authTextMuted,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  savedQuestionsCard: {
-    marginBottom: spacing.xl,
-  },
-  savedQuestionsCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.authSurface,
-    borderWidth: 1,
-    borderColor: colors.authBorder,
-    borderRadius: radius.xl + 2,
-  },
-  savedQuestionsIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadow.md,
-  },
-  savedQuestionsTextContainer: {
-    flex: 1,
-  },
-  savedQuestionsTitle: {
-    ...typography.h3,
-    color: colors.authText,
-    fontWeight: '700',
-    fontSize: 18,
-    marginBottom: spacing.xs / 2,
-  },
-  savedQuestionsSubtitle: {
-    ...typography.body,
-    color: colors.authTextMuted,
-    fontSize: 13,
-    lineHeight: 18,
   },
 });
