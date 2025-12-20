@@ -6,6 +6,7 @@ const morgan = require('morgan');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 
+const mongoose = require('mongoose');
 const { connectDB } = require('./config/db');
 const authRoutes = require('./routes/auth.routes');
 const mcqRoutes = require('./routes/mcq.routes');
@@ -30,6 +31,27 @@ app.use(cookieParser());
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
+
+// Middleware to ensure database connection before API requests (for serverless)
+app.use('/api', async (req, res, next) => {
+  // Check if already connected (readyState: 1 = connected, 2 = connecting)
+  if (mongoose.connection.readyState === 1) {
+    return next();
+  }
+  
+  // Ensure database is connected (connection is cached in db.js)
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error('Database connection error in middleware:', error);
+    return res.status(503).json({
+      success: false,
+      message: 'Database connection failed',
+      error: error.message
+    });
+  }
+});
 
 // Add middleware to disable caching for API responses
 app.use('/api', (req, res, next) => {

@@ -31,7 +31,8 @@ const register = async (req, res, next) => {
     }
 
     // Log current database and collection info
-    console.log('Current database for user registration:', mongoose.connection.db.databaseName);
+    const dbName = mongoose.connection.db ? mongoose.connection.db.databaseName : 'not connected';
+    console.log('Current database for user registration:', dbName);
     console.log('User model collection:', User.collection.name);
     
     // Check if user exists with detailed logging
@@ -42,11 +43,13 @@ const register = async (req, res, next) => {
     if (existingUser) {
       console.log('Found existing user ID:', existingUser._id);
       console.log('User database:', existingUser.db?.name || 'unknown');
-      return next(createError(409, `User with email ${email} already exists in ${mongoose.connection.db.databaseName} database`));
+      const dbName = mongoose.connection.db ? mongoose.connection.db.databaseName : 'MCQ';
+      return next(createError(409, `User with email ${email} already exists in ${dbName} database`));
     }
 
     const user = await User.create({ fullName, email, password });
-    console.log('User created successfully in database:', mongoose.connection.db.databaseName);
+    const dbName = mongoose.connection.db ? mongoose.connection.db.databaseName : 'MCQ';
+    console.log('User created successfully in database:', dbName);
     console.log('New user ID:', user._id);
     
     const response = buildAuthPayload(user);
