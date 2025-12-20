@@ -6,7 +6,6 @@ const morgan = require('morgan');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 
-const mongoose = require('mongoose');
 const { connectDB } = require('./config/db');
 const authRoutes = require('./routes/auth.routes');
 const mcqRoutes = require('./routes/mcq.routes');
@@ -31,27 +30,6 @@ app.use(cookieParser());
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
-
-// Middleware to ensure database connection before API requests (for serverless)
-app.use('/api', async (req, res, next) => {
-  // Check if already connected (readyState: 1 = connected, 2 = connecting)
-  if (mongoose.connection.readyState === 1) {
-    return next();
-  }
-  
-  // Ensure database is connected (connection is cached in db.js)
-  try {
-    await connectDB();
-    next();
-  } catch (error) {
-    console.error('Database connection error in middleware:', error);
-    return res.status(503).json({
-      success: false,
-      message: 'Database connection failed',
-      error: error.message
-    });
-  }
-});
 
 // Add middleware to disable caching for API responses
 app.use('/api', (req, res, next) => {
@@ -86,26 +64,20 @@ app.use('/api/mcq', mcqRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
-// Only start server if this file is run directly (not imported)
-if (require.main === module) {
-  const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 8000;
 
-  connectDB()
-    .then(() => {
-      // Listen on all network interfaces (0.0.0.0) to allow access from other devices
-      app.listen(PORT, '0.0.0.0', () => {
-        console.log(`Server running on port ${PORT}`);
-        console.log(`Server accessible at http://localhost:${PORT}`);
-        console.log(`Server accessible at http://0.0.0.0:${PORT}`);
-        console.log(`MCQ routes registered at /api/mcq`);
-      });
-    })
-    .catch((error) => {
-      console.error('Failed to start server:', error);
-      process.exit(1);
+connectDB()
+  .then(() => {
+    // Listen on all network interfaces (0.0.0.0) to allow access from other devices
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on port ${PORT}`);
+      console.log(`Server accessible at http://localhost:${PORT}`);
+      console.log(`Server accessible at http://0.0.0.0:${PORT}`);
+      console.log(`MCQ routes registered at /api/mcq`);
     });
-}
-
-// Export app for Vercel serverless functions
-module.exports = app;
+  })
+  .catch((error) => {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  });
 

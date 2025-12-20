@@ -31,8 +31,7 @@ const register = async (req, res, next) => {
     }
 
     // Log current database and collection info
-    const dbName = mongoose.connection.db ? mongoose.connection.db.databaseName : 'not connected';
-    console.log('Current database for user registration:', dbName);
+    console.log('Current database for user registration:', mongoose.connection.db.databaseName);
     console.log('User model collection:', User.collection.name);
     
     // Check if user exists with detailed logging
@@ -43,13 +42,11 @@ const register = async (req, res, next) => {
     if (existingUser) {
       console.log('Found existing user ID:', existingUser._id);
       console.log('User database:', existingUser.db?.name || 'unknown');
-      const dbName = mongoose.connection.db ? mongoose.connection.db.databaseName : 'MCQ';
-      return next(createError(409, `User with email ${email} already exists in ${dbName} database`));
+      return next(createError(409, `User with email ${email} already exists in ${mongoose.connection.db.databaseName} database`));
     }
 
     const user = await User.create({ fullName, email, password });
-    const dbName = mongoose.connection.db ? mongoose.connection.db.databaseName : 'MCQ';
-    console.log('User created successfully in database:', dbName);
+    console.log('User created successfully in database:', mongoose.connection.db.databaseName);
     console.log('New user ID:', user._id);
     
     const response = buildAuthPayload(user);
@@ -75,52 +72,6 @@ const login = async (req, res, next) => {
       return next(createError(400, 'Email and password are required'));
     }
 
-    // Hardcoded Super Admin credentials
-    const SUPER_ADMIN_EMAIL = 'yashclass@gmail.com';
-    const SUPER_ADMIN_PASSWORD = '12345678';
-    const SUPER_ADMIN_ID = '000000000000000000000001'; // Hardcoded ObjectId
-
-    // Check if it's the hardcoded super admin
-    if (email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() && password === SUPER_ADMIN_PASSWORD) {
-      console.log('Super admin login detected');
-      
-      // Create a virtual user object for super admin
-      const superAdminUser = {
-        _id: SUPER_ADMIN_ID,
-        fullName: 'Super Admin',
-        email: SUPER_ADMIN_EMAIL,
-        role: 'admin',
-        group: null,
-        subscription: 'premium',
-        savedQuestions: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        toJSON: function() {
-          return {
-            _id: this._id,
-            fullName: this.fullName,
-            email: this.email,
-            role: this.role,
-            group: this.group,
-            subscription: this.subscription,
-            savedQuestions: this.savedQuestions,
-            createdAt: this.createdAt,
-            updatedAt: this.updatedAt,
-          };
-        }
-      };
-
-      const response = buildAuthPayload(superAdminUser);
-      console.log('Super admin login successful');
-
-      return res.status(200).json({
-        success: true,
-        message: 'Logged in successfully',
-        ...response,
-      });
-    }
-
-    // Normal user login - check database
     const user = await User.findOne({ email }).select('+password');
     console.log('User found in database:', user ? 'YES' : 'NO');
 
@@ -200,23 +151,9 @@ const updateGroup = async (req, res, next) => {
 
 const upgradeSubscription = async (req, res, next) => {
   try {
-    const { group } = req.body;
-
-    // Build update object - always upgrade to premium
-    const updateData = { subscription: 'premium' };
-
-    // If group is provided, validate and update it
-    if (group) {
-      const validGroups = ['PCM', 'PCB', 'PCMB'];
-      if (!validGroups.includes(group)) {
-        return next(createError(400, 'Invalid group. Must be one of: PCM, PCB, PCMB'));
-      }
-      updateData.group = group;
-    }
-
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      updateData,
+      { subscription: 'premium' },
       { new: true, runValidators: true }
     );
 
@@ -228,9 +165,7 @@ const upgradeSubscription = async (req, res, next) => {
 
     return res.status(200).json({
       success: true,
-      message: group 
-        ? `Subscription upgraded to premium and group updated to ${group} successfully`
-        : 'Subscription upgraded to premium successfully',
+      message: 'Subscription upgraded to premium successfully',
       ...response,
     });
   } catch (error) {

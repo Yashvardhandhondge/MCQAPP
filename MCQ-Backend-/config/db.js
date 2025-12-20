@@ -26,8 +26,7 @@ const connectDB = async () => {
 
     isConnected = true;
     console.log(`MongoDB connected: ${connection.connection.host}`);
-    const dbName = connection.connection.db ? connection.connection.db.databaseName : 'MCQ';
-    console.log(`Database: ${dbName}`);
+    console.log(`Database: ${connection.connection.db.databaseName}`);
 
     // Handle connection events
     mongoose.connection.on('error', (err) => {
@@ -47,11 +46,7 @@ const connectDB = async () => {
   } catch (error) {
     console.error('MongoDB connection error:', error.message);
     isConnected = false;
-    // Don't exit process in serverless environments
-    if (require.main === module) {
-      process.exit(1);
-    }
-    throw error; // Re-throw so callers can handle it
+    process.exit(1);
   }
 };
 
