@@ -36,6 +36,103 @@ const isChapterLocked = async (user, subject, chapter, Model) => {
 };
 
 /**
+ * Helper function to check if a year is accessible for a non-premium user
+ * For chapters 4+ (index >= 3), only the first year (index 0) is accessible
+ * @param {Object} user - The user object
+ * @param {string} subject - The subject name
+ * @param {string} chapter - The chapter name
+ * @param {string} year - The year value (normalized string)
+ * @param {Object} Model - The Mongoose model for the subject
+ * @returns {Promise<boolean>} - Returns true if year is accessible, false if locked
+ */
+const isYearAccessible = async (user, subject, chapter, year, Model) => {
+  // Premium users have access to all years
+  if (user.subscription === 'premium') {
+    return true;
+  }
+
+  // Get all chapters for the subject, sorted alphabetically
+  const allChapters = await Model.distinct('chapter');
+  const sortedChapters = allChapters.sort((a, b) => a.localeCompare(b));
+
+  // Find the index of the requested chapter
+  const chapterIndex = sortedChapters.findIndex((ch) => ch === chapter);
+
+  // If chapter not found, consider it locked
+  if (chapterIndex === -1) {
+    return false;
+  }
+
+  // First 3 chapters (index 0, 1, 2) - all years are accessible
+  if (chapterIndex <= 2) {
+    return true;
+  }
+
+  // For chapters 4+ (index >= 3), only first year is accessible
+  // Get all years for this chapter and sort them
+  const yearResults = await Model.aggregate([
+    {
+      $match: {
+        subject: subject,
+        chapter: chapter
+      }
+    },
+    {
+      $group: {
+        _id: '$year',
+        questionCount: { $sum: 1 }
+      }
+    },
+    {
+      $match: {
+        questionCount: { $gt: 0 }
+      }
+    }
+  ]);
+
+  // Normalize years and create a map
+  const yearMap = new Map();
+  yearResults.forEach(result => {
+    const normalizedYear = String(result._id);
+    if (!yearMap.has(normalizedYear)) {
+      yearMap.set(normalizedYear, normalizedYear);
+    }
+  });
+
+  // Get sorted years (same sorting logic as getYearsWithAnalytics)
+  const years = Array.from(yearMap.values()).sort((a, b) => {
+    const aNum = parseInt(a);
+    const bNum = parseInt(b);
+    
+    if (!isNaN(aNum) && !isNaN(bNum)) {
+      return aNum - bNum;
+    }
+    
+    if (!isNaN(aNum)) return -1;
+    if (!isNaN(bNum)) return 1;
+    
+    return a.localeCompare(b);
+  });
+
+  // Normalize the requested year
+  const normalizedRequestedYear = String(year);
+
+  // Find the index of the requested year
+  const yearIndex = years.findIndex(y => {
+    const normalizedY = String(y);
+    return normalizedY === normalizedRequestedYear;
+  });
+
+  // If year not found, deny access
+  if (yearIndex === -1) {
+    return false;
+  }
+
+  // For chapters 4+, only first year (index 0) is accessible
+  return yearIndex === 0;
+};
+
+/**
  * Get dashboard summary with total questions and subject-wise counts
  * Filters subjects based on user's group (PCM, PCB, PCMB)
  */
@@ -532,14 +629,16 @@ const getQuestionsBySubjectChapterAndYear = async (req, res, next) => {
     const decodedChapter = decodeURIComponent(chapter);
     const decodedYear = decodeURIComponent(yearParam);
 
-    // Check if chapter is locked for non-premium users
-    const locked = await isChapterLocked(user, subject, decodedChapter, Model);
-    if (locked) {
-      return next(createError(403, 'This chapter is available for premium users only. Please upgrade to premium to access all chapters.'));
-    }
-    
     // Normalize year: convert to string for consistent matching
     const normalizedYear = String(decodedYear);
+
+    // Check if this specific year is accessible for non-premium users
+    // For chapters 4+, only the first year is accessible to non-premium users
+    const yearAccessible = await isYearAccessible(user, subject, decodedChapter, normalizedYear, Model);
+    if (!yearAccessible) {
+      return next(createError(403, 'This year is available for premium users only. Please upgrade to premium to access all years.'));
+    }
+    
     
     // Match both number and string versions of the same year
     // Use $or to explicitly match both types, and also use $expr for type-agnostic matching
