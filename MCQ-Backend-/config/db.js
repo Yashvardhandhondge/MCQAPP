@@ -7,7 +7,8 @@ const connectDB = async () => {
     return;
   }
 
-  const mongoUri = process.env.MONGODB_URI;
+  // const mongoUri = process.env.MONGODB_URI;
+  const mongoUri = 'mongodb+srv://yashvardhandhondge_db_user:3oSHe0WIRBnMWC7R@cluster0.us9t0gd.mongodb.net/MCQ';
 
   if (!mongoUri) {
     throw new Error('MONGODB_URI is not defined in the environment variables');
