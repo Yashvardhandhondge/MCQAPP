@@ -600,3 +600,50 @@ export async function reportQuestion(
     throw new Error('Failed to report question');
   }
 }
+
+// Daily question views functions
+export async function revealQuestion(questionId: string): Promise<{
+  success: boolean;
+  message: string;
+  isRevealed: boolean;
+  dailyViewsRemaining: number;
+  dailyLimit?: number;
+}> {
+  try {
+    const response = await axiosInstance.post<{
+      success: boolean;
+      message: string;
+      isRevealed: boolean;
+      dailyViewsRemaining: number;
+      dailyLimit?: number;
+    }>(`/api/mcq/questions/${encodeURIComponent(questionId)}/reveal`);
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to reveal question');
+    }
+    throw new Error('Failed to reveal question');
+  }
+}
+
+export async function getDailyViews(): Promise<{
+  success: boolean;
+  dailyViews: number;
+  dailyLimit: number;
+  dailyViewsRemaining: number;
+}> {
+  try {
+    const response = await axiosInstance.get<{
+      success: boolean;
+      dailyViews: number;
+      dailyLimit: number;
+      dailyViewsRemaining: number;
+    }>('/api/mcq/me/daily-views');
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to get daily views');
+    }
+    throw new Error('Failed to get daily views');
+  }
+}

@@ -46,6 +46,7 @@ export interface YearAnalytics {
   year: string;
   totalQuestions: number;
   userAttempts: number;
+  isBlurred?: boolean;
 }
 
 export interface YearsAnalyticsResponse {
@@ -63,11 +64,14 @@ export interface Question {
   options: string[];
   year: string;
   solution?: string;
+  isBlurred?: boolean;
 }
 
 export interface QuestionsResponse {
   success: boolean;
   data: Question[];
+  isChapterLocked?: boolean;
+  shouldBlurYear?: boolean;
 }
 
 export interface SubmitAnswerPayload {

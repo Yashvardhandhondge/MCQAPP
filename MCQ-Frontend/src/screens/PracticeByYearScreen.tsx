@@ -85,35 +85,7 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
   }, [chapter, subject]);
 
   const handleYearClick = async (year: string, index: number) => {
-    // Premium users have full access
-    if (isPremium) {
-      navigation.navigate('Questions', {
-        subject,
-        chapter,
-        mode: 'year',
-        year,
-      });
-      return;
-    }
-
-    const isNonPremium = !isPremium;
-    // Non-premium users can access all years for:
-    // - 11th standard: chapters with chapterNumber 1 and 2 (chapterNumber <= 2)
-    // - 12th standard: chapter with chapterNumber 1 (chapterNumber <= 1)
-    const isWithinFreeChapters = !isNonPremium || (
-      standard === '11' && chapterNumber !== undefined && chapterNumber <= 2
-    ) || (
-      standard === '12' && chapterNumber !== undefined && chapterNumber <= 1
-    );
-
-    // For non-premium users:
-    // - For free chapters: all years are unlocked.
-    // - For locked chapters: only the first year (index 0) is unlocked.
-    if (isNonPremium && !isWithinFreeChapters && index > 0) {
-      setPremiumModalVisible(true);
-      return;
-    }
-
+    // All users can navigate to any year - questions will handle blur logic
     navigation.navigate('Questions', {
       subject,
       chapter,
@@ -150,15 +122,6 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
       );
     }
 
-    const isNonPremium = !isPremium;
-    // Non-premium users can access all years for:
-    // - 11th standard: chapters with chapterNumber 1 and 2 (chapterNumber <= 2)
-    // - 12th standard: chapter with chapterNumber 1 (chapterNumber <= 1)
-    const isWithinFreeChapters = !isNonPremium || (
-      standard === '11' && chapterNumber !== undefined && chapterNumber <= 2
-    ) || (
-      standard === '12' && chapterNumber !== undefined && chapterNumber <= 1
-    );
 
     return (
       <View style={styles.yearList}>
@@ -166,11 +129,6 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
           const progressPercentage = item.totalQuestions > 0
             ? Math.round((item.userAttempts / item.totalQuestions) * 100)
             : 0;
-
-          // For non-premium users:
-          // - For free chapters: all years are unlocked.
-          // - For locked chapters: only the first year (index 0) is unlocked.
-          const isLocked = isNonPremium && !isWithinFreeChapters && index > 0;
           
           return (
             <Animated.View
@@ -188,41 +146,27 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
               }}
             >
               <TouchableOpacity
-                onPress={() => handleYearClick(item.year, index)}
+                onPress={() => handleYearClick(item.year, index, false)}
                 activeOpacity={0.8}
               >
                 <ModernCard
                   variant="elevated"
                   padding="lg"
-                  style={[
-                    styles.yearCard,
-                    isLocked && styles.lockedCard,
-                  ]}
+                  style={styles.yearCard}
                 >
                   <View style={styles.yearContent}>
                     <View style={styles.yearIconContainer}>
                       <Ionicons
-                        name={isLocked ? 'lock-closed' : 'calendar'}
+                        name="calendar"
                         size={24}
-                        color={isLocked ? colors.authTextMuted : colors.primary}
+                        color={colors.primary}
                       />
                     </View>
                     <View style={styles.yearInfo}>
                       <View style={styles.yearHeaderRow}>
-                        <Text
-                          style={[
-                            styles.yearName,
-                            isLocked && styles.lockedText,
-                          ]}
-                        >
+                        <Text style={styles.yearName}>
                           {item.year}
                         </Text>
-                        {isLocked && (
-                          <View style={styles.premiumBadge}>
-                            <Ionicons name="diamond" size={12} color={colors.primary} />
-                            <Text style={styles.premiumBadgeText}>Premium</Text>
-                          </View>
-                        )}
                       </View>
                       <View style={styles.yearStats}>
                         <View style={styles.statItem}>
@@ -321,9 +265,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     borderRadius: radius.xl + 2,
   },
-  lockedCard: {
-    opacity: 0.7,
-  },
   yearContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -351,9 +292,6 @@ const styles = StyleSheet.create({
     color: colors.authText,
     fontWeight: '700',
     marginBottom: spacing.xs,
-  },
-  lockedText: {
-    color: colors.authTextMuted,
   },
   yearStats: {
     flexDirection: 'row',

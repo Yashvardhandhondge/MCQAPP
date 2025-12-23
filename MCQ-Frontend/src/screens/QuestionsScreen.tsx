@@ -9,6 +9,7 @@ import {
   View,
   Animated,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,9 +23,12 @@ import {
   unsaveQuestion,
   getSavedStatus,
   getUserAttemptsByQuestions,
+  revealQuestion,
+  getDailyViews,
 } from '../services/mcq.service';
 import type { Question } from '../types/mcq';
 import { colors, radius, spacing, typography, shadow } from '../theme';
+import { useAuth } from '../context/AuthContext';
 import ModernCard from '../components/ui/ModernCard';
 import BackHeader from '../components/ui/BackHeader';
 import GradientButton from '../components/ui/GradientButton';
@@ -58,6 +62,10 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [reportingQuestionId, setReportingQuestionId] = useState<string | null>(null);
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
+  const [revealedQuestions, setRevealedQuestions] = useState<Set<string>>(new Set());
+  const [dailyViewsRemaining, setDailyViewsRemaining] = useState<number | null>(null);
+  const { user } = useAuth();
+  const isPremium = user?.subscription === 'premium';
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -78,6 +86,26 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
       }),
     ]).start();
   }, []);
+
+  // Fetch daily views on mount
+  useEffect(() => {
+    async function fetchDailyViews() {
+      if (!isPremium) {
+        try {
+          const response = await getDailyViews();
+          setDailyViewsRemaining(response.dailyViewsRemaining);
+        } catch (error) {
+          console.error('Failed to fetch daily views:', error);
+          // Set to null on error so we show "Loading..." instead of "Daily limit reached"
+          setDailyViewsRemaining(null);
+        }
+      } else {
+        // Premium users have unlimited views
+        setDailyViewsRemaining(-1);
+      }
+    }
+    fetchDailyViews();
+  }, [isPremium]);
 
   useEffect(() => {
     let isMounted = true;
@@ -224,6 +252,72 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
 
   const handleLoadMore = () => {
     setDisplayedCount((prev) => Math.min(prev + QUESTIONS_PER_PAGE, totalQuestions));
+  };
+
+  const handleRevealQuestion = async (questionId: string) => {
+    // Premium users don't need to reveal
+    if (isPremium) {
+      setRevealedQuestions((prev) => new Set(prev).add(questionId));
+      return;
+    }
+
+    // Check if already revealed
+    if (revealedQuestions.has(questionId)) {
+      return;
+    }
+
+    // Check daily limit
+    if (dailyViewsRemaining !== null && dailyViewsRemaining <= 0) {
+      Alert.alert(
+        'Daily Limit Reached',
+        "You have reached your today's limit to see more questions. Upgrade to premium to see unlimited questions.",
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Upgrade to Premium',
+            onPress: () => navigation.navigate('PremiumPurchase'),
+          },
+        ],
+      );
+      return;
+    }
+
+    try {
+      const response = await revealQuestion(questionId);
+      if (response.isRevealed) {
+        setRevealedQuestions((prev) => new Set(prev).add(questionId));
+        setDailyViewsRemaining(response.dailyViewsRemaining);
+      } else {
+        Alert.alert(
+          'Daily Limit Reached',
+          response.message || "You have reached your today's limit to see more questions. Upgrade to premium to see unlimited questions.",
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Upgrade to Premium',
+              onPress: () => navigation.navigate('PremiumPurchase'),
+            },
+          ],
+        );
+      }
+    } catch (error) {
+      const message = (error as Error)?.message || 'Failed to reveal question';
+      if (message.includes('limit')) {
+        Alert.alert(
+          'Daily Limit Reached',
+          "You have reached your today's limit to see more questions. Upgrade to premium to see unlimited questions.",
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Upgrade to Premium',
+              onPress: () => navigation.navigate('PremiumPurchase'),
+            },
+          ],
+        );
+      } else {
+        Alert.alert('Error', message);
+      }
+    }
   };
 
   const handleOptionSelect = async (questionId: string, selectedOption: string) => {
@@ -621,7 +715,13 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                           </TouchableOpacity>
                         </View>
                       </View>
-                      <Text style={styles.questionText}>{question.question}</Text>
+                      <View 
+                        style={[
+                          styles.questionContentWrapper,
+                          question.isBlurred && !isPremium && !revealedQuestions.has(question._id) && styles.blurredContent
+                        ]}
+                      >
+                        <Text style={styles.questionText}>{question.question}</Text>
                       
                       {/* Options List */}
                       <View style={styles.optionsContainer}>
@@ -658,6 +758,28 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                           );
                         })}
                       </View>
+                      </View>
+
+                      {/* Blur Overlay for locked questions */}
+                      {question.isBlurred && !isPremium && !revealedQuestions.has(question._id) && (
+                        <TouchableOpacity
+                          style={styles.blurOverlay}
+                          onPress={() => handleRevealQuestion(question._id)}
+                          activeOpacity={0.9}
+                        >
+                          <View style={styles.blurContent}>
+                            <Ionicons name="eye-off" size={48} color={colors.primary} />
+                            <Text style={styles.blurTitle}>Tap to Reveal Question</Text>
+                            <Text style={styles.blurSubtitle}>
+                              {dailyViewsRemaining !== null && dailyViewsRemaining > 0
+                                ? `${dailyViewsRemaining} questions remaining today`
+                                : dailyViewsRemaining === 0
+                                ? 'Daily limit reached'
+                                : 'Loading...'}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                      )}
 
                       {/* Previous Attempt Indicator */}
                       {showWithAttempts && questionStates.get(question._id)?.isSubmitted && (
@@ -837,6 +959,48 @@ const styles = StyleSheet.create({
   questionCard: {
     marginBottom: spacing.sm,
     borderRadius: radius.xl + 2,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  questionContentWrapper: {
+    position: 'relative',
+  },
+  blurredContent: {
+    opacity: 0.1,
+  },
+  blurOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: radius.xl + 2,
+    zIndex: 10,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  blurContent: {
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  blurTitle: {
+    ...typography.h3,
+    color: colors.primary,
+    fontWeight: '700',
+    marginTop: spacing.md,
+    textAlign: 'center',
+  },
+  blurSubtitle: {
+    ...typography.body,
+    color: colors.authTextMuted,
+    marginTop: spacing.xs,
+    textAlign: 'center',
   },
   questionHeader: {
     flexDirection: 'row',
