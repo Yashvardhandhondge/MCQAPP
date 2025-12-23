@@ -115,7 +115,14 @@ export default function ChapterDetailScreen({ route, navigation }: ChapterDetail
       >
         <BackHeader
           title={chapter}
-          subtitle={`Subject: ${subject}`}
+          subtitle={
+            <View style={styles.subtitleContainer}>
+              <View style={styles.pyqBadge}>
+                <Ionicons name="document-text" size={14} color="#FFFFFF" />
+                <Text style={styles.pyqBadgeText}>{subject} PYQ</Text>
+              </View>
+            </View>
+          }
           onBack={() => navigation.goBack()}
         />
         <ScrollView
@@ -312,5 +319,27 @@ const styles = StyleSheet.create({
   },
   fullPracticeRight: {
     marginLeft: spacing.md,
+  },
+  subtitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.xs / 2,
+  },
+  pyqBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs / 2,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.lg,
+    ...shadow.sm,
+  },
+  pyqBadgeText: {
+    ...typography.caption,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 12,
+    letterSpacing: 0.3,
   },
 });

@@ -22,11 +22,19 @@ export interface ChapterAnalytics {
   chapter: string;
   totalQuestions: number;
   userAttempts: number;
+  standard?: '11' | '12';
+  chapterNumber?: number;
+}
+
+export interface ChaptersAnalyticsData {
+  standard11: ChapterAnalytics[];
+  standard12: ChapterAnalytics[];
+  unclassified: ChapterAnalytics[];
 }
 
 export interface ChaptersAnalyticsResponse {
   success: boolean;
-  data: ChapterAnalytics[];
+  data: ChaptersAnalyticsData;
 }
 
 export interface YearsResponse {

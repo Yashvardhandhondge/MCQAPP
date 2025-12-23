@@ -13,8 +13,9 @@ if (__DEV__) {
     // For physical Android device via Expo Go, use your network IP
     // Change this to your computer's IP address (found via ipconfig)
     // API_BASE_URL = 'http://192.168.1.7:8000';
-    API_BASE_URL ='https://mcqapp-nu.vercel.app';
+    // API_BASE_URL ='https://mcqapp-nu.vercel.app';
     // API_BASE_URL = 'http://192.168.29.158:8000';
+    API_BASE_URL = 'http://10.228.232.180:8000';
 
     // If using Android Emulator instead, use:
     // API_BASE_URL = 'http://10.0.2.2:8000';

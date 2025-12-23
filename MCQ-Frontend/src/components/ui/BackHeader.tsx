@@ -6,7 +6,7 @@ import { colors, radius, spacing, typography, shadow } from '../../theme';
 
 interface BackHeaderProps {
   title: string;
-  subtitle?: string;
+  subtitle?: string | React.ReactNode;
   onBack: () => void;
   showGradient?: boolean;
 }
@@ -32,7 +32,13 @@ export default function BackHeader({ title, subtitle, onBack, showGradient = fal
       </TouchableOpacity>
       <View style={styles.titleContainer}>
         <Text style={styles.title}>{title}</Text>
-        {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+        {subtitle && (
+          typeof subtitle === 'string' ? (
+            <Text style={styles.subtitle}>{subtitle}</Text>
+          ) : (
+            subtitle
+          )
+        )}
       </View>
     </View>
   );

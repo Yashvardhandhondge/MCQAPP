@@ -23,6 +23,7 @@ import ModernCard from '../components/ui/ModernCard';
 import BackHeader from '../components/ui/BackHeader';
 import PremiumLockModal from '../components/ui/PremiumLockModal';
 import type { SubjectSummary, ChapterAnalytics } from '../types/mcq';
+import { categorizeChapters } from '../utils/chapterMapping';
 
 const SUBJECT_ICONS: Record<string, string> = {
   Chemistry: '🧪',
@@ -45,7 +46,8 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
   const appNavigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { user } = useAuth();
   const isPremium = user?.subscription === 'premium';
-  const [chapters, setChapters] = useState<ChapterAnalytics[]>([]);
+  const [chaptersData, setChaptersData] = useState<{ standard11: ChapterAnalytics[]; standard12: ChapterAnalytics[]; unclassified: ChapterAnalytics[] } | null>(null);
+  const [selectedStandard, setSelectedStandard] = useState<'11' | '12' | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
@@ -114,14 +116,48 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
       try {
         const response = await getChaptersWithAnalytics(subject);
         if (isMounted) {
-          setChapters(response.data);
+          // Handle both old format (array) and new format (object with standard11/standard12)
+          const data = response.data;
+          console.log('Chapters API Response:', JSON.stringify(data, null, 2));
+          
+          if (Array.isArray(data)) {
+            // Old format - categorize chapters using frontend mapping
+            console.log('Received old format (array), categorizing chapters...');
+            const categorized = categorizeChapters(data, subject);
+            console.log('Categorized chapters:', {
+              std11: categorized.standard11.length,
+              std12: categorized.standard12.length,
+              unclassified: categorized.unclassified.length,
+            });
+            setChaptersData(categorized);
+          } else if (data && typeof data === 'object') {
+            // New format - ensure all properties exist
+            console.log('Received new format:', {
+              std11: data.standard11?.length || 0,
+              std12: data.standard12?.length || 0,
+              unclassified: data.unclassified?.length || 0,
+            });
+            setChaptersData({
+              standard11: data.standard11 || [],
+              standard12: data.standard12 || [],
+              unclassified: data.unclassified || [],
+            });
+          } else {
+            console.log('Unknown data format, using empty arrays');
+            setChaptersData({
+              standard11: [],
+              standard12: [],
+              unclassified: [],
+            });
+          }
+          setSelectedStandard(null); // Reset standard selection when subject changes
         }
       } catch (requestError) {
         if (isMounted) {
           const message =
             requestError instanceof Error ? requestError.message : 'Failed to load chapters';
           setError(message);
-          setChapters([]);
+          setChaptersData(null);
         }
       } finally {
         if (isMounted) {
@@ -136,6 +172,19 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
       isMounted = false;
     };
   }, [subject]);
+
+  // Get chapters for selected standard
+  const chapters = useMemo(() => {
+    if (!chaptersData || !selectedStandard) return [];
+    
+    if (selectedStandard === '11') {
+      return chaptersData.standard11 || [];
+    } else if (selectedStandard === '12') {
+      return chaptersData.standard12 || [];
+    }
+    
+    return [];
+  }, [chaptersData, selectedStandard]);
 
   // Memoize content - must be called unconditionally
   const content = useMemo(() => {
@@ -205,7 +254,101 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
       );
     }
 
-    // Chapters view for selected subject
+    // Standard selection view
+    if (subject && !selectedStandard && !loading && !error) {
+      const std11Count = chaptersData?.standard11?.length || 0;
+      const std12Count = chaptersData?.standard12?.length || 0;
+      const unclassifiedCount = chaptersData?.unclassified?.length || 0;
+
+      // Always show both standard cards, even if empty
+      // This allows users to navigate and see what's available
+      return (
+        <View style={styles.standardSelectionContainer}>
+          <Text style={styles.standardSelectionTitle}>Select Standard</Text>
+          <Text style={styles.standardSelectionSubtitle}>Choose a standard to view chapters</Text>
+          <View style={styles.standardGrid}>
+            <Animated.View
+              style={{
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              }}
+            >
+              <TouchableOpacity
+                onPress={() => setSelectedStandard('11')}
+                activeOpacity={0.85}
+                disabled={std11Count === 0}
+              >
+                <LinearGradient
+                  colors={std11Count > 0 ? ['#6366F1', '#4F46E5'] : ['#9CA3AF', '#6B7280'] as [string, string, ...string[]]}
+                  style={[styles.standardCard, std11Count === 0 && styles.standardCardDisabled]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View style={styles.standardCardContent}>
+                    <View style={styles.standardCardLeft}>
+                      <Text style={styles.standardNumber}>11</Text>
+                      <Text style={styles.standardLabel}>Standard XI</Text>
+                    </View>
+                    <View style={styles.standardCardRight}>
+                      <View style={styles.standardChapterBadge}>
+                        <Ionicons name="book" size={14} color="#FFFFFF" />
+                        <Text style={styles.standardChapterCount}>
+                          {std11Count}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
+            <Animated.View
+              style={{
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              }}
+            >
+              <TouchableOpacity
+                onPress={() => setSelectedStandard('12')}
+                activeOpacity={0.85}
+                disabled={std12Count === 0}
+              >
+                <LinearGradient
+                  colors={std12Count > 0 ? ['#10B981', '#059669'] : ['#9CA3AF', '#6B7280'] as [string, string, ...string[]]}
+                  style={[styles.standardCard, std12Count === 0 && styles.standardCardDisabled]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View style={styles.standardCardContent}>
+                    <View style={styles.standardCardLeft}>
+                      <Text style={styles.standardNumber}>12</Text>
+                      <Text style={styles.standardLabel}>Standard XII</Text>
+                    </View>
+                    <View style={styles.standardCardRight}>
+                      <View style={styles.standardChapterBadge}>
+                        <Ionicons name="book" size={14} color="#FFFFFF" />
+                        <Text style={styles.standardChapterCount}>
+                          {std12Count}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
+          {unclassifiedCount > 0 && (
+            <View style={styles.unclassifiedWarning}>
+              <Ionicons name="information-circle" size={16} color={colors.authTextMuted} />
+              <Text style={styles.unclassifiedText}>
+                {unclassifiedCount} chapter{unclassifiedCount !== 1 ? 's' : ''} could not be categorized. Please check chapter names in the database.
+              </Text>
+            </View>
+          )}
+        </View>
+      );
+    }
+
+    // Chapters view for selected subject and standard
     if (loading) {
       return (
         <View style={styles.stateCard}>
@@ -224,11 +367,13 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
       );
     }
 
-    if (chapters.length === 0) {
+    if (!chaptersData || chapters.length === 0) {
       return (
         <View style={styles.stateCard}>
           <Ionicons name="document-outline" size={48} color={colors.authTextMuted} />
-          <Text style={styles.stateText}>No chapters available.</Text>
+          <Text style={styles.stateText}>
+            {!chaptersData ? 'No chapters available.' : 'No chapters available for this standard.'}
+          </Text>
         </View>
       );
     }
@@ -270,7 +415,13 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
                 <ModernCard variant="elevated" padding="lg" style={styles.chapterCard}>
                   <View style={styles.chapterContent}>
                     <View style={styles.chapterIconContainer}>
-                      <Ionicons name="book" size={24} color={colors.primary} />
+                      {item.chapterNumber !== undefined ? (
+                        <View style={styles.chapterNumberBadge}>
+                          <Text style={styles.chapterNumberText}>{item.chapterNumber}</Text>
+                        </View>
+                      ) : (
+                        <Ionicons name="book" size={24} color={colors.primary} />
+                      )}
                     </View>
                     <View style={styles.chapterInfo}>
                       <View style={styles.chapterNameRow}>
@@ -315,7 +466,7 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
         })}
       </View>
     );
-  }, [chapters, error, loading, navigation, subject, subjects, subjectsLoading, fadeAnim, slideAnim, isPremium, appNavigation]);
+  }, [chapters, error, loading, navigation, subject, subjects, subjectsLoading, fadeAnim, slideAnim, isPremium, appNavigation, selectedStandard, chaptersData]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -325,9 +476,15 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
       >
         {subject ? (
           <BackHeader
-            title={`${subject} Chapters`}
-            subtitle="Choose a chapter to practice"
-            onBack={() => navigation.setParams({ subject: undefined })}
+            title={selectedStandard ? `${subject} - Std. ${selectedStandard}` : `${subject} Chapters`}
+            subtitle={selectedStandard ? "Choose a chapter to practice" : "Select a standard"}
+            onBack={() => {
+              if (selectedStandard) {
+                setSelectedStandard(null);
+              } else {
+                navigation.setParams({ subject: undefined });
+              }
+            }}
           />
         ) : (
           <View style={styles.header}>
@@ -555,4 +712,105 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.md,
   },
+  standardSelectionContainer: {
+    paddingTop: spacing.xl,
+  },
+  standardSelectionTitle: {
+    ...typography.h2,
+    color: colors.authText,
+    fontWeight: '700',
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  standardSelectionSubtitle: {
+    ...typography.body,
+    color: colors.authTextSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+  },
+  standardGrid: {
+    flexDirection: 'column',
+    gap: spacing.md,
+  },
+  standardCard: {
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    width: '100%',
+    minHeight: 100,
+    justifyContent: 'center',
+    ...shadow.lg,
+  },
+  standardCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  standardCardLeft: {
+    flex: 1,
+  },
+  standardCardRight: {
+    alignItems: 'flex-end',
+  },
+  standardNumber: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: spacing.xs / 2,
+  },
+  standardLabel: {
+    ...typography.body,
+    color: 'rgba(255, 255, 255, 0.95)',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  standardChapterBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs / 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+    borderRadius: radius.md,
+  },
+  standardChapterCount: {
+    ...typography.caption,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  standardCardDisabled: {
+    opacity: 0.6,
+  },
+  unclassifiedWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.lg,
+    padding: spacing.md,
+    backgroundColor: colors.authSurface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.authBorder,
+  },
+  unclassifiedText: {
+    ...typography.caption,
+    color: colors.authTextMuted,
+    fontSize: 12,
+    flex: 1,
+  },
+  chapterNumberBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chapterNumberText: {
+    ...typography.h3,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 18,
+  },
 });
+

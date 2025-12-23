@@ -3,6 +3,7 @@ const { getModelBySubject, getAllModels } = require('../models/Mcq');
 const UserAttempt = require('../models/UserAttempt');
 const TestSession = require('../models/TestSession');
 const mongoose = require('mongoose');
+const { getChapterInfo } = require('../config/chapterMapping');
 
 /**
  * Helper function to check if a chapter is locked for a non-premium user
@@ -229,6 +230,7 @@ const getChaptersBySubject = async (req, res, next) => {
 /**
  * Get chapters with analytics (total questions and user attempts) for a specific subject
  * GET /api/mcq/subjects/:subject/chapters/analytics
+ * Returns chapters grouped by standard (11th/12th) with chapter numbers
  */
 const getChaptersWithAnalytics = async (req, res, next) => {
   try {
@@ -288,18 +290,64 @@ const getChaptersWithAnalytics = async (req, res, next) => {
       userAttemptCounts.map((item) => [item._id, item.userAttempts])
     );
 
-    // Combine data for all chapters
-    const chaptersWithAnalytics = chapters
-      .map((chapter) => ({
+    // Group chapters by standard and assign chapter numbers
+    const standard11Chapters = [];
+    const standard12Chapters = [];
+    const unclassifiedChapters = [];
+
+    chapters.forEach((chapter) => {
+      const chapterInfo = getChapterInfo(subject, chapter);
+      const chapterData = {
         chapter,
         totalQuestions: questionCountMap.get(chapter) || 0,
         userAttempts: attemptCountMap.get(chapter) || 0,
-      }))
-      .sort((a, b) => a.chapter.localeCompare(b.chapter));
+      };
 
+      if (chapterInfo) {
+        chapterData.standard = chapterInfo.standard;
+        chapterData.chapterNumber = chapterInfo.chapterNumber;
+        
+        if (chapterInfo.standard === '11') {
+          standard11Chapters.push(chapterData);
+        } else if (chapterInfo.standard === '12') {
+          standard12Chapters.push(chapterData);
+        } else {
+          unclassifiedChapters.push(chapterData);
+        }
+      } else {
+        // If chapter not found in mapping, add to unclassified
+        console.log(`[Chapter Mapping] Chapter "${chapter}" for subject "${subject}" not found in mapping - adding to unclassified`);
+        unclassifiedChapters.push(chapterData);
+      }
+    });
+
+    console.log(`[Chapter Mapping] Subject: ${subject}, Std. 11: ${standard11Chapters.length}, Std. 12: ${standard12Chapters.length}, Unclassified: ${unclassifiedChapters.length}`);
+
+    // Sort chapters by chapter number within each standard
+    standard11Chapters.sort((a, b) => {
+      if (a.chapterNumber !== undefined && b.chapterNumber !== undefined) {
+        return a.chapterNumber - b.chapterNumber;
+      }
+      return a.chapter.localeCompare(b.chapter);
+    });
+
+    standard12Chapters.sort((a, b) => {
+      if (a.chapterNumber !== undefined && b.chapterNumber !== undefined) {
+        return a.chapterNumber - b.chapterNumber;
+      }
+      return a.chapter.localeCompare(b.chapter);
+    });
+
+    unclassifiedChapters.sort((a, b) => a.chapter.localeCompare(b.chapter));
+
+    // Return grouped by standard
     res.status(200).json({
       success: true,
-      data: chaptersWithAnalytics,
+      data: {
+        standard11: standard11Chapters,
+        standard12: standard12Chapters,
+        unclassified: unclassifiedChapters,
+      },
     });
   } catch (error) {
     console.error('Error getting chapters with analytics:', error);
