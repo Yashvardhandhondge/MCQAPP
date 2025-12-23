@@ -23,12 +23,13 @@ import PremiumLockModal from '../components/ui/PremiumLockModal';
 export type ChapterDetailScreenProps = NativeStackScreenProps<AppStackParamList, 'ChapterDetail'>;
 
 export default function ChapterDetailScreen({ route, navigation }: ChapterDetailScreenProps) {
-  const { subject, chapter, chapterIndex } = route.params;
+  const { subject, chapter, standard, chapterNumber } = route.params;
   const [generatingPractice, setGeneratingPractice] = useState(false);
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
   const { user } = useAuth();
   const isPremium = user?.subscription === 'premium';
-  const isWithinFreeChapters = isPremium || chapterIndex <= 2; // first 3 chapters (0,1,2) are free for non-premium
+  // Non-premium users can access chapters with chapterNumber 1, 2, or 3
+  const isWithinFreeChapters = isPremium || (chapterNumber !== undefined && chapterNumber <= 3);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -103,7 +104,8 @@ export default function ChapterDetailScreen({ route, navigation }: ChapterDetail
     navigation.navigate('PracticeByYear', {
       subject,
       chapter,
-      chapterIndex,
+      standard,
+      chapterNumber,
     });
   };
 

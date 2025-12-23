@@ -2,10 +2,11 @@ const createError = require('http-errors');
 const { getAllModels, getModelBySubject } = require('../models/Mcq');
 const TestSession = require('../models/TestSession');
 const UserAttempt = require('../models/UserAttempt');
+const { getChapterInfo } = require('../config/chapterMapping');
 
 /**
  * Helper function to check if a chapter is locked for a non-premium user
- * Non-premium users can only access the first 3 chapters (index 0-2) of each subject
+ * Non-premium users can only access chapters with chapterNumber 1, 2, or 3
  * @param {Object} user - The user object
  * @param {string} subject - The subject name
  * @param {string} chapter - The chapter name
@@ -18,20 +19,16 @@ const isChapterLocked = async (user, subject, chapter, Model) => {
     return false;
   }
 
-  // Get all chapters for the subject, sorted alphabetically
-  const allChapters = await Model.distinct('chapter');
-  const sortedChapters = allChapters.sort((a, b) => a.localeCompare(b));
+  // Get chapter info from chapterMapping (standard and chapterNumber)
+  const chapterInfo = getChapterInfo(subject, chapter);
 
-  // Find the index of the requested chapter
-  const chapterIndex = sortedChapters.findIndex((ch) => ch === chapter);
-
-  // If chapter not found, consider it locked (shouldn't happen, but safety check)
-  if (chapterIndex === -1) {
+  // If chapter not found in mapping, consider it locked (safety check)
+  if (!chapterInfo || !chapterInfo.chapterNumber) {
     return true;
   }
 
-  // Non-premium users can only access first 3 chapters (index 0, 1, 2)
-  return chapterIndex >= 3;
+  // Non-premium users can only access chapters with chapterNumber 1, 2, or 3
+  return chapterInfo.chapterNumber > 3;
 };
 
 /**

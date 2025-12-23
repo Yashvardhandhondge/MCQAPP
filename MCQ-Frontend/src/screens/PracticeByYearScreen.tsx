@@ -24,7 +24,7 @@ import type { YearAnalytics } from '../types/mcq';
 export type PracticeByYearScreenProps = NativeStackScreenProps<AppStackParamList, 'PracticeByYear'>;
 
 export default function PracticeByYearScreen({ route, navigation }: PracticeByYearScreenProps) {
-  const { subject, chapter, chapterIndex } = route.params;
+  const { subject, chapter, standard, chapterNumber } = route.params;
   const [years, setYears] = useState<YearAnalytics[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -97,11 +97,12 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
     }
 
     const isNonPremium = !isPremium;
-    const isWithinFreeChapters = !isNonPremium || chapterIndex <= 2; // first 3 chapters by order
+    // Non-premium users can access all years for chapters with chapterNumber 1, 2, or 3
+    const isWithinFreeChapters = !isNonPremium || (chapterNumber !== undefined && chapterNumber <= 3);
 
     // For non-premium users:
-    // - For the first 3 chapters (by index), all years are unlocked.
-    // - For later chapters, only the first year (index 0) is unlocked.
+    // - For chapters with chapterNumber 1, 2, 3: all years are unlocked.
+    // - For chapters with chapterNumber 4+: only the first year (index 0) is unlocked.
     if (isNonPremium && !isWithinFreeChapters && index > 0) {
       setPremiumModalVisible(true);
       return;
@@ -144,7 +145,8 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
     }
 
     const isNonPremium = !isPremium;
-    const isWithinFreeChapters = !isNonPremium || chapterIndex <= 2;
+    // Non-premium users can access all years for chapters with chapterNumber 1, 2, or 3
+    const isWithinFreeChapters = !isNonPremium || (chapterNumber !== undefined && chapterNumber <= 3);
 
     return (
       <View style={styles.yearList}>
@@ -154,8 +156,8 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
             : 0;
 
           // For non-premium users:
-          // - For the first 3 chapters (by order): all years are unlocked.
-          // - After that, for later chapters: only the first year (index 0) is unlocked.
+          // - For chapters with chapterNumber 1, 2, 3: all years are unlocked.
+          // - For chapters with chapterNumber 4+: only the first year (index 0) is unlocked.
           const isLocked = isNonPremium && !isWithinFreeChapters && index > 0;
           
           return (

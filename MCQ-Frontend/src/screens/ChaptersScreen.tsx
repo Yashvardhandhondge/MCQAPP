@@ -403,11 +403,12 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
               <TouchableOpacity
                 onPress={() => {
                   // Navigate to chapter detail using parent navigator.
-                  // We pass the chapterIndex so non-premium limits can be applied to the first 3 chapters only.
+                  // We pass the standard and chapterNumber so non-premium limits can be applied based on chapterNumber (1,2,3 free; 4+ locked).
                   (navigation as any).getParent()?.navigate('ChapterDetail', {
                     subject,
                     chapter: item.chapter,
-                    chapterIndex: index,
+                    standard: selectedStandard as '11' | '12',
+                    chapterNumber: item.chapterNumber,
                   });
                 }}
                 activeOpacity={0.8}

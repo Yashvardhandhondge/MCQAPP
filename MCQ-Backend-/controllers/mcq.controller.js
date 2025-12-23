@@ -7,7 +7,7 @@ const { getChapterInfo } = require('../config/chapterMapping');
 
 /**
  * Helper function to check if a chapter is locked for a non-premium user
- * Non-premium users can only access the first 3 chapters (index 0-2) of each subject
+ * Non-premium users can only access chapters with chapterNumber 1, 2, or 3
  * @param {Object} user - The user object
  * @param {string} subject - The subject name
  * @param {string} chapter - The chapter name
@@ -20,25 +20,21 @@ const isChapterLocked = async (user, subject, chapter, Model) => {
     return false;
   }
 
-  // Get all chapters for the subject, sorted alphabetically
-  const allChapters = await Model.distinct('chapter');
-  const sortedChapters = allChapters.sort((a, b) => a.localeCompare(b));
+  // Get chapter info from chapterMapping (standard and chapterNumber)
+  const chapterInfo = getChapterInfo(subject, chapter);
 
-  // Find the index of the requested chapter
-  const chapterIndex = sortedChapters.findIndex((ch) => ch === chapter);
-
-  // If chapter not found, consider it locked (shouldn't happen, but safety check)
-  if (chapterIndex === -1) {
+  // If chapter not found in mapping, consider it locked (safety check)
+  if (!chapterInfo || !chapterInfo.chapterNumber) {
     return true;
   }
 
-  // Non-premium users can only access first 3 chapters (index 0, 1, 2)
-  return chapterIndex >= 3;
+  // Non-premium users can only access chapters with chapterNumber 1, 2, or 3
+  return chapterInfo.chapterNumber > 3;
 };
 
 /**
  * Helper function to check if a year is accessible for a non-premium user
- * For chapters 4+ (index >= 3), only the first year (index 0) is accessible
+ * For chapters with chapterNumber 4+, only the first year (index 0) is accessible
  * @param {Object} user - The user object
  * @param {string} subject - The subject name
  * @param {string} chapter - The chapter name
@@ -52,25 +48,21 @@ const isYearAccessible = async (user, subject, chapter, year, Model) => {
     return true;
   }
 
-  // Get all chapters for the subject, sorted alphabetically
-  const allChapters = await Model.distinct('chapter');
-  const sortedChapters = allChapters.sort((a, b) => a.localeCompare(b));
+  // Get chapter info from chapterMapping (standard and chapterNumber)
+  const chapterInfo = getChapterInfo(subject, chapter);
 
-  // Find the index of the requested chapter
-  const chapterIndex = sortedChapters.findIndex((ch) => ch === chapter);
-
-  // If chapter not found, consider it locked
-  if (chapterIndex === -1) {
+  // If chapter not found in mapping, deny access
+  if (!chapterInfo || !chapterInfo.chapterNumber) {
     return false;
   }
 
-  // First 3 chapters (index 0, 1, 2) - all years are accessible
-  if (chapterIndex <= 2) {
+  // First 3 chapters (chapterNumber 1, 2, 3) - all years are accessible
+  if (chapterInfo.chapterNumber <= 3) {
     return true;
   }
 
-  // For chapters 4+ (index >= 3), only first year is accessible
-  // Get all years for this chapter and sort them
+  // For chapters 4+ (chapterNumber >= 4), only first year is accessible
+  // Get all years for this chapter and sort them (using same logic as getYearsWithAnalytics)
   const yearResults = await Model.aggregate([
     {
       $match: {
@@ -91,10 +83,11 @@ const isYearAccessible = async (user, subject, chapter, year, Model) => {
     }
   ]);
 
-  // Normalize years and create a map
+  // Normalize years: convert all to strings to merge duplicates (same as getYearsWithAnalytics)
   const yearMap = new Map();
-  yearResults.forEach(result => {
-    const normalizedYear = String(result._id);
+  yearResults.forEach(item => {
+    // Normalize year: convert to string and trim
+    const normalizedYear = String(item._id).trim();
     if (!yearMap.has(normalizedYear)) {
       yearMap.set(normalizedYear, normalizedYear);
     }
@@ -105,22 +98,32 @@ const isYearAccessible = async (user, subject, chapter, year, Model) => {
     const aNum = parseInt(a);
     const bNum = parseInt(b);
     
+    // If both are numbers, sort numerically
     if (!isNaN(aNum) && !isNaN(bNum)) {
       return aNum - bNum;
     }
     
+    // If one is a number, it comes first
     if (!isNaN(aNum)) return -1;
     if (!isNaN(bNum)) return 1;
     
+    // Both are strings, sort alphabetically
     return a.localeCompare(b);
   });
 
-  // Normalize the requested year
-  const normalizedRequestedYear = String(year);
+  // If no years found, deny access
+  if (years.length === 0) {
+    return false;
+  }
+
+  // Normalize the requested year (ensure it's a string, trim whitespace)
+  const normalizedRequestedYear = String(year).trim();
 
   // Find the index of the requested year
+  // Compare normalized strings (exact match)
   const yearIndex = years.findIndex(y => {
-    const normalizedY = String(y);
+    const normalizedY = String(y).trim();
+    // Use strict equality for exact match
     return normalizedY === normalizedRequestedYear;
   });
 
