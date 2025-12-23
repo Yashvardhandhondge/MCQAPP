@@ -11,6 +11,8 @@ const {
   getQuestionsByIds,
   generatePracticeTest,
   generateChapterPractice,
+  revealQuestion,
+  getDailyViews,
 } = require('../controllers/mcq.controller');
 const {
   submitAnswer,
@@ -326,6 +328,21 @@ router.get('/me/streak', getStudyStreakAndTodayProgress);
  * @access  Private (requires authentication)
  */
 router.get('/me/analytics/time-series', getTimeSeriesAnalytics);
+
+/**
+ * @route   GET /api/mcq/me/daily-views
+ * @desc    Get today's question view count for the user
+ * @access  Private (requires authentication)
+ */
+router.get('/me/daily-views', getDailyViews);
+
+/**
+ * @route   POST /api/mcq/questions/:questionId/reveal
+ * @desc    Reveal a blurred question (track daily view limit for free users)
+ * @param   {string} questionId - ID of the question to reveal
+ * @access  Private (requires authentication)
+ */
+router.post('/questions/:questionId/reveal', revealQuestion);
 
 /**
  * @route   POST /api/mcq/questions/:questionId/save

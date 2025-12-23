@@ -2,6 +2,7 @@ const createError = require('http-errors');
 const { getModelBySubject, getAllModels } = require('../models/Mcq');
 const UserAttempt = require('../models/UserAttempt');
 const TestSession = require('../models/TestSession');
+const DailyQuestionView = require('../models/DailyQuestionView');
 const mongoose = require('mongoose');
 const { getChapterInfo } = require('../config/chapterMapping');
 
@@ -44,111 +45,39 @@ const isChapterLocked = async (user, subject, chapter, Model) => {
 };
 
 /**
- * Helper function to check if a year is accessible for a non-premium user
- * For chapters with chapterNumber 4+, only the first year (index 0) is accessible
+ * Helper function to check if a year should be blurred for a non-premium user
+ * For free chapters (11th: chapters 1-2, 12th: chapter 1), all years are accessible
+ * For locked chapters, all years are shown but blurred
  * @param {Object} user - The user object
  * @param {string} subject - The subject name
  * @param {string} chapter - The chapter name
- * @param {string} year - The year value (normalized string)
- * @param {Object} Model - The Mongoose model for the subject
- * @returns {Promise<boolean>} - Returns true if year is accessible, false if locked
+ * @returns {Promise<boolean>} - Returns true if year should be blurred, false if accessible
  */
-const isYearAccessible = async (user, subject, chapter, year, Model) => {
-  // Premium users have access to all years
+const shouldBlurYear = async (user, subject, chapter) => {
+  // Premium users have access to all years without blur
   if (user.subscription === 'premium') {
-    return true;
+    return false;
   }
 
   // Get chapter info from chapterMapping (standard and chapterNumber)
   const chapterInfo = getChapterInfo(subject, chapter);
 
-  // If chapter not found in mapping, deny access
+  // If chapter not found in mapping, blur it (safety check)
   if (!chapterInfo || !chapterInfo.chapterNumber || !chapterInfo.standard) {
-    return false;
+    return true;
   }
 
   // Check based on standard:
-  // - 11th standard: chapters 1 and 2 (chapterNumber <= 2) - all years accessible
-  // - 12th standard: chapter 1 (chapterNumber <= 1) - all years accessible
+  // - 11th standard: chapters 1 and 2 (chapterNumber <= 2) - all years accessible (no blur)
+  // - 12th standard: chapter 1 (chapterNumber <= 1) - all years accessible (no blur)
   if (chapterInfo.standard === '11' && chapterInfo.chapterNumber <= 2) {
-    return true;
+    return false;
   } else if (chapterInfo.standard === '12' && chapterInfo.chapterNumber <= 1) {
-    return true;
-  }
-
-  // For chapters 4+ (chapterNumber >= 4), only first year is accessible
-  // Get all years for this chapter and sort them (using same logic as getYearsWithAnalytics)
-  const yearResults = await Model.aggregate([
-    {
-      $match: {
-        subject: subject,
-        chapter: chapter
-      }
-    },
-    {
-      $group: {
-        _id: '$year',
-        questionCount: { $sum: 1 }
-      }
-    },
-    {
-      $match: {
-        questionCount: { $gt: 0 }
-      }
-    }
-  ]);
-
-  // Normalize years: convert all to strings to merge duplicates (same as getYearsWithAnalytics)
-  const yearMap = new Map();
-  yearResults.forEach(item => {
-    // Normalize year: convert to string and trim
-    const normalizedYear = String(item._id).trim();
-    if (!yearMap.has(normalizedYear)) {
-      yearMap.set(normalizedYear, normalizedYear);
-    }
-  });
-
-  // Get sorted years (same sorting logic as getYearsWithAnalytics)
-  const years = Array.from(yearMap.values()).sort((a, b) => {
-    const aNum = parseInt(a);
-    const bNum = parseInt(b);
-    
-    // If both are numbers, sort numerically
-    if (!isNaN(aNum) && !isNaN(bNum)) {
-      return aNum - bNum;
-    }
-    
-    // If one is a number, it comes first
-    if (!isNaN(aNum)) return -1;
-    if (!isNaN(bNum)) return 1;
-    
-    // Both are strings, sort alphabetically
-    return a.localeCompare(b);
-  });
-
-  // If no years found, deny access
-  if (years.length === 0) {
     return false;
   }
 
-  // Normalize the requested year (ensure it's a string, trim whitespace)
-  const normalizedRequestedYear = String(year).trim();
-
-  // Find the index of the requested year
-  // Compare normalized strings (exact match)
-  const yearIndex = years.findIndex(y => {
-    const normalizedY = String(y).trim();
-    // Use strict equality for exact match
-    return normalizedY === normalizedRequestedYear;
-  });
-
-  // If year not found, deny access
-  if (yearIndex === -1) {
-    return false;
-  }
-
-  // For chapters 4+, only first year (index 0) is accessible
-  return yearIndex === 0;
+  // For locked chapters (3rd chapter onwards), blur all years
+  return true;
 };
 
 /**
@@ -477,7 +406,8 @@ const getYearsBySubjectAndChapter = async (req, res, next) => {
 const getYearsWithAnalytics = async (req, res, next) => {
   try {
     const { subject, chapter } = req.params;
-    const userId = req.user._id;
+    const user = req.user;
+    const userId = user._id;
 
     // Validate subject
     const validSubjects = ['Chemistry', 'Physics', 'Maths', 'Biology'];
@@ -487,6 +417,9 @@ const getYearsWithAnalytics = async (req, res, next) => {
 
     const Model = getModelBySubject(subject);
     const decodedChapter = decodeURIComponent(chapter);
+    
+    // Check if years should be blurred for this chapter
+    const shouldBlur = await shouldBlurYear(user, subject, decodedChapter);
     
     // Use aggregation to get question counts per year
     const questionCounts = await Model.aggregate([
@@ -554,6 +487,7 @@ const getYearsWithAnalytics = async (req, res, next) => {
         year: yearData.year,
         totalQuestions: yearData.totalQuestions,
         userAttempts: attemptCountMap.get(yearData.year) || 0,
+        isBlurred: shouldBlur && user.subscription !== 'premium',
       }))
       .sort((a, b) => {
         // Sort years: numeric years first (ascending), then string years (alphabetically)
@@ -618,9 +552,6 @@ const getQuestionsBySubjectAndChapter = async (req, res, next) => {
 
     // Check if chapter is locked for non-premium users
     const locked = await isChapterLocked(user, subject, decodedChapter, Model);
-    if (locked) {
-      return next(createError(403, 'This chapter is available for premium users only. Please upgrade to premium to access all chapters.'));
-    }
     
     const filter = {
       subject: subject,
@@ -641,13 +572,20 @@ const getQuestionsBySubjectAndChapter = async (req, res, next) => {
       });
     }
 
+    // For locked chapters, mark questions as blurred for free users
+    // Premium users see all questions without blur
+    const questionsWithBlur = questions.map(q => ({
+      ...q,
+      isBlurred: locked && user.subscription !== 'premium'
+    }));
+
     // Get total count for pagination info
     const totalQuestions = await Model.countDocuments(filter);
     const totalPages = Math.ceil(totalQuestions / limitNum);
 
     res.status(200).json({
       success: true,
-      data: questions,
+      data: questionsWithBlur,
       pagination: {
         currentPage: pageNum,
         totalPages,
@@ -655,6 +593,7 @@ const getQuestionsBySubjectAndChapter = async (req, res, next) => {
         hasNextPage: pageNum < totalPages,
         hasPrevPage: pageNum > 1,
       },
+      isChapterLocked: locked,
     });
   } catch (error) {
     console.error('Error getting questions by subject and chapter:', error);
@@ -698,13 +637,8 @@ const getQuestionsBySubjectChapterAndYear = async (req, res, next) => {
     // Normalize year: convert to string for consistent matching
     const normalizedYear = String(decodedYear);
 
-    // Check if this specific year is accessible for non-premium users
-    // For chapters 4+, only the first year is accessible to non-premium users
-    const yearAccessible = await isYearAccessible(user, subject, decodedChapter, normalizedYear, Model);
-    if (!yearAccessible) {
-      return next(createError(403, 'This year is available for premium users only. Please upgrade to premium to access all years.'));
-    }
-    
+    // Check if this year should be blurred for non-premium users
+    const shouldBlur = await shouldBlurYear(user, subject, decodedChapter);
     
     // Match both number and string versions of the same year
     // Use $or to explicitly match both types, and also use $expr for type-agnostic matching
@@ -751,13 +685,20 @@ const getQuestionsBySubjectChapterAndYear = async (req, res, next) => {
       });
     }
 
+    // For locked chapters, mark questions as blurred for free users
+    // Premium users see all questions without blur
+    const questionsWithBlur = questions.map(q => ({
+      ...q,
+      isBlurred: shouldBlur && user.subscription !== 'premium'
+    }));
+
     // Get total count for pagination info
     const totalQuestions = await Model.countDocuments(filter);
     const totalPages = Math.ceil(totalQuestions / limitNum);
 
     res.status(200).json({
       success: true,
-      data: questions,
+      data: questionsWithBlur,
       pagination: {
         currentPage: pageNum,
         totalPages,
@@ -765,6 +706,7 @@ const getQuestionsBySubjectChapterAndYear = async (req, res, next) => {
         hasNextPage: pageNum < totalPages,
         hasPrevPage: pageNum > 1,
       },
+      shouldBlurYear: shouldBlur,
     });
   } catch (error) {
     console.error('Error getting questions by subject, chapter, and year:', error);
@@ -1036,6 +978,127 @@ const getQuestionsByIds = async (req, res, next) => {
   }
 };
 
+/**
+ * Track a question view for daily limit (for free users viewing blurred questions)
+ * POST /api/mcq/questions/:questionId/reveal
+ */
+const revealQuestion = async (req, res, next) => {
+  try {
+    const { questionId } = req.params;
+    const user = req.user;
+    const userId = user._id;
+
+    // Premium users don't have limits
+    if (user.subscription === 'premium') {
+      return res.status(200).json({
+        success: true,
+        message: 'Question revealed',
+        isRevealed: true,
+        dailyViewsRemaining: -1, // Unlimited for premium
+      });
+    }
+
+    // Get today's date string
+    const today = DailyQuestionView.getTodayDateString();
+    const DAILY_LIMIT = 25;
+
+    // Check today's view count
+    const todayViews = await DailyQuestionView.countDocuments({
+      user: userId,
+      date: today,
+    });
+
+    // Check if user has reached daily limit
+    if (todayViews >= DAILY_LIMIT) {
+      return res.status(403).json({
+        success: false,
+        message: "You have reached your today's limit to see more questions. Upgrade to premium to see unlimited questions.",
+        isRevealed: false,
+        dailyViewsRemaining: 0,
+        dailyLimit: DAILY_LIMIT,
+      });
+    }
+
+    // Check if this question was already viewed today
+    const existingView = await DailyQuestionView.findOne({
+      user: userId,
+      question: questionId,
+      date: today,
+    });
+
+    if (existingView) {
+      // Already viewed today, return success
+      return res.status(200).json({
+        success: true,
+        message: 'Question revealed',
+        isRevealed: true,
+        dailyViewsRemaining: DAILY_LIMIT - todayViews,
+        dailyLimit: DAILY_LIMIT,
+      });
+    }
+
+    // Create new view record
+    await DailyQuestionView.create({
+      user: userId,
+      question: questionId,
+      date: today,
+      viewedAt: new Date(),
+    });
+
+    // Return success with updated count
+    const newTodayViews = todayViews + 1;
+    return res.status(200).json({
+      success: true,
+      message: 'Question revealed',
+      isRevealed: true,
+      dailyViewsRemaining: DAILY_LIMIT - newTodayViews,
+      dailyLimit: DAILY_LIMIT,
+    });
+  } catch (error) {
+    console.error('Error revealing question:', error);
+    return next(createError(500, 'Failed to reveal question'));
+  }
+};
+
+/**
+ * Get today's question view count for the user
+ * GET /api/mcq/me/daily-views
+ */
+const getDailyViews = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const userId = user._id;
+
+    // Premium users don't have limits
+    if (user.subscription === 'premium') {
+      return res.status(200).json({
+        success: true,
+        dailyViews: 0,
+        dailyLimit: -1, // Unlimited
+        dailyViewsRemaining: -1, // Unlimited
+      });
+    }
+
+    const today = DailyQuestionView.getTodayDateString();
+    const DAILY_LIMIT = 25;
+
+    const todayViews = await DailyQuestionView.countDocuments({
+      user: userId,
+      date: today,
+    });
+
+    return res.status(200).json({
+      success: true,
+      dailyViews: todayViews,
+      dailyLimit: DAILY_LIMIT,
+      dailyViewsRemaining: Math.max(0, DAILY_LIMIT - todayViews),
+    });
+  } catch (error) {
+    console.error('Error getting daily views:', error);
+    return next(createError(500, 'Failed to get daily views'));
+  }
+};
+
 module.exports = {
   getDashboardSummary,
   getChaptersBySubject,
@@ -1047,4 +1110,6 @@ module.exports = {
   getQuestionsByIds,
   generatePracticeTest,
   generateChapterPractice,
+  revealQuestion,
+  getDailyViews,
 };
