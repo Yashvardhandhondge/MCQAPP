@@ -97,12 +97,18 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
     }
 
     const isNonPremium = !isPremium;
-    // Non-premium users can access all years for chapters with chapterNumber 1, 2, or 3
-    const isWithinFreeChapters = !isNonPremium || (chapterNumber !== undefined && chapterNumber <= 3);
+    // Non-premium users can access all years for:
+    // - 11th standard: chapters with chapterNumber 1 and 2 (chapterNumber <= 2)
+    // - 12th standard: chapter with chapterNumber 1 (chapterNumber <= 1)
+    const isWithinFreeChapters = !isNonPremium || (
+      standard === '11' && chapterNumber !== undefined && chapterNumber <= 2
+    ) || (
+      standard === '12' && chapterNumber !== undefined && chapterNumber <= 1
+    );
 
     // For non-premium users:
-    // - For chapters with chapterNumber 1, 2, 3: all years are unlocked.
-    // - For chapters with chapterNumber 4+: only the first year (index 0) is unlocked.
+    // - For free chapters: all years are unlocked.
+    // - For locked chapters: only the first year (index 0) is unlocked.
     if (isNonPremium && !isWithinFreeChapters && index > 0) {
       setPremiumModalVisible(true);
       return;
@@ -145,8 +151,14 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
     }
 
     const isNonPremium = !isPremium;
-    // Non-premium users can access all years for chapters with chapterNumber 1, 2, or 3
-    const isWithinFreeChapters = !isNonPremium || (chapterNumber !== undefined && chapterNumber <= 3);
+    // Non-premium users can access all years for:
+    // - 11th standard: chapters with chapterNumber 1 and 2 (chapterNumber <= 2)
+    // - 12th standard: chapter with chapterNumber 1 (chapterNumber <= 1)
+    const isWithinFreeChapters = !isNonPremium || (
+      standard === '11' && chapterNumber !== undefined && chapterNumber <= 2
+    ) || (
+      standard === '12' && chapterNumber !== undefined && chapterNumber <= 1
+    );
 
     return (
       <View style={styles.yearList}>
@@ -156,8 +168,8 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
             : 0;
 
           // For non-premium users:
-          // - For chapters with chapterNumber 1, 2, 3: all years are unlocked.
-          // - For chapters with chapterNumber 4+: only the first year (index 0) is unlocked.
+          // - For free chapters: all years are unlocked.
+          // - For locked chapters: only the first year (index 0) is unlocked.
           const isLocked = isNonPremium && !isWithinFreeChapters && index > 0;
           
           return (

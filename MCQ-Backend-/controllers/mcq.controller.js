@@ -7,7 +7,9 @@ const { getChapterInfo } = require('../config/chapterMapping');
 
 /**
  * Helper function to check if a chapter is locked for a non-premium user
- * Non-premium users can only access chapters with chapterNumber 1, 2, or 3
+ * Non-premium users can access:
+ * - 11th standard: chapters with chapterNumber 1 and 2 (first 2 chapters)
+ * - 12th standard: chapter with chapterNumber 1 (first 1 chapter)
  * @param {Object} user - The user object
  * @param {string} subject - The subject name
  * @param {string} chapter - The chapter name
@@ -24,12 +26,21 @@ const isChapterLocked = async (user, subject, chapter, Model) => {
   const chapterInfo = getChapterInfo(subject, chapter);
 
   // If chapter not found in mapping, consider it locked (safety check)
-  if (!chapterInfo || !chapterInfo.chapterNumber) {
+  if (!chapterInfo || !chapterInfo.chapterNumber || !chapterInfo.standard) {
     return true;
   }
 
-  // Non-premium users can only access chapters with chapterNumber 1, 2, or 3
-  return chapterInfo.chapterNumber > 3;
+  // Check based on standard:
+  // - 11th standard: allow chapters 1 and 2 (chapterNumber <= 2)
+  // - 12th standard: allow chapter 1 only (chapterNumber <= 1)
+  if (chapterInfo.standard === '11') {
+    return chapterInfo.chapterNumber > 2;
+  } else if (chapterInfo.standard === '12') {
+    return chapterInfo.chapterNumber > 1;
+  }
+
+  // If standard is not 11 or 12, lock it
+  return true;
 };
 
 /**
@@ -52,12 +63,16 @@ const isYearAccessible = async (user, subject, chapter, year, Model) => {
   const chapterInfo = getChapterInfo(subject, chapter);
 
   // If chapter not found in mapping, deny access
-  if (!chapterInfo || !chapterInfo.chapterNumber) {
+  if (!chapterInfo || !chapterInfo.chapterNumber || !chapterInfo.standard) {
     return false;
   }
 
-  // First 3 chapters (chapterNumber 1, 2, 3) - all years are accessible
-  if (chapterInfo.chapterNumber <= 3) {
+  // Check based on standard:
+  // - 11th standard: chapters 1 and 2 (chapterNumber <= 2) - all years accessible
+  // - 12th standard: chapter 1 (chapterNumber <= 1) - all years accessible
+  if (chapterInfo.standard === '11' && chapterInfo.chapterNumber <= 2) {
+    return true;
+  } else if (chapterInfo.standard === '12' && chapterInfo.chapterNumber <= 1) {
     return true;
   }
 

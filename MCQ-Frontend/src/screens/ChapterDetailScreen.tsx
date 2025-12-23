@@ -28,8 +28,14 @@ export default function ChapterDetailScreen({ route, navigation }: ChapterDetail
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
   const { user } = useAuth();
   const isPremium = user?.subscription === 'premium';
-  // Non-premium users can access chapters with chapterNumber 1, 2, or 3
-  const isWithinFreeChapters = isPremium || (chapterNumber !== undefined && chapterNumber <= 3);
+  // Non-premium users can access:
+  // - 11th standard: chapters with chapterNumber 1 and 2 (chapterNumber <= 2)
+  // - 12th standard: chapter with chapterNumber 1 (chapterNumber <= 1)
+  const isWithinFreeChapters = isPremium || (
+    standard === '11' && chapterNumber !== undefined && chapterNumber <= 2
+  ) || (
+    standard === '12' && chapterNumber !== undefined && chapterNumber <= 1
+  );
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
