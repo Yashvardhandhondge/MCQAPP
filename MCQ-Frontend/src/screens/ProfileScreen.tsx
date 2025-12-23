@@ -176,15 +176,24 @@ export default function ProfileScreen() {
                   </View>
                 </View>
 
-                {/* Subscription / password-style row */}
+                {/* Subscription row */}
                 <View style={styles.infoRow}>
-                  <Ionicons name="eye-outline" size={20} color={colors.primary} />
+                  <Ionicons name="diamond-outline" size={20} color={colors.primary} />
                   <View style={styles.infoRowTextContainer}>
                     <Text style={styles.infoRowText}>Subscription</Text>
                     <Text style={styles.infoRowSubText}>
                       {user?.subscription === 'premium' ? 'Premium member' : 'Free plan'}
                     </Text>
                   </View>
+                  {user?.subscription !== 'premium' && (
+                    <TouchableOpacity
+                      onPress={() => navigation.navigate('PremiumPurchase')}
+                      activeOpacity={0.8}
+                      style={styles.premiumButton}
+                    >
+                      <Text style={styles.premiumButtonText}>Purchase Premium</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
 
@@ -277,19 +286,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   infoSection: {
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.authBorder,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.xl,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.lg,
     paddingHorizontal: spacing.lg,
     borderRadius: radius.lg,
     backgroundColor: colors.authInputBg,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
+    minHeight: 56,
   },
   infoRowTextContainer: {
     flex: 1,
@@ -307,6 +317,18 @@ const styles = StyleSheet.create({
   },
   infoRowChevron: {
     marginLeft: 'auto',
+  },
+  premiumButton: {
+    marginLeft: 'auto',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+  },
+  premiumButtonText: {
+    ...typography.small,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   actionsRow: {
     flexDirection: 'row',

@@ -27,7 +27,7 @@ if (__DEV__) {
   }
 } else {
   // Production - use your production API URL
-  API_BASE_URL = 'https://your-production-api.com';
+  API_BASE_URL = 'https://mcqapp-nu.vercel.app';
 }
 
 export { API_BASE_URL };
