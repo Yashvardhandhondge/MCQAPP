@@ -33,6 +33,7 @@ import ModernCard from '../components/ui/ModernCard';
 import BackHeader from '../components/ui/BackHeader';
 import GradientButton from '../components/ui/GradientButton';
 import ReportQuestionModal from '../components/ui/ReportQuestionModal';
+import MathText from '../components/ui/MathText';
 import PremiumLockModal from '../components/ui/PremiumLockModal';
 
 const QUESTIONS_PER_PAGE = 5;
@@ -721,7 +722,7 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                           question.isBlurred && !isPremium && !revealedQuestions.has(question._id) && styles.blurredContent
                         ]}
                       >
-                        <Text style={styles.questionText}>{question.question}</Text>
+                        <MathText style={styles.questionText}>{question.question}</MathText>
                       
                       {/* Options List */}
                       <View style={styles.optionsContainer}>
@@ -745,14 +746,14 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                                 <View style={styles.optionIconContainer}>
                                   {getOptionIcon(question._id, option)}
                                 </View>
-                                <Text
+                                <MathText
                                   style={[
                                     styles.optionText,
                                     state?.selectedOption === option && styles.optionTextSelected,
                                   ]}
                                 >
                                   {option}
-                                </Text>
+                                </MathText>
                               </View>
                             </TouchableOpacity>
                           );
@@ -800,9 +801,14 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                           ) : (
                             <View style={styles.resultIncorrect}>
                               <Ionicons name="close-circle" size={20} color={colors.danger} />
-                              <Text style={styles.resultTextIncorrect}>
-                                Incorrect. Correct answer: {question.correctanswrs}
-                              </Text>
+                              <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
+                                <Text style={styles.resultTextIncorrect}>
+                                  Incorrect. Correct answer:{' '}
+                                </Text>
+                                <MathText style={styles.resultTextIncorrect}>
+                                  {question.correctanswrs}
+                                </MathText>
+                              </View>
                             </View>
                           )}
 
@@ -871,9 +877,9 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                               </Text>
                             </View>
                           ) : questionStates.get(question._id)?.solution ? (
-                            <Text style={styles.solutionText}>
+                            <MathText style={styles.solutionText}>
                               {questionStates.get(question._id)?.solution}
-                            </Text>
+                            </MathText>
                           ) : null}
                         </Animated.View>
                       )}

@@ -18,6 +18,7 @@ import type { TestResult } from '../types/mcq';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import ModernCard from '../components/ui/ModernCard';
 import BackHeader from '../components/ui/BackHeader';
+import MathText from '../components/ui/MathText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export type TestResultsScreenProps = NativeStackScreenProps<AppStackParamList, 'TestResults'>;
@@ -216,15 +217,20 @@ export default function TestResultsScreen({ route, navigation }: TestResultsScre
                       <View style={styles.resultNumberCorrect}>
                         <Text style={styles.resultNumberText}>{index + 1}</Text>
                       </View>
-                      <Text style={styles.resultQuestion} numberOfLines={2}>
+                      <MathText style={styles.resultQuestion}>
                         {result.question}
-                      </Text>
+                      </MathText>
                     </View>
                     <View style={styles.resultAnswer}>
                       <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-                      <Text style={styles.resultAnswerText}>
-                        Your Answer: {result.selectedOption}
-                      </Text>
+                      <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
+                        <Text style={styles.resultAnswerText}>
+                          Your Answer:{' '}
+                        </Text>
+                        <MathText style={styles.resultAnswerText}>
+                          {result.selectedOption}
+                        </MathText>
+                      </View>
                     </View>
                   </ModernCard>
                 ))}
@@ -257,12 +263,11 @@ export default function TestResultsScreen({ route, navigation }: TestResultsScre
                           <View style={styles.resultNumberWrong}>
                             <Text style={styles.resultNumberText}>{index + 1}</Text>
                           </View>
-                          <Text
+                          <MathText
                             style={styles.resultQuestion}
-                            numberOfLines={isExpanded ? undefined : 2}
                           >
                             {result.question}
-                          </Text>
+                          </MathText>
                           <Ionicons
                             name={isExpanded ? 'chevron-up' : 'chevron-down'}
                             size={20}
@@ -297,7 +302,7 @@ export default function TestResultsScreen({ route, navigation }: TestResultsScre
                                       <View style={styles.optionDot} />
                                     )}
                                   </View>
-                                  <Text
+                                  <MathText
                                     style={[
                                       styles.optionText,
                                       isCorrect && styles.optionTextCorrect,
@@ -305,7 +310,7 @@ export default function TestResultsScreen({ route, navigation }: TestResultsScre
                                     ]}
                                   >
                                     {option}
-                                  </Text>
+                                  </MathText>
                                 </View>
                               );
                             })}
@@ -316,15 +321,25 @@ export default function TestResultsScreen({ route, navigation }: TestResultsScre
                       <View style={styles.resultAnswers}>
                         <View style={[styles.resultAnswer, styles.resultAnswerWrong]}>
                           <Ionicons name="close-circle" size={20} color={colors.danger} />
-                          <Text style={styles.resultAnswerText}>
-                            Your Answer: {result.selectedOption}
-                          </Text>
+                          <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
+                            <Text style={styles.resultAnswerText}>
+                              Your Answer:{' '}
+                            </Text>
+                            <MathText style={styles.resultAnswerText}>
+                              {result.selectedOption}
+                            </MathText>
+                          </View>
                         </View>
                         <View style={[styles.resultAnswer, styles.resultAnswerCorrect]}>
                           <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-                          <Text style={styles.resultAnswerText}>
-                            Correct Answer: {result.correctAnswer}
-                          </Text>
+                          <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
+                            <Text style={styles.resultAnswerText}>
+                              Correct Answer:{' '}
+                            </Text>
+                            <MathText style={styles.resultAnswerText}>
+                              {result.correctAnswer}
+                            </MathText>
+                          </View>
                         </View>
                       </View>
                     </ModernCard>

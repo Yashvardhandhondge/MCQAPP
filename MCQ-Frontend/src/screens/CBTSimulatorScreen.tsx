@@ -21,6 +21,7 @@ import ModernCard from '../components/ui/ModernCard';
 import GradientButton from '../components/ui/GradientButton';
 import BackHeader from '../components/ui/BackHeader';
 import ReportQuestionModal from '../components/ui/ReportQuestionModal';
+import MathText from '../components/ui/MathText';
 import { getQuestionsByIds, submitTestSession } from '../services/mcq.service';
 import type { Question } from '../types/mcq';
 
@@ -390,7 +391,7 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
                   <View style={styles.questionNumberBadge}>
                     <Text style={styles.questionNumberBadgeText}>{currentQuestionIndex + 1}</Text>
                   </View>
-                  <Text style={styles.questionText}>{currentQuestion.question}</Text>
+                  <MathText style={styles.questionText}>{currentQuestion.question}</MathText>
                 </View>
 
                 <View style={styles.optionsContainer}>
@@ -422,9 +423,9 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
                               {optionLabel}
                             </Text>
                           </View>
-                          <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                          <MathText style={[styles.optionText, isSelected && styles.optionTextSelected]}>
                             {option}
-                          </Text>
+                          </MathText>
                         </View>
                         {isSelected && (
                           <View style={styles.selectedIconContainer}>

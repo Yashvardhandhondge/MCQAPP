@@ -18,6 +18,7 @@ import type { SavedQuestionWithAttempt } from '../types/mcq';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import ModernCard from '../components/ui/ModernCard';
 import BackHeader from '../components/ui/BackHeader';
+import MathText from '../components/ui/MathText';
 
 export type SavedQuestionsListScreenProps = NativeStackScreenProps<AppStackParamList, 'SavedQuestionsList'>;
 
@@ -207,7 +208,7 @@ export default function SavedQuestionsListScreen({ route, navigation }: SavedQue
                       onPress={() => handleQuestionPress(question)}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.questionText}>{question.question}</Text>
+                      <MathText style={styles.questionText}>{question.question}</MathText>
                     </TouchableOpacity>
 
                     {/* Show options with answers if attempted */}
@@ -225,14 +226,14 @@ export default function SavedQuestionsListScreen({ route, navigation }: SavedQue
                               <View style={styles.optionIconContainer}>
                                 {getOptionIcon(question, option)}
                               </View>
-                              <Text
+                              <MathText
                                 style={[
                                   styles.optionText,
                                   question.userAttempt?.selectedOption === option && styles.optionTextSelected,
                                 ]}
                               >
                                 {option}
-                              </Text>
+                              </MathText>
                             </View>
                           </View>
                         ))}
