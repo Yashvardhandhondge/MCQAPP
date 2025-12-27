@@ -253,6 +253,9 @@ const getChaptersWithAnalytics = async (req, res, next) => {
       if (chapterInfo) {
         chapterData.standard = chapterInfo.standard;
         chapterData.chapterNumber = chapterInfo.chapterNumber;
+        // Add exam weightage (MHT-CET exam questions and marks)
+        chapterData.examQuestions = chapterInfo.examQuestions !== undefined ? chapterInfo.examQuestions : null;
+        chapterData.examMarks = chapterInfo.examMarks !== undefined ? chapterInfo.examMarks : null;
         
         if (chapterInfo.standard === '11') {
           standard11Chapters.push(chapterData);

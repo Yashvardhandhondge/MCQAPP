@@ -118,7 +118,6 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
         if (isMounted) {
           // Handle both old format (array) and new format (object with standard11/standard12)
           const data = response.data;
-          console.log('Chapters API Response:', JSON.stringify(data, null, 2));
           
           if (Array.isArray(data)) {
             // Old format - categorize chapters using frontend mapping
@@ -385,6 +384,19 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
             ? Math.round((item.userAttempts / item.totalQuestions) * 100) 
             : 0;
           
+          // Check if weightage should be displayed
+          const hasWeightage = item.examQuestions !== undefined && item.examQuestions !== null && item.examQuestions > 0;
+          
+          // Temporary debug - remove after verifying
+          if (index === 0 && __DEV__) {
+            console.log('Chapter weightage check:', {
+              chapter: item.chapter,
+              examQuestions: item.examQuestions,
+              examMarks: item.examMarks,
+              hasWeightage,
+            });
+          }
+          
           return (
             <Animated.View
               key={item.chapter}
@@ -442,6 +454,14 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
                               {item.userAttempts.toLocaleString()} solved
                             </Text>
                           </View>
+                          {hasWeightage && (
+                            <View style={styles.statItem}>
+                              <Ionicons name="trophy" size={14} color="#F59E0B" />
+                              <Text style={styles.statText}>
+                                {item.examQuestions} question{item.examQuestions !== 1 ? 's' : ''} expected 
+                              </Text>
+                            </View>
+                          )}
                         </View>
                         {item.totalQuestions > 0 && (
                           <View style={styles.progressContainer}>
@@ -655,6 +675,7 @@ const styles = StyleSheet.create({
   },
   chapterStats: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: spacing.md,
     marginTop: spacing.xs,

@@ -24,6 +24,8 @@ export interface ChapterAnalytics {
   userAttempts: number;
   standard?: '11' | '12';
   chapterNumber?: number;
+  examQuestions?: number; // Number of questions from this chapter in MHT-CET exam
+  examMarks?: number; // Total marks for questions from this chapter in MHT-CET exam
 }
 
 export interface ChaptersAnalyticsData {
