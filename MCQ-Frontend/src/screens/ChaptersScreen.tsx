@@ -19,7 +19,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { getChaptersWithAnalytics, getDashboard } from '../services/mcq.service';
 import { colors, radius, spacing, typography, shadow } from '../theme';
-import ModernCard from '../components/ui/ModernCard';
 import BackHeader from '../components/ui/BackHeader';
 import PremiumLockModal from '../components/ui/PremiumLockModal';
 import type { SubjectSummary, ChapterAnalytics } from '../types/mcq';
@@ -423,17 +422,24 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
                     chapterNumber: item.chapterNumber,
                   });
                 }}
-                activeOpacity={0.8}
+                activeOpacity={0.85}
               >
-                <ModernCard variant="elevated" padding="lg" style={styles.chapterCard}>
+                <View style={styles.chapterItem}>
                   <View style={styles.chapterContent}>
                     <View style={styles.chapterIconContainer}>
                       {item.chapterNumber !== undefined ? (
-                        <View style={styles.chapterNumberBadge}>
+                        <LinearGradient
+                          colors={colors.gradientPrimary as [string, string]}
+                          style={styles.chapterNumberBadge}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                        >
                           <Text style={styles.chapterNumberText}>{item.chapterNumber}</Text>
-                        </View>
+                        </LinearGradient>
                       ) : (
-                        <Ionicons name="book" size={24} color={colors.primary} />
+                        <View style={styles.chapterIconWrapper}>
+                          <Ionicons name="book" size={24} color={colors.primary} />
+                        </View>
                       )}
                     </View>
                     <View style={styles.chapterInfo}>
@@ -466,11 +472,14 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
                         {item.totalQuestions > 0 && (
                           <View style={styles.progressContainer}>
                             <View style={styles.progressBar}>
-                              <View 
+                              <LinearGradient
+                                colors={colors.gradientPrimary as [string, string]}
                                 style={[
                                   styles.progressFill, 
                                   { width: `${progressPercentage}%` }
-                                ]} 
+                                ]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
                               />
                             </View>
                             <Text style={styles.progressText}>{progressPercentage}% complete</Text>
@@ -478,9 +487,9 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
                         )}
                       </>
                     </View>
-                    <Ionicons name="chevron-forward" size={24} color={colors.authTextMuted} />
+                    <Ionicons name="chevron-forward" size={20} color={colors.authTextMuted} style={styles.chapterChevron} />
                   </View>
-                </ModernCard>
+                </View>
               </TouchableOpacity>
             </Animated.View>
           );
@@ -536,19 +545,19 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FAFBFC',
+    backgroundColor: '#F3E8FF',
   },
   backgroundGradient: {
     flex: 1,
-    backgroundColor: '#FAFBFC',
+    backgroundColor: '#F3E8FF',
   },
   header: {
     paddingHorizontal: spacing.xxl,
     paddingTop: spacing.xxxl,
     paddingBottom: spacing.lg,
-    backgroundColor: colors.authSurface,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: colors.authBorder,
+    borderBottomColor: '#E5E7EB',
   },
   title: {
     ...typography.h1,
@@ -619,11 +628,14 @@ const styles = StyleSheet.create({
   chapterList: {
     gap: spacing.md,
   },
-  chapterCard: {
+  chapterItem: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl + 2,
+    padding: spacing.lg,
     marginBottom: spacing.md,
-    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    ...shadow.sm,
   },
   chapterContent: {
     flexDirection: 'row',
@@ -631,13 +643,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   chapterIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
+    marginRight: spacing.md,
+  },
+  chapterIconWrapper: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.lg,
     backgroundColor: '#EEF2FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.md,
   },
   chapterInfo: {
     flex: 1,
@@ -653,7 +667,12 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontWeight: '700',
     flex: 1,
-    fontSize: 16,
+    fontSize: 17,
+    lineHeight: 24,
+  },
+  chapterChevron: {
+    marginLeft: spacing.sm,
+    opacity: 0.6,
   },
   premiumBadge: {
     flexDirection: 'row',
@@ -704,7 +723,6 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#6366F1',
     borderRadius: radius.full,
   },
   progressText: {
@@ -715,11 +733,11 @@ const styles = StyleSheet.create({
   },
   stateCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: radius.xl,
+    borderRadius: radius.xl + 2,
     padding: spacing.xxxl,
     alignItems: 'center',
     marginTop: spacing.xl,
-    ...shadow.sm,
+    ...shadow.md,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
@@ -826,18 +844,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   chapterNumberBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: '#6366F1',
+    width: 52,
+    height: 52,
+    borderRadius: radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
+    ...shadow.sm,
   },
   chapterNumberText: {
     ...typography.h3,
     color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 18,
+    fontWeight: '800',
+    fontSize: 20,
   },
 });
 

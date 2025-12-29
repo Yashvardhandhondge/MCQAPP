@@ -16,7 +16,6 @@ import type { AppStackParamList } from '../navigation/types';
 import { useAuth } from '../context/AuthContext';
 import { getYearsWithAnalytics } from '../services/mcq.service';
 import { colors, radius, spacing, typography, shadow } from '../theme';
-import ModernCard from '../components/ui/ModernCard';
 import BackHeader from '../components/ui/BackHeader';
 import PremiumLockModal from '../components/ui/PremiumLockModal';
 import type { YearAnalytics } from '../types/mcq';
@@ -146,21 +145,24 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
               }}
             >
               <TouchableOpacity
-                onPress={() => handleYearClick(item.year, index, false)}
-                activeOpacity={0.8}
+                onPress={() => handleYearClick(item.year, index)}
+                activeOpacity={0.85}
               >
-                <ModernCard
-                  variant="elevated"
-                  padding="lg"
-                  style={styles.yearCard}
-                >
+                <View style={styles.yearItem}>
                   <View style={styles.yearContent}>
                     <View style={styles.yearIconContainer}>
-                      <Ionicons
-                        name="calendar"
-                        size={24}
-                        color={colors.primary}
-                      />
+                      <LinearGradient
+                        colors={colors.gradientPrimary as [string, string]}
+                        style={styles.yearIconGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <Ionicons
+                          name="calendar"
+                          size={24}
+                          color="#FFFFFF"
+                        />
+                      </LinearGradient>
                     </View>
                     <View style={styles.yearInfo}>
                       <View style={styles.yearHeaderRow}>
@@ -185,20 +187,23 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
                       {item.totalQuestions > 0 && (
                         <View style={styles.progressContainer}>
                           <View style={styles.progressBar}>
-                            <View 
+                            <LinearGradient
+                              colors={colors.gradientPrimary as [string, string]}
                               style={[
                                 styles.progressFill, 
                                 { width: `${progressPercentage}%` }
-                              ]} 
+                              ]}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 1, y: 0 }}
                             />
                           </View>
                           <Text style={styles.progressText}>{progressPercentage}% complete</Text>
                         </View>
                       )}
                     </View>
-                    <Ionicons name="chevron-forward" size={24} color={colors.authTextMuted} />
+                    <Ionicons name="chevron-forward" size={20} color={colors.authTextMuted} style={styles.yearChevron} />
                   </View>
-                </ModernCard>
+                </View>
               </TouchableOpacity>
             </Animated.View>
           );
@@ -209,10 +214,7 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <LinearGradient
-        colors={colors.gradientAuthLight as [string, string, ...string[]]}
-        style={styles.backgroundGradient}
-      >
+      <View style={styles.backgroundGradient}>
         <BackHeader
           title={chapter}
           subtitle={`Practice by Year - ${subject}`}
@@ -239,7 +241,7 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
             navigation.navigate('PremiumPurchase');
           }}
         />
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -247,10 +249,11 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.authBackground,
+    backgroundColor: '#F3E8FF',
   },
   backgroundGradient: {
     flex: 1,
+    backgroundColor: '#F3E8FF',
   },
   container: {
     flexGrow: 1,
@@ -261,9 +264,14 @@ const styles = StyleSheet.create({
   yearList: {
     gap: spacing.md,
   },
-  yearCard: {
-    marginBottom: spacing.sm,
+  yearItem: {
+    backgroundColor: '#FFFFFF',
     borderRadius: radius.xl + 2,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    ...shadow.sm,
   },
   yearContent: {
     flexDirection: 'row',
@@ -271,13 +279,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   yearIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: colors.primarySoft,
+    marginRight: spacing.md,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  yearIconGradient: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.md,
+    ...shadow.sm,
   },
   yearInfo: {
     flex: 1,
@@ -289,9 +301,14 @@ const styles = StyleSheet.create({
   },
   yearName: {
     ...typography.h3,
-    color: colors.authText,
+    color: '#111827',
     fontWeight: '700',
     marginBottom: spacing.xs,
+    fontSize: 18,
+  },
+  yearChevron: {
+    marginLeft: spacing.sm,
+    opacity: 0.6,
   },
   yearStats: {
     flexDirection: 'row',
@@ -315,15 +332,14 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 6,
-    backgroundColor: colors.authBorder,
-    borderRadius: radius.sm,
+    backgroundColor: '#F3F4F6',
+    borderRadius: radius.full,
     overflow: 'hidden',
     marginBottom: spacing.xs,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: radius.sm,
+    borderRadius: radius.full,
   },
   progressText: {
     ...typography.caption,
@@ -347,14 +363,14 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   stateCard: {
-    backgroundColor: colors.authSurface,
-    borderRadius: radius.xl + 4,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl + 2,
     padding: spacing.xxxl,
     alignItems: 'center',
     marginTop: spacing.xl,
-    ...shadow.lg,
+    ...shadow.md,
     borderWidth: 1,
-    borderColor: colors.authBorder,
+    borderColor: '#E5E7EB',
   },
   stateText: {
     ...typography.body,

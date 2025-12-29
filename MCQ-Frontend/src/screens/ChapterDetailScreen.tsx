@@ -16,7 +16,6 @@ import type { AppStackParamList } from '../navigation/types';
 import { useAuth } from '../context/AuthContext';
 import { generateChapterPractice } from '../services/mcq.service';
 import { colors, radius, spacing, typography, shadow } from '../theme';
-import ModernCard from '../components/ui/ModernCard';
 import BackHeader from '../components/ui/BackHeader';
 import PremiumLockModal from '../components/ui/PremiumLockModal';
 
@@ -117,10 +116,7 @@ export default function ChapterDetailScreen({ route, navigation }: ChapterDetail
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <LinearGradient
-        colors={colors.gradientAuthLight as [string, string, ...string[]]}
-        style={styles.backgroundGradient}
-      >
+      <View style={styles.backgroundGradient}>
         <BackHeader
           title={chapter}
           subtitle={
@@ -178,12 +174,12 @@ export default function ChapterDetailScreen({ route, navigation }: ChapterDetail
               </LinearGradient>
             </TouchableOpacity>
 
-            {/* Practice by Year Card */}
+            {/* Practice by Year - Flowing Design */}
             <TouchableOpacity
               onPress={handlePracticeByYear}
-              activeOpacity={0.9}
+              activeOpacity={0.85}
             >
-              <ModernCard variant="elevated" padding="lg" style={styles.practiceByYearCard}>
+              <View style={styles.practiceByYearItem}>
                 <View style={styles.practiceByYearContent}>
                   <View style={styles.practiceByYearLeft}>
                     <View style={styles.practiceByYearIconContainer}>
@@ -204,10 +200,10 @@ export default function ChapterDetailScreen({ route, navigation }: ChapterDetail
                     </View>
                   </View>
                   <View style={styles.practiceByYearRight}>
-                    <Ionicons name="arrow-forward-circle" size={32} color={colors.primary} />
+                    <Ionicons name="chevron-forward" size={22} color={colors.primary} />
                   </View>
                 </View>
-              </ModernCard>
+              </View>
             </TouchableOpacity>
           </Animated.View>
         </ScrollView>
@@ -219,7 +215,7 @@ export default function ChapterDetailScreen({ route, navigation }: ChapterDetail
             navigation.navigate('PremiumPurchase');
           }}
         />
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -227,10 +223,11 @@ export default function ChapterDetailScreen({ route, navigation }: ChapterDetail
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.authBackground,
+    backgroundColor: '#F3E8FF',
   },
   backgroundGradient: {
     flex: 1,
+    backgroundColor: '#F3E8FF',
   },
   container: {
     flexGrow: 1,
@@ -240,18 +237,20 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   fullPracticeCard: {
-    borderRadius: radius.xl + 4,
-    padding: spacing.xl,
+    borderRadius: radius.xl + 6,
+    padding: spacing.xxl,
     marginBottom: spacing.lg,
     ...shadow.xl,
-    minHeight: 120,
+    minHeight: 130,
   },
-  practiceByYearCard: {
-    borderRadius: radius.xl + 4,
+  practiceByYearItem: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl + 2,
+    padding: spacing.xl,
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: colors.authBorder,
-    ...shadow.lg,
+    borderColor: '#E5E7EB',
+    ...shadow.md,
   },
   practiceByYearContent: {
     flexDirection: 'row',
@@ -267,29 +266,32 @@ const styles = StyleSheet.create({
     marginRight: spacing.lg,
   },
   practiceByYearIconGradient: {
-    width: 64,
-    height: 64,
-    borderRadius: radius.xl,
+    width: 68,
+    height: 68,
+    borderRadius: radius.xl + 2,
     justifyContent: 'center',
     alignItems: 'center',
+    ...shadow.sm,
   },
   practiceByYearText: {
     flex: 1,
   },
   practiceByYearTitle: {
     ...typography.h2,
-    color: colors.authText,
+    color: '#111827',
     fontWeight: '700',
     marginBottom: spacing.xs,
-    fontSize: 22,
+    fontSize: 20,
   },
   practiceByYearSubtitle: {
     ...typography.body,
-    color: colors.authTextSecondary,
-    fontSize: 15,
+    color: '#6B7280',
+    fontSize: 14,
+    lineHeight: 20,
   },
   practiceByYearRight: {
     marginLeft: spacing.md,
+    opacity: 0.7,
   },
   fullPracticeContent: {
     flexDirection: 'row',
@@ -302,13 +304,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   fullPracticeIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: radius.xl,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 72,
+    height: 72,
+    borderRadius: radius.xl + 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   fullPracticeText: {
     flex: 1,

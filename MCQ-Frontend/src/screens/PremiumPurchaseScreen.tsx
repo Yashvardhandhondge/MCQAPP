@@ -12,9 +12,13 @@ import {
   StatusBar,
   ActivityIndicator,
   Alert,
+  LayoutAnimation,
+  UIManager,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import type { AppStackParamList } from '../navigation/types';
 import { colors, radius, spacing, typography, shadow } from '../theme';
@@ -23,6 +27,7 @@ import { getPremiumContent } from '../services/mcq.service';
 export default function PremiumPurchaseScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { user, upgradeSubscription, loading } = useAuth();
+  const insets = useSafeAreaInsets();
   const [purchasing, setPurchasing] = useState(false);
   const [content, setContent] = useState<{
     heroBadgeText: string;
@@ -42,6 +47,41 @@ export default function PremiumPurchaseScreen() {
     }>;
   } | null>(null);
   const [contentLoading, setContentLoading] = useState(true);
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+
+  // Enable LayoutAnimation on Android
+  if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
+
+  const toggleFaq = (index: number) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedFaq(expandedFaq === index ? null : index);
+  };
+
+  // FAQ data
+  const faqData = [
+    {
+      question: 'What\'s included in the premium plan?',
+      answer: 'Premium gives you unlimited access to 20,000+ questions across all subjects, complete PYQ database from 2015 onwards, AI-powered detailed solutions for every question, comprehensive analytics to track your progress, 10-20 full-length mock tests per subject, leaderboard access to compete with peers, and saved questions feature for revision. It\'s everything you need to ace your competitive exams!',
+      icon: 'help-circle',
+    },
+    {
+      question: 'How is this different from free content?',
+      answer: 'Free users get limited access with basic questions. Premium unlocks the complete question bank (20K+ vs limited), all previous year questions from 2015, AI-analyzed step-by-step solutions, advanced performance analytics with detailed insights, unlimited mock tests, and priority support. Think of it as getting a complete coaching institute\'s question bank at 80-90% less cost than physical books!',
+      icon: 'star',
+    },
+    {
+      question: 'Is this a one-time payment or subscription?',
+      answer: 'It\'s a one-time payment! Once you purchase premium, you get lifetime access to all premium features for your selected stream (PCM, PCB, or PCMB). No monthly fees, no recurring charges. Pay once and study forever. This makes it incredibly cost-effective compared to buying multiple books or paying for coaching classes.',
+      icon: 'card',
+    },
+    {
+      question: 'Can I change my stream later?',
+      answer: 'Yes! If you need to switch streams (e.g., from PCM to PCB), you can upgrade to a different plan. The system will update your access accordingly. However, we recommend choosing the stream that matches your exam requirements from the start to get the most value. If you\'re unsure, PCMB gives you access to all subjects.',
+      icon: 'swap-horizontal',
+    },
+  ];
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -186,10 +226,13 @@ export default function PremiumPurchaseScreen() {
 
   const selectedPlan = user?.group ? content.pricingPlans.find(p => p.id === user.group) : content.pricingPlans[0];
 
+  // Calculate tab bar height (56px tab bar + padding + safe area)
+  const tabBarHeight = 56 + spacing.xs * 2 + insets.bottom;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" />
-      <View style={styles.backgroundGradient}>
+      <View style={[styles.backgroundGradient, { paddingBottom: tabBarHeight }]}>
         <ScrollView
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}
@@ -411,6 +454,57 @@ export default function PremiumPurchaseScreen() {
                   </TouchableOpacity>
                 );
               })}
+            </View>
+
+            {/* FAQ Section */}
+            <View style={styles.faqSection}>
+              <View style={styles.faqTitleContainer}>
+                <Text style={styles.faqTitle}>Frequently Asked Questions</Text>
+                <Text style={styles.faqSubtitle}>Everything you need to know about premium</Text>
+              </View>
+              <View style={styles.faqList}>
+                {faqData.map((faq, index) => {
+                  const isExpanded = expandedFaq === index;
+                  return (
+                    <View key={index} style={styles.faqItem}>
+                      <TouchableOpacity
+                        style={styles.faqQuestionContainer}
+                        onPress={() => toggleFaq(index)}
+                        activeOpacity={0.8}
+                      >
+                        <View style={styles.faqQuestionLeft}>
+                          <View style={styles.faqIconWrapper}>
+                            <LinearGradient
+                              colors={[`${colors.primary}20`, `${colors.primary}08`] as [string, string]}
+                              style={styles.faqIconGradient}
+                            >
+                              <Ionicons name={faq.icon as any} size={20} color={colors.primary} />
+                            </LinearGradient>
+                          </View>
+                          <Text style={styles.faqQuestionText}>{faq.question}</Text>
+                        </View>
+                        <View
+                          style={[
+                            styles.faqChevron,
+                            isExpanded && styles.faqChevronExpanded,
+                          ]}
+                        >
+                          <Ionicons
+                            name="chevron-down"
+                            size={22}
+                            color={isExpanded ? colors.primary : colors.authTextMuted}
+                          />
+                        </View>
+                      </TouchableOpacity>
+                      {isExpanded && (
+                        <View style={styles.faqAnswerContainer}>
+                          <Text style={styles.faqAnswerText}>{faq.answer}</Text>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
             </View>
           </Animated.View>
         </ScrollView>
@@ -829,6 +923,93 @@ const styles = StyleSheet.create({
   loadingText: {
     ...typography.body,
     color: colors.authTextMuted,
+  },
+  faqSection: {
+    marginTop: spacing.xxxl,
+    marginBottom: spacing.xl,
+  },
+  faqTitleContainer: {
+    marginBottom: spacing.xl,
+    alignItems: 'center',
+  },
+  faqTitle: {
+    ...typography.h2,
+    color: colors.authText,
+    fontWeight: '700',
+    fontSize: 26,
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+    letterSpacing: -0.3,
+  },
+  faqSubtitle: {
+    ...typography.body,
+    color: colors.authTextMuted,
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  faqList: {
+    gap: spacing.md,
+  },
+  faqItem: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    ...shadow.sm,
+  },
+  faqQuestionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  faqQuestionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.md,
+  },
+  faqIconWrapper: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  faqIconGradient: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  faqQuestionText: {
+    ...typography.body,
+    color: colors.authText,
+    fontSize: 15,
+    fontWeight: '600',
+    flex: 1,
+    lineHeight: 22,
+  },
+  faqAnswerContainer: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    paddingTop: 0,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    marginTop: spacing.xs,
+  },
+  faqAnswerText: {
+    ...typography.body,
+    color: colors.authTextMuted,
+    fontSize: 14,
+    lineHeight: 22,
+    paddingLeft: spacing.xl + spacing.md,
+  },
+  faqChevron: {
+    transform: [{ rotate: '0deg' }],
+  },
+  faqChevronExpanded: {
+    transform: [{ rotate: '180deg' }],
   },
 });
 
