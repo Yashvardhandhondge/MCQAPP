@@ -716,3 +716,62 @@ export async function getAchievements(): Promise<{
     throw new Error('Failed to load achievements');
   }
 }
+
+// Mock Test functions
+export async function getAvailableMockTests(): Promise<{
+  success: boolean;
+  data: Array<{
+    mockTestNumber: number;
+    name: string;
+    sourceFile: string;
+    questionCount: number;
+    physicsCount: number;
+    chemistryCount: number;
+    mathsCount: number;
+  }>;
+}> {
+  try {
+    const response = await axiosInstance.get('/api/mcq/mock-tests');
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to load mock tests');
+    }
+    throw new Error('Failed to load mock tests');
+  }
+}
+
+export async function getMockTestQuestions(mockTestNumber: number): Promise<{
+  success: boolean;
+  data: {
+    questions: string[];
+    questionDetails: Array<{
+      _id: string;
+      subject: string;
+    }>;
+  };
+}> {
+  try {
+    const response = await axiosInstance.get(`/api/mcq/mock-tests/${mockTestNumber}/questions`);
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to load mock test questions');
+    }
+    throw new Error('Failed to load mock test questions');
+  }
+}
+
+export async function startMockTestSession(mockTestNumber: number): Promise<StartTestResponse> {
+  try {
+    const response = await axiosInstance.post<StartTestResponse>(
+      `/api/mcq/mock-tests/${mockTestNumber}/start`
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to start mock test session');
+    }
+    throw new Error('Failed to start mock test session');
+  }
+}

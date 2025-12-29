@@ -36,7 +36,7 @@ interface QuestionState {
 export type CBTSimulatorScreenProps = NativeStackScreenProps<AppStackParamList, 'CBT'>;
 
 export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorScreenProps) {
-  const { testId, questions: questionIds } = route.params;
+  const { testId, questions: questionIds, testType, mockTestNumber } = route.params;
   const insets = useSafeAreaInsets();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +49,17 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
   const [submitting, setSubmitting] = useState(false);
   const [showQuestionsOverlay, setShowQuestionsOverlay] = useState(false);
   const [reportModalVisible, setReportModalVisible] = useState(false);
+  
+  // Mock test section support
+  const isMockTest = testType === 'mocktest';
+  const [currentSection, setCurrentSection] = useState<1 | 2>(1);
+  const [section1TimeLeft, setSection1TimeLeft] = useState(5400); // 90 minutes
+  const [section2TimeLeft, setSection2TimeLeft] = useState(5400); // 90 minutes
+  const [section1Locked, setSection1Locked] = useState(false);
+  
+  // Section boundaries for mock test: Section 1 = Q1-100 (indices 0-99, Physics + Chemistry), Section 2 = Q101-150 (indices 100-149, Maths)
+  const SECTION1_END_INDEX = 99; // Last index of section 1 (question 100)
+  const SECTION2_START_INDEX = 100; // First index of section 2 (question 101)
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -124,6 +135,15 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
           if (states.length > 0) {
             states[0].status = 'not-answered';
           }
+          // Initialize section for mock tests
+          if (isMockTest && response.data.length > 0) {
+            const firstQuestionSubject = response.data[0]?.subject;
+            if (firstQuestionSubject === 'Maths') {
+              setCurrentSection(2);
+            } else {
+              setCurrentSection(1);
+            }
+          }
         }
       } catch (requestError) {
         if (isMounted) {
@@ -151,20 +171,54 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
   }, [questionIds]);
 
   useEffect(() => {
-    // Timer countdown
+    // Timer countdown - handle mock test sections separately
     const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 0) {
-          clearInterval(interval);
-          handleFinishTest();
-          return 0;
+      if (isMockTest) {
+        if (currentSection === 1 && !section1Locked) {
+          setSection1TimeLeft((prev) => {
+            if (prev <= 1) {
+              // Auto-switch to section 2
+              setSection1Locked(true);
+              setCurrentSection(2);
+              setCurrentQuestionIndex(SECTION2_START_INDEX); // Jump to first question of section 2
+              Alert.alert(
+                'Section 1 Completed',
+                'Time for Physics & Chemistry section has ended. You are now in the Mathematics section.',
+                [{ text: 'OK' }]
+              );
+              return 0;
+            }
+            const newTime = prev - 1;
+            setTimeLeft(newTime);
+            return newTime;
+          });
+        } else if (currentSection === 2) {
+          setSection2TimeLeft((prev) => {
+            if (prev <= 1) {
+              clearInterval(interval);
+              handleFinishTest();
+              return 0;
+            }
+            const newTime = prev - 1;
+            setTimeLeft(newTime);
+            return newTime;
+          });
         }
-        return prev - 1;
-      });
+      } else {
+        // Regular test timer
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            handleFinishTest();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isMockTest, currentSection, section1Locked]);
 
   const formatTime = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
@@ -278,9 +332,28 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
   };
 
   const handleNavigateToQuestion = (index: number) => {
+    // For mock tests, prevent navigation to locked section 1
+    if (isMockTest && section1Locked && index <= SECTION1_END_INDEX) {
+      Alert.alert(
+        'Section Locked',
+        'You cannot go back to Section 1 (Physics & Chemistry) after the time has ended.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
     setCurrentQuestionIndex(index);
     const state = questionStates[index];
     setSelectedOption(state?.selectedOption || null);
+    
+    // Update current section for mock tests
+    if (isMockTest) {
+      if (index <= SECTION1_END_INDEX) {
+        setCurrentSection(1);
+      } else {
+        setCurrentSection(2);
+      }
+    }
     
     // Mark as visited if not already
     if (questionStates[index].status === 'not-visited') {
@@ -300,6 +373,15 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
 
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
+      // For mock tests, prevent going back to locked section 1
+      if (isMockTest && section1Locked && currentQuestionIndex - 1 <= SECTION1_END_INDEX) {
+        Alert.alert(
+          'Section Locked',
+          'You cannot go back to Section 1 (Physics & Chemistry) after the time has ended.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
       handleNavigateToQuestion(currentQuestionIndex - 1);
     }
   };
@@ -346,10 +428,21 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
                 <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
               </TouchableOpacity>
               <View style={styles.headerInfo}>
-                <Text style={styles.headerTitle}>MHT CET Test</Text>
-                <Text style={styles.headerSubtitle}>
-                  Question {currentQuestionIndex + 1} of {questions.length}
+                <Text style={styles.headerTitle}>
+                  {isMockTest ? `MockTest ${mockTestNumber || ''}` : 'MHT CET Test'}
                 </Text>
+                <View style={styles.headerSubtitleContainer}>
+                  <Text style={styles.headerSubtitle}>
+                    Question {currentQuestionIndex + 1} of {questions.length}
+                  </Text>
+                  {isMockTest && (
+                    <View style={styles.sectionBadge}>
+                      <Text style={styles.sectionBadgeText}>
+                        {currentSection === 1 ? 'Section 1: Physics & Chemistry' : 'Section 2: Mathematics'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               </View>
             </View>
             <View style={styles.headerRight}>
@@ -467,7 +560,7 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
 
         {/* Bottom Navigation */}
         <View style={[styles.bottomNavigation, { paddingBottom: insets.bottom }]}>
-          {currentQuestionIndex > 0 && (
+          {currentQuestionIndex > 0 && !(isMockTest && section1Locked && currentQuestionIndex <= SECTION1_END_INDEX) && (
             <TouchableOpacity
               style={styles.prevButton}
               onPress={handlePrevious}
@@ -577,24 +670,36 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
                     const status = getQuestionStatus(index);
                     const isCurrent = index === currentQuestionIndex;
                     const statusColor = getStatusColor(status);
+                    const isLocked = isMockTest && section1Locked && index <= SECTION1_END_INDEX;
                     return (
                       <TouchableOpacity
                         key={index}
                         style={[
                           styles.questionNumberButton,
                           isCurrent && styles.questionNumberButtonActive,
-                          { backgroundColor: isCurrent ? colors.primary : statusColor },
+                          isLocked && styles.questionNumberButtonLocked,
+                          { backgroundColor: isCurrent ? colors.primary : (isLocked ? '#9CA3AF' : statusColor) },
                         ]}
                         onPress={() => {
-                          handleNavigateToQuestion(index);
-                          setShowQuestionsOverlay(false);
+                          if (!isLocked) {
+                            handleNavigateToQuestion(index);
+                            setShowQuestionsOverlay(false);
+                          } else {
+                            Alert.alert(
+                              'Section Locked',
+                              'This question is from Section 1 which has been locked.',
+                              [{ text: 'OK' }]
+                            );
+                          }
                         }}
-                        activeOpacity={0.8}
+                        activeOpacity={isLocked ? 1 : 0.8}
+                        disabled={isLocked}
                       >
                         <Text
                           style={[
                             styles.questionNumberButtonText,
                             isCurrent && styles.questionNumberButtonTextActive,
+                            isLocked && styles.questionNumberButtonTextLocked,
                           ]}
                         >
                           {index + 1}
@@ -700,10 +805,30 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs / 2,
     fontSize: 18,
   },
+  headerSubtitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
   headerSubtitle: {
     ...typography.caption,
     color: 'rgba(255, 255, 255, 0.85)',
     fontSize: 13,
+  },
+  sectionBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  sectionBadgeText: {
+    ...typography.caption,
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
   },
   headerRight: {
     flexDirection: 'row',
@@ -1074,5 +1199,11 @@ const styles = StyleSheet.create({
   questionNumberButtonTextActive: {
     color: '#FFFFFF',
     fontWeight: '800',
+  },
+  questionNumberButtonLocked: {
+    opacity: 0.5,
+  },
+  questionNumberButtonTextLocked: {
+    opacity: 0.7,
   },
 });

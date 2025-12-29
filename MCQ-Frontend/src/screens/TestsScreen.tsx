@@ -292,21 +292,65 @@ export default function TestsScreen() {
                   transform: [{ translateY: slideAnim }],
                 }}
               >
-                <TouchableOpacity
-                  onPress={() => setShowTestOptions(true)}
-                  activeOpacity={0.85}
-                  style={styles.startRandomTestButton}
-                >
-                  <LinearGradient
-                    colors={colors.gradientPrimary as [string, string, ...string[]]}
-                    style={styles.startRandomTestGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
+                <View style={styles.initialCardsContainer}>
+                  {/* Start Random Test Card */}
+                  <TouchableOpacity
+                    onPress={() => setShowTestOptions(true)}
+                    activeOpacity={0.85}
+                    style={styles.testCard}
                   >
-                    <Text style={styles.startRandomTestText}>Start Random Test</Text>
-                    <Ionicons name="arrow-forward" size={24} color="#FFFFFF" style={{ marginLeft: spacing.sm }} />
-                  </LinearGradient>
-                </TouchableOpacity>
+                    <LinearGradient
+                      colors={colors.gradientPrimary as [string, string, ...string[]]}
+                      style={styles.testCardGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <View style={styles.testCardContent}>
+                        <View style={styles.testCardLeft}>
+                          <View style={styles.testCardIconContainer}>
+                            <Ionicons name="shuffle" size={32} color="#FFFFFF" />
+                          </View>
+                          <View style={styles.testCardText}>
+                            <Text style={styles.testCardTitle}>Start Random Test</Text>
+                            <Text style={styles.testCardSubtitle}>
+                              Practice with random questions
+                            </Text>
+                          </View>
+                        </View>
+                        <Ionicons name="arrow-forward-circle" size={28} color="#FFFFFF" />
+                      </View>
+                    </LinearGradient>
+                  </TouchableOpacity>
+
+                  {/* Give Mock Test Card */}
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('MockTestSelection')}
+                    activeOpacity={0.85}
+                    style={styles.testCard}
+                  >
+                    <LinearGradient
+                      colors={colors.gradientAccent as [string, string, ...string[]]}
+                      style={styles.testCardGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <View style={styles.testCardContent}>
+                        <View style={styles.testCardLeft}>
+                          <View style={styles.testCardIconContainer}>
+                            <Ionicons name="document-text" size={32} color="#FFFFFF" />
+                          </View>
+                          <View style={styles.testCardText}>
+                            <Text style={styles.testCardTitle}>Give Mock Test</Text>
+                            <Text style={styles.testCardSubtitle}>
+                              Full-length MHT CET mock tests
+                            </Text>
+                          </View>
+                        </View>
+                        <Ionicons name="arrow-forward-circle" size={28} color="#FFFFFF" />
+                      </View>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
               </Animated.View>
             )}
 
@@ -1028,23 +1072,53 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: 'rgba(255, 255, 255, 0.9)',
   },
-  startRandomTestButton: {
-    borderRadius: radius.xl,
-    overflow: 'hidden',
+  initialCardsContainer: {
+    gap: spacing.lg,
     marginTop: spacing.xl,
+  },
+  testCard: {
+    borderRadius: radius.xl + 4,
+    overflow: 'hidden',
     ...shadow.lg,
   },
-  startRandomTestGradient: {
+  testCardGradient: {
+    padding: spacing.xl,
+    minHeight: 100,
+  },
+  testCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xl,
-    paddingHorizontal: spacing.xxl,
+    justifyContent: 'space-between',
   },
-  startRandomTestText: {
-    ...typography.h3,
+  testCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  testCardIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.xl,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  testCardText: {
+    flex: 1,
+  },
+  testCardTitle: {
+    ...typography.h2,
     color: '#FFFFFF',
     fontWeight: '700',
-    fontSize: 18,
+    marginBottom: spacing.xs,
+    fontSize: 20,
+  },
+  testCardSubtitle: {
+    ...typography.body,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 14,
   },
 });

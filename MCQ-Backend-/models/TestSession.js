@@ -10,7 +10,7 @@ const testSessionSchema = new mongoose.Schema(
     },
     testType: {
       type: String,
-      enum: ['pyq', 'practice', 'chapter'],
+      enum: ['pyq', 'practice', 'chapter', 'mocktest'],
       required: true,
     },
     year: {
@@ -36,7 +36,7 @@ const testSessionSchema = new mongoose.Schema(
     }],
     questionModel: {
       type: String,
-      enum: ['Chemistry', 'Physics', 'Maths', 'Biology'],
+      enum: ['Chemistry', 'Physics', 'Maths', 'Biology', 'MockTest'],
     },
     answers: [{
       questionId: mongoose.Schema.Types.ObjectId,
@@ -67,6 +67,23 @@ const testSessionSchema = new mongoose.Schema(
     totalQuestions: {
       type: Number,
       default: 0,
+    },
+    mockTestNumber: {
+      type: Number,
+      trim: true,
+    },
+    currentSection: {
+      type: Number,
+      enum: [1, 2],
+      default: 1,
+    },
+    section1TimeLeft: {
+      type: Number, // in seconds
+      default: 5400, // 90 minutes
+    },
+    section2TimeLeft: {
+      type: Number, // in seconds
+      default: 5400, // 90 minutes
     },
   },
   {

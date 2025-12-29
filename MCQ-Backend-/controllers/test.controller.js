@@ -1,5 +1,6 @@
 const createError = require('http-errors');
 const { getAllModels, getModelBySubject } = require('../models/Mcq');
+const MockTestModel = require('../models/MockTest');
 const TestSession = require('../models/TestSession');
 const UserAttempt = require('../models/UserAttempt');
 const { getChapterInfo } = require('../config/chapterMapping');
@@ -612,19 +613,29 @@ const submitTestSession = async (req, res, next) => {
       return next(createError(404, 'Test session not found or already completed'));
     }
 
-    // Get questions to verify answers - handle multiple subjects for random tests
+    // Get questions to verify answers - handle multiple subjects for random tests and mock tests
     const { getAllModels, getModelBySubject } = require('../models/Mcq');
     const allModels = getAllModels();
     const allQuestions = [];
     
-    // Try to find questions in all subject collections
-    for (const [subject, Model] of Object.entries(allModels)) {
+    // For mock tests, query from MockTest collection
+    if (session.testType === 'mocktest') {
       try {
-        const questions = await Model.find({ _id: { $in: session.questions } }).lean();
-        allQuestions.push(...questions);
+        const mockQuestions = await MockTestModel.find({ _id: { $in: session.questions } }).lean();
+        allQuestions.push(...mockQuestions);
       } catch (error) {
-        // Continue if collection doesn't exist or query fails
-        console.error(`Error querying ${subject}:`, error);
+        console.error('Error querying MockTest collection:', error);
+      }
+    } else {
+      // Try to find questions in all subject collections
+      for (const [subject, Model] of Object.entries(allModels)) {
+        try {
+          const questions = await Model.find({ _id: { $in: session.questions } }).lean();
+          allQuestions.push(...questions);
+        } catch (error) {
+          // Continue if collection doesn't exist or query fails
+          console.error(`Error querying ${subject}:`, error);
+        }
       }
     }
     
@@ -632,9 +643,21 @@ const submitTestSession = async (req, res, next) => {
 
     // Process answers and calculate score
     let correctCount = 0;
+    let totalMarks = 0;
     const processedAnswers = answers.map((ans) => {
       const question = questionMap.get(ans.questionId.toString());
       const isCorrect = question && ans.selectedOption.trim() === question.correctanswrs.trim();
+      
+      // For mock tests, calculate marks based on subject
+      if (session.testType === 'mocktest' && isCorrect) {
+        const subject = question?.subject;
+        if (subject === 'Maths') {
+          totalMarks += 2; // 2 marks for Maths
+        } else if (subject === 'Physics' || subject === 'Chemistry') {
+          totalMarks += 1; // 1 mark for Physics and Chemistry
+        }
+      }
+      
       if (isCorrect) correctCount++;
       
       return {
@@ -647,7 +670,8 @@ const submitTestSession = async (req, res, next) => {
 
     // Update session
     session.answers = processedAnswers;
-    session.score = correctCount;
+    // For mock tests, use totalMarks; for others, use correctCount
+    session.score = session.testType === 'mocktest' ? totalMarks : correctCount;
     session.status = 'completed';
     session.completedAt = new Date();
     session.duration = Math.floor((session.completedAt - session.startedAt) / 1000);
@@ -748,12 +772,22 @@ const getTestReport = async (req, res, next) => {
     const allModels = getAllModels();
     const allQuestions = [];
     
-    for (const [subject, Model] of Object.entries(allModels)) {
+    // For mock tests, query from MockTest collection
+    if (session.testType === 'mocktest') {
       try {
-        const questions = await Model.find({ _id: { $in: session.questions } }).lean();
-        allQuestions.push(...questions);
+        const mockQuestions = await MockTestModel.find({ _id: { $in: session.questions } }).lean();
+        allQuestions.push(...mockQuestions);
       } catch (error) {
-        console.error(`Error querying ${subject}:`, error);
+        console.error('Error querying MockTest collection:', error);
+      }
+    } else {
+      for (const [subject, Model] of Object.entries(allModels)) {
+        try {
+          const questions = await Model.find({ _id: { $in: session.questions } }).lean();
+          allQuestions.push(...questions);
+        } catch (error) {
+          console.error(`Error querying ${subject}:`, error);
+        }
       }
     }
     
@@ -900,6 +934,8 @@ const getRecentActivity = async (req, res, next) => {
         return `${session.subject || 'MHT CET'} ${session.year || ''} ${session.shift ? `Shift ${session.shift}` : ''}`.trim();
       } else if (session.testType === 'chapter') {
         return `${session.subject || ''} ${session.chapter || 'Practice'}`.trim();
+      } else if (session.testType === 'mocktest') {
+        return `MockTest ${session.mockTestNumber || ''}`.trim();
       } else {
         return `${session.subject || ''} Mock Test`.trim();
       }
@@ -925,6 +961,199 @@ const getRecentActivity = async (req, res, next) => {
   }
 };
 
+/**
+ * Get available mock tests
+ * GET /api/mcq/mock-tests
+ */
+const getAvailableMockTests = async (req, res, next) => {
+  try {
+    console.log('getAvailableMockTests called', {
+      method: req.method,
+      url: req.url,
+      originalUrl: req.originalUrl,
+      path: req.path,
+    });
+    // Get distinct sourceFile values from MockTest collection
+    const distinctSourceFiles = await MockTestModel.distinct('sourceFile');
+    console.log('Found sourceFiles:', distinctSourceFiles);
+    
+    // Filter and extract mock test numbers (e.g., "mock1.json" -> 1)
+    const mockTests = [];
+    const sourceFilePattern = /^mock(\d+)\.json$/i;
+    
+    for (const sourceFile of distinctSourceFiles) {
+      if (sourceFile) {
+        const match = sourceFile.match(sourceFilePattern);
+        if (match) {
+          const mockTestNumber = parseInt(match[1], 10);
+          
+          // Count questions for this mock test
+          const questionCount = await MockTestModel.countDocuments({ sourceFile });
+          
+          // Count by subject
+          const physicsCount = await MockTestModel.countDocuments({ 
+            sourceFile, 
+            subject: 'Physics' 
+          });
+          const chemistryCount = await MockTestModel.countDocuments({ 
+            sourceFile, 
+            subject: 'Chemistry' 
+          });
+          const mathsCount = await MockTestModel.countDocuments({ 
+            sourceFile, 
+            subject: 'Maths' 
+          });
+          
+          mockTests.push({
+            mockTestNumber,
+            name: `MockTest ${mockTestNumber}`,
+            sourceFile,
+            questionCount,
+            physicsCount,
+            chemistryCount,
+            mathsCount,
+          });
+        }
+      }
+    }
+    
+    // Sort by mock test number
+    mockTests.sort((a, b) => a.mockTestNumber - b.mockTestNumber);
+    
+    res.status(200).json({
+      success: true,
+      data: mockTests,
+    });
+  } catch (error) {
+    console.error('Error getting available mock tests:', error);
+    return next(createError(500, 'Failed to fetch available mock tests'));
+  }
+};
+
+/**
+ * Get questions for a specific mock test
+ * GET /api/mcq/mock-tests/:mockTestNumber/questions
+ */
+const getMockTestQuestions = async (req, res, next) => {
+  try {
+    const { mockTestNumber } = req.params;
+    const sourceFile = `mock${mockTestNumber}.json`;
+    
+    // Get all questions for this mock test, ordered by subject: Physics, Chemistry, Maths
+    const questions = await MockTestModel.find({ sourceFile })
+      .sort({ subject: 1 }) // Sort by subject: Physics, Chemistry, Maths
+      .lean();
+    
+    if (questions.length === 0) {
+      return next(createError(404, `Mock test ${mockTestNumber} not found`));
+    }
+    
+    // Return question IDs in order
+    const questionIds = questions.map((q) => q._id);
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        questions: questionIds,
+        questionDetails: questions.map((q) => ({
+          _id: q._id,
+          subject: q.subject,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error('Error getting mock test questions:', error);
+    return next(createError(500, 'Failed to fetch mock test questions'));
+  }
+};
+
+/**
+ * Start a mock test session
+ * POST /api/mcq/mock-tests/:mockTestNumber/start
+ */
+const startMockTestSession = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { mockTestNumber } = req.params;
+    const sourceFile = `mock${mockTestNumber}.json`;
+    
+    // Get all questions for this mock test, ordered by subject
+    const questions = await MockTestModel.find({ sourceFile })
+      .sort({ subject: 1 }) // Physics, Chemistry, Maths
+      .lean();
+    
+    if (questions.length === 0) {
+      return next(createError(404, `Mock test ${mockTestNumber} not found`));
+    }
+    
+    // Verify structure: Should have 50 Physics, 50 Chemistry, 50 Maths
+    const physicsCount = questions.filter((q) => q.subject === 'Physics').length;
+    const chemistryCount = questions.filter((q) => q.subject === 'Chemistry').length;
+    const mathsCount = questions.filter((q) => q.subject === 'Maths').length;
+    
+    if (physicsCount !== 50 || chemistryCount !== 50 || mathsCount !== 50) {
+      console.warn(`Mock test ${mockTestNumber} has unexpected question distribution: Physics=${physicsCount}, Chemistry=${chemistryCount}, Maths=${mathsCount}`);
+    }
+    
+    const questionIds = questions.map((q) => q._id);
+    
+    // Check for existing in-progress session
+    const existingSession = await TestSession.findOne({
+      user: userId,
+      testType: 'mocktest',
+      mockTestNumber: parseInt(mockTestNumber, 10),
+      status: 'in-progress',
+    });
+    
+    if (existingSession) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          sessionId: existingSession._id,
+          questions: questionIds,
+          testType: 'mocktest',
+          mockTestNumber: parseInt(mockTestNumber, 10),
+        },
+      });
+    }
+    
+    // Create new test session
+    const session = new TestSession({
+      user: userId,
+      testType: 'mocktest',
+      mockTestNumber: parseInt(mockTestNumber, 10),
+      questions: questionIds,
+      questionModel: 'MockTest',
+      totalQuestions: questionIds.length,
+      status: 'in-progress',
+      startedAt: new Date(),
+      currentSection: 1,
+      section1TimeLeft: 5400, // 90 minutes
+      section2TimeLeft: 5400, // 90 minutes
+    });
+    
+    await session.save();
+    
+    res.status(201).json({
+      success: true,
+      data: {
+        sessionId: session._id,
+        questions: questionIds,
+        testType: 'mocktest',
+        mockTestNumber: parseInt(mockTestNumber, 10),
+      },
+    });
+  } catch (error) {
+    console.error('Error starting mock test session:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+    return next(createError(500, error.message || 'Failed to start mock test session'));
+  }
+};
+
 module.exports = {
   getAvailableTests,
   getDistinctYears,
@@ -935,4 +1164,7 @@ module.exports = {
   getTestReport,
   getTestReports,
   getRecentActivity,
+  getAvailableMockTests,
+  getMockTestQuestions,
+  startMockTestSession,
 };

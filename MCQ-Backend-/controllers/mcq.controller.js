@@ -958,6 +958,19 @@ const getQuestionsByIds = async (req, res, next) => {
       }
     }
 
+    // If questions not found in subject collections, try MockTest collection
+    if (questions.length === 0) {
+      try {
+        const MockTestModel = require('../models/MockTest');
+        const mockQuestions = await MockTestModel.find({
+          _id: { $in: questionIds },
+        }).lean();
+        questions.push(...mockQuestions);
+      } catch (error) {
+        console.error('Error querying MockTest collection:', error);
+      }
+    }
+
     if (questions.length === 0) {
       return res.status(404).json({
         success: false,

@@ -77,6 +77,7 @@ app.use('/api/auth', (req, res, next) => {
 
 app.use('/api/mcq', (req, res, next) => {
   console.log(`MCQ Route accessed: ${req.method} ${req.originalUrl}`);
+  console.log(`MCQ Route path: ${req.path}`);
   next();
 });
 

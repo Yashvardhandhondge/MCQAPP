@@ -194,6 +194,7 @@ export interface StartTestResponse {
     testType: string;
     year?: string;
     shift?: string;
+    mockTestNumber?: number;
     questionsData?: Question[]; // Full question data for chapter practice
   };
 }
@@ -391,4 +392,20 @@ export interface ReportQuestionResponse {
   data: {
     reportId: string;
   };
+}
+
+// Mock Test types
+export interface MockTest {
+  mockTestNumber: number;
+  name: string;
+  sourceFile: string;
+  questionCount: number;
+  physicsCount: number;
+  chemistryCount: number;
+  mathsCount: number;
+}
+
+export interface MockTestsResponse {
+  success: boolean;
+  data: MockTest[];
 }

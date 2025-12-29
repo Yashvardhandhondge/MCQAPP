@@ -24,6 +24,7 @@ import PremiumPurchaseScreen from './src/screens/PremiumPurchaseScreen';
 import SavedQuestionsScreen from './src/screens/SavedQuestionsScreen';
 import SavedQuestionsChaptersScreen from './src/screens/SavedQuestionsChaptersScreen';
 import SavedQuestionsListScreen from './src/screens/SavedQuestionsListScreen';
+import MockTestSelectionScreen from './src/screens/MockTestSelectionScreen';
 import BottomTabBar from './src/components/ui/BottomTabBar';
 import { colors, typography } from './src/theme';
 
@@ -219,6 +220,15 @@ function AppStackNavigator() {
       <AppStack.Screen
         name="SavedQuestionsList"
         component={SavedQuestionsListScreen}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          animationDuration: 300,
+        }}
+      />
+      <AppStack.Screen
+        name="MockTestSelection"
+        component={MockTestSelectionScreen}
         options={{
           headerShown: false,
           animation: 'slide_from_right',
