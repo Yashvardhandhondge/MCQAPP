@@ -851,6 +851,80 @@ const getTestReports = async (req, res, next) => {
   }
 };
 
+/**
+ * Get recent activity (last 3 test sessions)
+ * GET /api/mcq/tests/recent-activity
+ */
+const getRecentActivity = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+
+    const sessions = await TestSession.find({
+      user: userId,
+      status: 'completed',
+    })
+      .sort({ completedAt: -1 })
+      .limit(3)
+      .select('_id score totalQuestions testType subject chapter year completedAt')
+      .lean();
+
+    const SUBJECT_ICONS = {
+      Chemistry: '🧪',
+      Physics: '⚛️',
+      Maths: '📐',
+      Biology: '🧬',
+    };
+
+    const formatTimeAgo = (date) => {
+      const now = new Date();
+      const diffMs = now - new Date(date);
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 60) {
+        return `${diffMins}m ago`;
+      } else if (diffHours < 24) {
+        return `${diffHours}h ago`;
+      } else if (diffDays === 1) {
+        return 'Yesterday';
+      } else if (diffDays < 7) {
+        return `${diffDays}d ago`;
+      } else {
+        return new Date(date).toLocaleDateString();
+      }
+    };
+
+    const getTestTitle = (session) => {
+      if (session.testType === 'pyq') {
+        return `${session.subject || 'MHT CET'} ${session.year || ''} ${session.shift ? `Shift ${session.shift}` : ''}`.trim();
+      } else if (session.testType === 'chapter') {
+        return `${session.subject || ''} ${session.chapter || 'Practice'}`.trim();
+      } else {
+        return `${session.subject || ''} Mock Test`.trim();
+      }
+    };
+
+    const activities = sessions.map((session) => ({
+      id: session._id.toString(),
+      title: getTestTitle(session),
+      score: `${session.score}/${session.totalQuestions}`,
+      time: formatTimeAgo(session.completedAt),
+      icon: SUBJECT_ICONS[session.subject] || '📝',
+      subject: session.subject,
+      testType: session.testType,
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: activities,
+    });
+  } catch (error) {
+    console.error('Error getting recent activity:', error);
+    return next(createError(500, 'Failed to fetch recent activity'));
+  }
+};
+
 module.exports = {
   getAvailableTests,
   getDistinctYears,
@@ -860,4 +934,5 @@ module.exports = {
   getUserTestSessions,
   getTestReport,
   getTestReports,
+  getRecentActivity,
 };

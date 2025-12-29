@@ -491,10 +491,7 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <LinearGradient
-        colors={colors.gradientAuthLight as [string, string, ...string[]]}
-        style={styles.backgroundGradient}
-      >
+      <View style={styles.backgroundGradient}>
         {subject ? (
           <BackHeader
             title={selectedStandard ? `${subject} - Std. ${selectedStandard}` : `${subject} Chapters`}
@@ -531,7 +528,7 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
           onClose={() => setPremiumModalVisible(false)}
           onBuyPremium={() => appNavigation.navigate('PremiumPurchase')}
         />
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -539,10 +536,11 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.authBackground,
+    backgroundColor: '#FAFBFC',
   },
   backgroundGradient: {
     flex: 1,
+    backgroundColor: '#FAFBFC',
   },
   header: {
     paddingHorizontal: spacing.xxl,
@@ -622,8 +620,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   chapterCard: {
-    marginBottom: spacing.sm,
-    borderRadius: radius.xl + 2,
+    marginBottom: spacing.md,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   chapterContent: {
     flexDirection: 'row',
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radius.md,
-    backgroundColor: colors.primarySoft,
+    backgroundColor: '#EEF2FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,
@@ -650,9 +650,10 @@ const styles = StyleSheet.create({
   },
   chapterName: {
     ...typography.h3,
-    color: colors.authText,
+    color: '#111827',
     fontWeight: '700',
     flex: 1,
+    fontSize: 16,
   },
   premiumBadge: {
     flexDirection: 'row',
@@ -688,7 +689,7 @@ const styles = StyleSheet.create({
   },
   statText: {
     ...typography.caption,
-    color: colors.authTextMuted,
+    color: '#6B7280',
     fontSize: 12,
   },
   progressContainer: {
@@ -696,59 +697,63 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 6,
-    backgroundColor: colors.authBorder,
-    borderRadius: radius.sm,
+    backgroundColor: '#F3F4F6',
+    borderRadius: radius.full,
     overflow: 'hidden',
     marginBottom: spacing.xs,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: radius.sm,
+    backgroundColor: '#6366F1',
+    borderRadius: radius.full,
   },
   progressText: {
     ...typography.caption,
-    color: colors.primary,
+    color: '#6366F1',
     fontSize: 11,
     fontWeight: '600',
   },
   stateCard: {
-    backgroundColor: colors.authSurface,
-    borderRadius: radius.xl + 4,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
     padding: spacing.xxxl,
     alignItems: 'center',
     marginTop: spacing.xl,
-    ...shadow.lg,
+    ...shadow.sm,
     borderWidth: 1,
-    borderColor: colors.authBorder,
+    borderColor: '#E5E7EB',
   },
   stateText: {
     ...typography.body,
-    color: colors.authTextMuted,
+    color: '#6B7280',
     marginTop: spacing.md,
     textAlign: 'center',
+    fontSize: 14,
   },
   errorText: {
     ...typography.body,
     color: colors.danger,
     textAlign: 'center',
     marginTop: spacing.md,
+    fontSize: 14,
   },
   standardSelectionContainer: {
     paddingTop: spacing.xl,
   },
   standardSelectionTitle: {
     ...typography.h2,
-    color: colors.authText,
+    color: '#111827',
     fontWeight: '700',
     marginBottom: spacing.xs,
     textAlign: 'center',
+    fontSize: 22,
   },
   standardSelectionSubtitle: {
     ...typography.body,
-    color: colors.authTextSecondary,
+    color: '#6B7280',
     textAlign: 'center',
     marginBottom: spacing.xl,
+    fontSize: 14,
   },
   standardGrid: {
     flexDirection: 'column',
@@ -809,14 +814,14 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     marginTop: spacing.lg,
     padding: spacing.md,
-    backgroundColor: colors.authSurface,
-    borderRadius: radius.md,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.authBorder,
+    borderColor: '#E5E7EB',
   },
   unclassifiedText: {
     ...typography.caption,
-    color: colors.authTextMuted,
+    color: '#6B7280',
     fontSize: 12,
     flex: 1,
   },
@@ -824,7 +829,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radius.md,
-    backgroundColor: colors.primary,
+    backgroundColor: '#6366F1',
     justifyContent: 'center',
     alignItems: 'center',
   },

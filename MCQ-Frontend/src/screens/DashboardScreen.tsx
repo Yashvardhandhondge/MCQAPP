@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,12 +12,13 @@ import {
   Animated,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '../context/AuthContext';
 import type { AppStackParamList } from '../navigation/types';
-import { getDashboard, getUserStats, getExamConfig, getStudyStreak, getTimeSeriesAnalytics, generateRandomTest } from '../services/mcq.service';
+import { getDashboard, getUserStats, getExamConfig, getStudyStreak, getTimeSeriesAnalytics, generateRandomTest, getRecentActivity, getUserRank } from '../services/mcq.service';
 import type { DashboardData, SubjectSummary, UserStatsData } from '../types/mcq';
 import { colors, radius, shadow, spacing, typography } from '../theme';
 import GradientButton from '../components/ui/GradientButton';
@@ -108,6 +108,14 @@ export default function DashboardScreen() {
   const [timeSeriesData, setTimeSeriesData] = useState<any>(null);
   const [loadingTimeSeries, setLoadingTimeSeries] = useState(false);
   const [generatingMockTest, setGeneratingMockTest] = useState(false);
+  const [recentActivity, setRecentActivity] = useState<Array<{
+    id: string;
+    title: string;
+    score: string;
+    time: string;
+    icon: string;
+  }>>([]);
+  const [userRank, setUserRank] = useState<number | null>(null);
 
   const normalizedActivityDates = useMemo(
     () => normalizeActivityDates(studyStreak.activityDates),
@@ -146,12 +154,14 @@ export default function DashboardScreen() {
     setLoading(true);
     setError(null);
     try {
-      const [dashboardResponse, statsResponse, configResponse, streakResponse, timeSeriesResponse] = await Promise.allSettled([
+      const [dashboardResponse, statsResponse, configResponse, streakResponse, timeSeriesResponse, activityResponse, rankResponse] = await Promise.allSettled([
         getDashboard(),
         getUserStats(),
         getExamConfig(),
         getStudyStreak(),
         getTimeSeriesAnalytics({ period: '7d', groupBy: 'day' }),
+        getRecentActivity(),
+        getUserRank('all-time'),
       ]);
 
       if (dashboardResponse.status === 'fulfilled') {
@@ -190,6 +200,14 @@ export default function DashboardScreen() {
       if (timeSeriesResponse.status === 'fulfilled') {
         setTimeSeriesData(timeSeriesResponse.value.data);
       }
+
+      if (activityResponse.status === 'fulfilled') {
+        setRecentActivity(activityResponse.value.data);
+      }
+
+      if (rankResponse.status === 'fulfilled') {
+        setUserRank(rankResponse.value.data.rank);
+      }
     } catch (requestError) {
       const message =
         requestError instanceof Error ? requestError.message : 'Failed to load dashboard';
@@ -211,6 +229,7 @@ export default function DashboardScreen() {
   };
 
   const totalQuestions = dashboardData?.totalQuestions ?? 0;
+  const totalAttempts = stats?.overall.totalAttempts ?? 0;
   const sortedSubjects = useMemo(() => {
     if (!dashboardData) return [] as SubjectSummary[];
     return [...dashboardData.subjects].sort((a, b) => b.questionCount - a.questionCount);
@@ -281,10 +300,49 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <LinearGradient
-        colors={colors.gradientAuthLight}
-        style={styles.backgroundGradient}
-      >
+      <View style={styles.backgroundGradient}>
+        {/* Sticky Header - Enhanced */}
+        <View style={styles.stickyHeader}>
+          <LinearGradient
+            colors={['#FFFFFF', '#F9FAFB']}
+            style={styles.stickyHeaderGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            <View style={styles.headerContent}>
+              <View style={styles.headerLeftSection}>
+                <View style={styles.greetingBadge}>
+                  <Ionicons 
+                    name={getGreeting().includes('Morning') ? 'sunny' : getGreeting().includes('Afternoon') ? 'partly-sunny' : 'moon'} 
+                    size={14} 
+                    color="#6366F1" 
+                  />
+                  <Text style={styles.greetingTime}>{getGreeting().toUpperCase()}</Text>
+                </View>
+                <View style={styles.headerNameRow}>
+                  <Text style={styles.greetingName}>
+                    {user?.fullName?.split(' ')[0] || 'Student'}
+                  </Text>
+                  <Text style={styles.greetingEmoji}>👋</Text>
+                </View>
+              </View>
+              <View style={styles.headerRight}>
+                <TouchableOpacity
+                  style={styles.rankCard}
+                  onPress={() => (navigation as any).getParent()?.navigate('MainTabs', { screen: 'Leaderboard' })}
+                  activeOpacity={0.7}
+                >
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.profileButton} activeOpacity={0.7}>
+                  <LinearGradient colors={colors.gradientPrimary as [string, string]} style={styles.profileGradient}>
+                    <Ionicons name="person" size={18} color="#FFFFFF" />
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </LinearGradient>
+        </View>
+
         <ScrollView
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}
@@ -296,170 +354,343 @@ export default function DashboardScreen() {
               transform: [{ translateY: slideAnim }],
             }}
           >
-            {/* Header */}
-            <View style={styles.header}>
-              <View style={styles.headerContent}>
-                <Text style={styles.greeting}>
-                  {getGreeting()}, {user?.fullName?.split(' ')[0] || 'Student'} 👋
-                </Text>
-                <Text style={styles.subheading}>Ready to ace {examName} {targetYear}?</Text>
+
+            {/* Premium Upgrade Banner - Only for Non-Premium Users */}
+            {!isPremium && (
+              <TouchableOpacity
+                style={styles.premiumBanner}
+                onPress={() => navigation.navigate('PremiumPurchase')}
+                activeOpacity={0.95}
+              >
+                <LinearGradient
+                  colors={['#667EEA', '#764BA2', '#F093FB', '#4FACFE'] as [string, string, string, string]}
+                  style={styles.premiumBannerGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  {/* Decorative Background Elements */}
+                  <View style={styles.premiumDecorativeCircle1} />
+                  <View style={styles.premiumDecorativeCircle2} />
+                  <View style={styles.premiumDecorativeCircle3} />
+                  
+                  {/* Floating Icons */}
+                  <View style={styles.premiumFloatingIcons}>
+                    <View style={styles.premiumFloatingIcon1}>
+                      <Ionicons name="star" size={20} color="rgba(255, 255, 255, 0.6)" />
+                    </View>
+                    <View style={styles.premiumFloatingIcon2}>
+                      <Ionicons name="diamond" size={18} color="rgba(255, 255, 255, 0.5)" />
+                    </View>
+                    <View style={styles.premiumFloatingIcon3}>
+                      <Ionicons name="sparkles" size={16} color="rgba(255, 255, 255, 0.4)" />
+                    </View>
+                  </View>
+
+                  {/* Main Content */}
+                  <View style={styles.premiumContent}>
+                    <View style={styles.premiumHeaderRow}>
+                      <View style={styles.premiumBadgeContainer}>
+                        <LinearGradient
+                          colors={['rgba(255, 255, 255, 0.3)', 'rgba(255, 255, 255, 0.15)'] as [string, string]}
+                          style={styles.premiumBadgeGradient}
+                        >
+                          <Ionicons name="diamond" size={16} color="#FFFFFF" />
+                          <Text style={styles.premiumBadgeText}>PREMIUM</Text>
+                        </LinearGradient>
+                      </View>
+                      <View style={styles.premiumCrownIcon}>
+                        <Text style={styles.premiumCrownEmoji}>👑</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.premiumTitleSection}>
+                      <Text style={styles.premiumMainTitle}>Unlock Premium</Text>
+                      <Text style={styles.premiumSubTitle}>Transform Your Learning Journey</Text>
+                    </View>
+
+                    {/* Feature Grid */}
+                    <View style={styles.premiumFeaturesGrid}>
+                      <View style={styles.premiumFeatureBox}>
+                        <View style={styles.premiumFeatureIconContainer}>
+                          <LinearGradient
+                            colors={['rgba(255, 255, 255, 0.25)', 'rgba(255, 255, 255, 0.15)'] as [string, string]}
+                            style={styles.premiumFeatureIconBg}
+                          >
+                            <Text style={styles.premiumFeatureEmoji}>📚</Text>
+                          </LinearGradient>
+                        </View>
+                        <Text style={styles.premiumFeatureNumber}>20K+</Text>
+                        <Text style={styles.premiumFeatureLabel}>Questions</Text>
+                      </View>
+
+                      <View style={styles.premiumFeatureBox}>
+                        <View style={styles.premiumFeatureIconContainer}>
+                          <LinearGradient
+                            colors={['rgba(255, 255, 255, 0.25)', 'rgba(255, 255, 255, 0.15)'] as [string, string]}
+                            style={styles.premiumFeatureIconBg}
+                          >
+                            <Text style={styles.premiumFeatureEmoji}>📝</Text>
+                          </LinearGradient>
+                        </View>
+                        <Text style={styles.premiumFeatureNumber}>10-20</Text>
+                        <Text style={styles.premiumFeatureLabel}>Mock Tests</Text>
+                      </View>
+
+                      <View style={styles.premiumFeatureBox}>
+                        <View style={styles.premiumFeatureIconContainer}>
+                          <LinearGradient
+                            colors={['rgba(255, 255, 255, 0.25)', 'rgba(255, 255, 255, 0.15)'] as [string, string]}
+                            style={styles.premiumFeatureIconBg}
+                          >
+                            <Text style={styles.premiumFeatureEmoji}>🎯</Text>
+                          </LinearGradient>
+                        </View>
+                        <Text style={styles.premiumFeatureNumber}>Random</Text>
+                        <Text style={styles.premiumFeatureLabel}>Tests</Text>
+                      </View>
+
+                      <View style={styles.premiumFeatureBox}>
+                        <View style={styles.premiumFeatureIconContainer}>
+                          <LinearGradient
+                            colors={['rgba(255, 255, 255, 0.25)', 'rgba(255, 255, 255, 0.15)'] as [string, string]}
+                            style={styles.premiumFeatureIconBg}
+                          >
+                            <Text style={styles.premiumFeatureEmoji}>📊</Text>
+                          </LinearGradient>
+                        </View>
+                        <Text style={styles.premiumFeatureNumber}>Advanced</Text>
+                        <Text style={styles.premiumFeatureLabel}>Analytics</Text>
+                      </View>
+                    </View>
+
+                    {/* CTA Button */}
+                    <TouchableOpacity
+                      style={styles.premiumCTAButton}
+                      onPress={() => navigation.navigate('PremiumPurchase')}
+                      activeOpacity={0.8}
+                    >
+                      <LinearGradient
+                        colors={['#FFFFFF', '#F8FAFF'] as [string, string]}
+                        style={styles.premiumCTAButtonGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                      >
+                        <Text style={styles.premiumCTAButtonText}>Upgrade Now</Text>
+                        <View style={styles.premiumCTAButtonIcon}>
+                          <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                        </View>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+
+            {/* Compact Exam Countdown + Quick Stats */}
+            <View style={styles.compactStatsGrid}>
+              <View style={styles.examCountdownCard}>
+                <LinearGradient
+                  colors={colors.gradientPrimary as [string, string]}
+                  style={styles.examCountdownGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View style={styles.examCountdownContent}>
+                    <View style={styles.examCountdownHeader}>
+                      <Ionicons name="calendar" size={14} color="rgba(255,255,255,0.8)" />
+                      <Text style={styles.examCountdownLabel}>{examName} {targetYear}</Text>
+                    </View>
+                    <Text style={styles.examCountdownDays}>{daysUntilExam}</Text>
+                    <Text style={styles.examCountdownSubtext}>days to go</Text>
+                  </View>
+                </LinearGradient>
               </View>
-              <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.profileButton} activeOpacity={0.7}>
-                <LinearGradient colors={colors.gradientPrimary} style={styles.profileGradient}>
-                  <Ionicons name="person" size={20} color="#FFFFFF" />
+              
+              <View style={styles.streakCard}>
+                <LinearGradient
+                  colors={colors.gradientOrange as [string, string]}
+                  style={styles.streakGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Ionicons name="flame" size={24} color="#FFFFFF" />
+                  <Text style={styles.streakCardValue}>{currentStreak}</Text>
+                  <Text style={styles.streakCardLabel}>Day Streak</Text>
+                  <Text style={styles.streakCardHint}>Study daily to maintain!</Text>
+                </LinearGradient>
+              </View>
+            </View>
+
+            {/* Performance Metrics - Flowing Layout */}
+            <View style={styles.performanceMetricsCard}>
+              <View style={styles.metricsHeader}>
+                <Text style={styles.metricsTitle}>Your Performance</Text>
+                <Text style={styles.metricsSubtitle}>Track your progress and improve</Text>
+              </View>
+              <View style={styles.metricsGrid}>
+                <TouchableOpacity
+                  style={styles.metricCard}
+                  onPress={() => (navigation as any).getParent()?.navigate('MainTabs', { screen: 'Tests' })}
+                  activeOpacity={0.7}
+                >
+                  <LinearGradient colors={colors.gradientPrimary as [string, string]} style={styles.metricIconContainer}>
+                    <Ionicons name="stats-chart" size={22} color="#FFFFFF" />
+                  </LinearGradient>
+                  <View style={styles.metricContent}>
+                    <Text style={styles.metricValue}>{stats?.overall.totalAttempts ?? 0}</Text>
+                    <Text style={styles.metricLabel}>Total Attempts</Text>
+                    <Text style={styles.metricHint}>Tap to see tests</Text>
+                  </View>
+                </TouchableOpacity>
+                
+                <View style={styles.metricCard}>
+                  <LinearGradient colors={['#8B5CF6', '#EC4899'] as [string, string]} style={styles.metricIconContainer}>
+                    <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
+                  </LinearGradient>
+                  <View style={styles.metricContent}>
+                    <Text style={styles.metricValue}>{accuracyPercent}%</Text>
+                    <Text style={styles.metricLabel}>Accuracy</Text>
+                    <Text style={styles.metricHint}>Keep practicing!</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.metricCard}>
+                  <LinearGradient colors={colors.gradientAccent as [string, string]} style={styles.metricIconContainer}>
+                    <Text style={styles.metricEmoji}>✅</Text>
+                  </LinearGradient>
+                  <View style={styles.metricContent}>
+                    <Text style={styles.metricValue}>{stats?.overall.totalCorrect ?? 0}</Text>
+                    <Text style={styles.metricLabel}>Correct Answers</Text>
+                    <Text style={styles.metricHint}>Great job!</Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.metricCard}
+                  onPress={() => (navigation as any).getParent()?.navigate('MainTabs', { screen: 'Leaderboard' })}
+                  activeOpacity={0.7}
+                >
+                  <LinearGradient colors={colors.gradientOrange as [string, string]} style={styles.metricIconContainer}>
+                    <Ionicons name="trophy" size={22} color="#FFFFFF" />
+                  </LinearGradient>
+                  <View style={styles.metricContent}>
+                    <Text style={styles.metricValue}>#{userRank || '--'}</Text>
+                    <Text style={styles.metricLabel}>Your Rank</Text>
+                    <Text style={styles.metricHint}>Tap to see leaderboard</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Today's Goal - Enhanced */}
+            <View style={styles.todaysGoalCard}>
+              <View style={styles.todaysGoalHeader}>
+                <View style={styles.todaysGoalHeaderLeft}>
+                  <Text style={styles.todaysGoalTitle}>Today's Goal</Text>
+                  <Text style={styles.todaysGoalSubtitle}>
+                    {todayProgress} of {dailyGoal} questions completed
+                  </Text>
+                  <Text style={styles.todaysGoalDescription} numberOfLines={2}>
+                    Complete {dailyGoal} questions daily to build a strong study habit
+                  </Text>
+                </View>
+                <View style={styles.todaysGoalPercentage}>
+                  <Text style={styles.todaysGoalPercentText}>{Math.round(goalProgress)}%</Text>
+                </View>
+              </View>
+              
+              <View style={styles.todaysGoalProgressContainer}>
+                <LinearGradient
+                  colors={colors.gradientPrimary as [string, string]}
+                  style={[styles.todaysGoalProgressBar, { width: `${goalProgress}%` }]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                />
+              </View>
+
+              <View style={styles.todaysGoalFooter}>
+                <View style={styles.todaysGoalMotivation}>
+                  <Ionicons name="flash" size={16} color={colors.primary} />
+                  <Text style={styles.todaysGoalMotivationText}>
+                    {goalProgress >= 100
+                      ? '🎉 Amazing! Goal achieved!'
+                      : goalProgress >= 50
+                      ? '💪 Keep the momentum!'
+                      : '🚀 Start strong! Every question counts!'}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.todaysGoalButton}
+                onPress={() => (navigation as any).getParent()?.navigate('MainTabs', { screen: 'Chapters' })}
+                activeOpacity={0.7}
+              >
+                <LinearGradient
+                  colors={colors.gradientPrimary as [string, string]}
+                  style={styles.todaysGoalButtonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <Text style={styles.todaysGoalButtonText}>Start Practice</Text>
+                  <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
                 </LinearGradient>
               </TouchableOpacity>
             </View>
 
-            {/* Target Exam Card */}
-            <View style={styles.targetCard}>
-              <LinearGradient
-                colors={colors.gradientPrimary}
-                style={styles.targetGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <View style={styles.targetContent}>
-                  <View style={styles.targetInfo}>
-                    <View style={styles.targetIconContainer}>
-                      <Ionicons name="calendar" size={24} color="#FFFFFF" />
-                    </View>
-                    <View>
-                      <Text style={styles.targetLabel}>Target Exam</Text>
-                      <Text style={styles.targetExam}>{examName} {targetYear}</Text>
-                    </View>
+            {/* Recent Activity */}
+            {recentActivity.length > 0 ? (
+              <View style={styles.recentActivitySection}>
+                <View style={styles.sectionHeaderRow}>
+                  <View>
+                    <Text style={styles.sectionTitle}>Recent Activity</Text>
+                    <Text style={styles.sectionSubtitle}>Your latest test attempts</Text>
                   </View>
-                  <View style={styles.daysContainer}>
-                    <Text style={styles.daysNumber}>{daysUntilExam}</Text>
-                    <Text style={styles.daysLabel}>Days Left</Text>
-                  </View>
+                  <TouchableOpacity onPress={() => (navigation as any).getParent()?.navigate('MainTabs', { screen: 'Tests' })}>
+                    <Text style={styles.viewAllText}>View All</Text>
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                  onPress={handleStartMockTest}
-                  disabled={generatingMockTest}
-                  activeOpacity={0.85}
-                  style={styles.mockTestButton}
-                >
-                  <LinearGradient
-                    colors={colors.gradientAccent}
-                    style={styles.mockTestButtonGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                  >
-                    {generatingMockTest ? (
-                      <ActivityIndicator color="#FFFFFF" size="small" />
-                    ) : (
-                      <>
-                        <Ionicons name="play-circle" size={20} color="#FFFFFF" />
-                        <Text style={styles.mockTestButtonText}>Start Mock Test</Text>
-                        <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
-                      </>
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
-              </LinearGradient>
-            </View>
-
-            {/* Quick Stats Grid */}
-            <View style={styles.statsGrid}>
-              <StatCard
-                title="Total Attempts"
-                value={stats?.overall.totalAttempts ?? 0}
-                icon="stats-chart"
-                gradient={colors.gradientPrimary}
-                delay={100}
-              />
-              <StatCard
-                title="Accuracy"
-                value={`${accuracyPercent}%`}
-                subtitle="Overall"
-                icon="checkmark-circle"
-                gradient={colors.gradientAccent}
-                delay={150}
-              />
-            </View>
-
-            <View style={styles.statsGrid}>
-              <StatCard
-                title="Correct Answers"
-                value={stats?.overall.totalCorrect ?? 0}
-                icon="trophy"
-                gradient={colors.gradientGold}
-                delay={200}
-              />
-              <StatCard
-                title="Study Streak"
-                value={`${currentStreak}`}
-                subtitle="days in a row 🔥"
-                icon="flame"
-                gradient={['#F59E0B', '#EF4444']}
-                delay={250}
-              />
-            </View>
-
-            {/* Daily Goal Card */}
-            <ModernCard variant="elevated" padding="lg" style={styles.goalCard}>
-              <View style={styles.goalHeader}>
-                <View>
-                  <Text style={styles.goalTitle}>Today's Goal</Text>
-                  <Text style={styles.goalSubtitle}>
-                    {todayProgress} / {dailyGoal} questions completed
-                  </Text>
-                </View>
-                <View style={styles.goalIconContainer}>
-                  <Ionicons name="flag" size={24} color={colors.primary} />
+                
+                <View style={styles.recentActivityList}>
+                  {recentActivity.map((activity) => (
+                    <TouchableOpacity
+                      key={activity.id}
+                      style={styles.recentActivityItem}
+                      activeOpacity={0.7}
+                      onPress={() => (navigation as any).getParent()?.navigate('MainTabs', { screen: 'Tests' })}
+                    >
+                      <Text style={styles.recentActivityIcon}>{activity.icon}</Text>
+                      <View style={styles.recentActivityContent}>
+                        <Text style={styles.recentActivityTitle}>{activity.title}</Text>
+                        <Text style={styles.recentActivityTime}>{activity.time}</Text>
+                      </View>
+                      <View style={styles.recentActivityScore}>
+                        <Text style={styles.recentActivityScoreText}>{activity.score}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
                 </View>
               </View>
-              <ProgressBar progress={goalProgress} height={12} variant="primary" />
-              <Text style={styles.goalMotivation}>
-                {goalProgress >= 100
-                  ? '🎉 Amazing! Goal achieved!'
-                  : goalProgress >= 50
-                  ? '💪 Keep going! You\'re halfway there!'
-                  : '🚀 Start strong! Every question counts!'}
-              </Text>
-            </ModernCard>
-
-            {/* Quick Actions */}
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Quick Actions</Text>
-            </View>
-            <View style={styles.quickActions}>
-              {[
-                { screen: 'Tests', icon: 'play-circle', gradient: colors.gradientPrimary, label: 'Start Test' },
-                { screen: 'Chapters', icon: 'book', gradient: colors.gradientAccent, label: 'Chapters' },
-                { screen: 'Leaderboard', icon: 'trophy', gradient: colors.gradientGold, label: 'Leaderboard' },
-              ].map((action) => (
-                <Animated.View
-                  key={action.screen}
-                  style={[
-                    styles.quickActionWrapper,
-                    {
-                      opacity: fadeAnim,
-                      transform: [{ translateY: slideAnim }],
-                    },
-                  ]}
+            ) : (
+              <View style={styles.emptyActivityCard}>
+                <Ionicons name="document-text" size={48} color={colors.textMuted} />
+                <Text style={styles.emptyActivityTitle}>No Recent Activity</Text>
+                <Text style={styles.emptyActivityText}>
+                  Start practicing to see your test history here
+                </Text>
+                <TouchableOpacity
+                  style={styles.emptyActivityButton}
+                  onPress={handleStartMockTest}
+                  activeOpacity={0.7}
                 >
-                  <TouchableOpacity
-                    style={styles.quickActionButton}
-                    onPress={() => navigation.navigate('MainTabs', { screen: action.screen as any })}
-                    activeOpacity={0.85}
+                  <LinearGradient
+                    colors={colors.gradientPrimary as [string, string]}
+                    style={styles.emptyActivityButtonGradient}
                   >
-                    <LinearGradient
-                      colors={action.gradient}
-                      style={styles.quickActionGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <View style={styles.quickActionIconContainer}>
-                        <Ionicons name={action.icon as any} size={32} color="#FFFFFF" />
-                      </View>
-                      <Text style={styles.quickActionText} numberOfLines={1}>{action.label}</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </Animated.View>
-              ))}
-            </View>
+                    <Text style={styles.emptyActivityButtonText}>Start Your First Test</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            )}
 
             {/* Study Calendar */}
             <ModernCard variant="elevated" padding="lg" style={styles.performanceCard}>
@@ -548,15 +779,69 @@ export default function DashboardScreen() {
               {/* Streak indicators */}
               <View style={styles.streakRow}>
                 <View style={styles.streakItem}>
-                  <Text style={styles.streakLabel}>Current Streak 🔥</Text>
+                  <View style={styles.streakItemHeader}>
+                    <Ionicons name="flame" size={18} color="#F59E0B" />
+                    <Text style={styles.streakLabel}>Current</Text>
+                  </View>
                   <Text style={styles.streakValue}>{currentStreak}</Text>
                 </View>
+                <View style={styles.streakDivider} />
                 <View style={styles.streakItem}>
-                  <Text style={styles.streakLabel}>Max Streak 🔥</Text>
+                  <View style={styles.streakItemHeader}>
+                    <Ionicons name="star" size={18} color="#F59E0B" />
+                    <Text style={styles.streakLabel}>Best</Text>
+                  </View>
                   <Text style={styles.streakValue}>{studyStreak.maxStreak}</Text>
                 </View>
               </View>
             </ModernCard>
+
+            {/* First-Time User Guide - Solve Questions by Subject */}
+            {totalAttempts === 0 && (
+              <TouchableOpacity
+                style={styles.subjectGuideCard}
+                onPress={() => (navigation as any).getParent()?.navigate('MainTabs', { screen: 'Chapters' })}
+                activeOpacity={0.85}
+              >
+                <LinearGradient
+                  colors={colors.gradientPrimary as [string, string]}
+                  style={styles.subjectGuideGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View style={styles.subjectGuideContent}>
+                    <View style={styles.subjectGuideLeft}>
+                      <View style={styles.subjectGuideIconContainer}>
+                        <Ionicons name="book" size={32} color="#FFFFFF" />
+                      </View>
+                      <View style={styles.subjectGuideTextContainer}>
+                        <Text style={styles.subjectGuideTitle}>Solve Questions by Subject</Text>
+                        <Text style={styles.subjectGuideDescription}>
+                          Practice chapter-wise questions from Chemistry, Physics, Maths, and Biology
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.subjectGuideRight}>
+                      <Ionicons name="arrow-forward-circle" size={32} color="#FFFFFF" />
+                    </View>
+                  </View>
+                  <View style={styles.subjectGuideFeatures}>
+                    <View style={styles.subjectGuideFeatureItem}>
+                      <Ionicons name="checkmark-circle" size={16} color="rgba(255, 255, 255, 0.9)" />
+                      <Text style={styles.subjectGuideFeatureText}>Chapter-wise practice</Text>
+                    </View>
+                    <View style={styles.subjectGuideFeatureItem}>
+                      <Ionicons name="checkmark-circle" size={16} color="rgba(255, 255, 255, 0.9)" />
+                      <Text style={styles.subjectGuideFeatureText}>Track your progress</Text>
+                    </View>
+                    <View style={styles.subjectGuideFeatureItem}>
+                      <Ionicons name="checkmark-circle" size={16} color="rgba(255, 255, 255, 0.9)" />
+                      <Text style={styles.subjectGuideFeatureText}>All subjects available</Text>
+                    </View>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
 
             {/* Weekly Performance Trend */}
             {/* {timeSeriesData && timeSeriesData.timeSeries.length > 0 && (
@@ -619,40 +904,70 @@ export default function DashboardScreen() {
               </ModernCard>
             )} */}
 
-            {/* Subject Progress */}
+            {/* Subject Performance */}
             {stats && stats.perSubject.length > 0 && (
-              <ModernCard padding="lg" style={styles.subjectProgressCard}>
-                <Text style={styles.cardTitle}>Subject Performance</Text>
-                <View style={styles.chipGrid}>
-                  {stats.perSubject.map((item, index) => {
+              <View style={styles.subjectPerformanceSection}>
+                <View style={styles.sectionHeaderRow}>
+                  <View>
+                    <Text style={styles.sectionTitle}>Subject Performance</Text>
+                    <Text style={styles.sectionSubtitle}>Your accuracy across different subjects</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.subjectPerformanceList}>
+                  {stats.perSubject.map((item) => {
                     const subjectGradient = SUBJECT_COLORS[item.subject] || colors.gradientPrimary;
+                    const progressPercent = item.totalAttempts > 0 
+                      ? (item.correctAttempts / item.totalAttempts) * 100 
+                      : 0;
+                    
                     return (
-                      <View key={item.subject} style={styles.chip}>
-                        <LinearGradient
-                          colors={subjectGradient}
-                          style={styles.chipGradient}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                        >
-                          <Text style={styles.chipIcon}>{SUBJECT_ICONS[item.subject] ?? '📘'}</Text>
-                          <Text style={styles.chipLabel}>{item.subject}</Text>
-                          <Text style={styles.chipValue}>{Math.round(item.accuracy)}%</Text>
-                          <Text style={styles.chipMeta}>
-                            {item.correctAttempts}/{item.totalAttempts}
-                          </Text>
-                        </LinearGradient>
-                      </View>
+                      <TouchableOpacity
+                        key={item.subject}
+                        style={styles.subjectPerformanceCard}
+                        activeOpacity={0.7}
+                        onPress={() =>
+                          (navigation as any).getParent()?.navigate('MainTabs', {
+                            screen: 'Chapters',
+                            params: { subject: item.subject },
+                          })
+                        }
+                      >
+                        <View style={styles.subjectPerformanceHeader}>
+                          <View style={styles.subjectPerformanceInfo}>
+                            <Text style={styles.subjectPerformanceIcon}>
+                              {SUBJECT_ICONS[item.subject] ?? '📘'}
+                            </Text>
+                            <View>
+                              <Text style={styles.subjectPerformanceName}>{item.subject}</Text>
+                              <Text style={styles.subjectPerformanceMeta}>
+                                {item.correctAttempts}/{item.totalAttempts} correct answers
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={styles.subjectPerformanceScore}>
+                            <Text style={styles.subjectPerformanceScoreText}>
+                              {Math.round(item.accuracy)}%
+                            </Text>
+                            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                          </View>
+                        </View>
+                        
+                        <View style={styles.subjectPerformanceProgressContainer}>
+                          <LinearGradient
+                            colors={subjectGradient as [string, string]}
+                            style={[styles.subjectPerformanceProgressBar, { width: `${progressPercent}%` }]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                          />
+                        </View>
+                        <Text style={styles.subjectPerformanceHint}>Tap to practice {item.subject}</Text>
+                      </TouchableOpacity>
                     );
                   })}
                 </View>
-              </ModernCard>
+              </View>
             )}
-
-            {/* Subjects Section */}
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Explore Subjects</Text>
-              <Text style={styles.sectionSubtitle}>Tap to view chapters</Text>
-            </View>
 
             {loading && !dashboardData ? (
               <View style={styles.stateCard}>
@@ -683,26 +998,7 @@ export default function DashboardScreen() {
                     }
                     activeOpacity={0.9}
                   >
-                    <ModernCard variant="elevated" padding="md" style={styles.subjectCard}>
-                      <View style={styles.subjectHeader}>
-                        <Text style={styles.subjectIcon}>{SUBJECT_ICONS[subject.name] ?? '📘'}</Text>
-                        <View style={styles.subjectInfo}>
-                          <Text style={styles.subjectName}>{subject.name}</Text>
-                          <Text style={styles.subjectMeta}>
-                            {subject.questionCount.toLocaleString()} questions available
-                          </Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={24} color={colors.textMuted} />
-                      </View>
-                      <View style={styles.subjectProgressContainer}>
-                        <LinearGradient
-                          colors={gradientColors || colors.gradientPrimary}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={[styles.subjectProgressBar, { width: `${ratio * 100}%` }]}
-                        />
-                      </View>
-                    </ModernCard>
+                    
                   </TouchableOpacity>
                 );
               })
@@ -712,7 +1008,7 @@ export default function DashboardScreen() {
             <View style={styles.bottomSpacing} />
           </Animated.View>
         </ScrollView>
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -720,216 +1016,426 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.authBackground,
+    backgroundColor: '#F3E8FF',
   },
   backgroundGradient: {
     flex: 1,
   },
   container: {
     flexGrow: 1,
-    paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.xxxl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
     paddingBottom: 100,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.xxl,
+  stickyHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    ...shadow.sm,
+  },
+  stickyHeaderGradient: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
   },
   headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerLeftSection: {
     flex: 1,
   },
-  greeting: {
-    ...typography.h1,
-    color: colors.authText,
-    marginBottom: spacing.sm,
-    fontWeight: '700',
+  greetingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.md,
+    alignSelf: 'flex-start',
   },
-  subheading: {
-    ...typography.body,
-    color: colors.authTextSecondary,
+  greetingTime: {
+    ...typography.caption,
+    color: '#6366F1',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    fontSize: 10,
+  },
+  headerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     marginTop: spacing.xs,
   },
-  profileButton: {
-    borderRadius: radius.full,
+  greetingName: {
+    ...typography.h2,
+    color: '#111827',
+    fontWeight: '700',
+    fontSize: 24,
+    letterSpacing: -0.5,
+  },
+  greetingEmoji: {
+    fontSize: 24,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  rankCard: {
+    borderRadius: radius.lg,
     overflow: 'hidden',
-    ...shadow.md,
+    ...shadow.sm,
+  },
+  rankCardGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  rankCardContent: {
+    alignItems: 'flex-start',
+  },
+  rankLabel: {
+    ...typography.caption,
+    color: '#6B7280',
+    fontSize: 9,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  rankValue: {
+    ...typography.subtitle,
+    color: '#6366F1',
+    fontWeight: '800',
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  profileButton: {
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    ...shadow.lg,
   },
   profileGradient: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.full,
+    width: 44,
+    height: 44,
+    borderRadius: radius.xl,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  statsGrid: {
+  compactStatsGrid: {
     flexDirection: 'row',
-    gap: spacing.lg,
+    gap: spacing.md,
     marginBottom: spacing.lg,
   },
-  targetCard: {
-    marginBottom: spacing.xl,
+  examCountdownCard: {
+    flex: 2,
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    ...shadow.lg,
+  },
+  examCountdownGradient: {
+    padding: spacing.xl,
+    position: 'relative',
+  },
+  examCountdownContent: {
+    position: 'relative',
+    zIndex: 10,
+  },
+  examCountdownHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  examCountdownLabel: {
+    ...typography.caption,
+    color: 'rgba(255, 255, 255, 0.95)',
+    fontWeight: '600',
+    fontSize: 12,
+    letterSpacing: 0.3,
+  },
+  examCountdownDays: {
+    ...typography.display,
+    color: '#FFFFFF',
+    fontSize: 52,
+    fontWeight: '800',
+    lineHeight: 56,
+    marginBottom: spacing.xs,
+    letterSpacing: -1,
+  },
+  examCountdownSubtext: {
+    ...typography.body,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  streakCard: {
+    flex: 1,
     borderRadius: radius.xl + 4,
     overflow: 'hidden',
-    ...shadow.xl,
+    ...shadow.lg,
   },
-  targetGradient: {
-    padding: spacing.lg + 4,
+  streakGradient: {
+    flex: 1,
+    padding: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 120,
   },
-  mockTestButton: {
-    marginTop: spacing.lg,
+  streakCardValue: {
+    ...typography.h1,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  streakCardLabel: {
+    ...typography.caption,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 11,
+  },
+  performanceMetricsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    ...shadow.sm,
+  },
+  metricsHeader: {
+    marginBottom: spacing.lg,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  metricsTitle: {
+    ...typography.h3,
+    color: '#111827',
+    fontWeight: '700',
+    marginBottom: spacing.xs,
+    fontSize: 18,
+  },
+  metricsSubtitle: {
+    ...typography.caption,
+    color: '#6B7280',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  metricCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: '#F9FAFB',
     borderRadius: radius.lg,
+    padding: spacing.md + 2,
+    flex: 1,
+    minWidth: '47%',
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  metricIconContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadow.sm,
+  },
+  metricEmoji: {
+    fontSize: 26,
+  },
+  metricContent: {
+    flex: 1,
+  },
+  metricValue: {
+    ...typography.h2,
+    color: '#111827',
+    fontWeight: '700',
+    marginBottom: spacing.xs,
+    fontSize: 22,
+  },
+  metricLabel: {
+    ...typography.caption,
+    color: '#374151',
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+  },
+  todaysGoalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    ...shadow.sm,
     overflow: 'hidden',
   },
-  mockTestButtonGradient: {
+  todaysGoalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.lg,
+    gap: spacing.md,
+  },
+  todaysGoalHeaderLeft: {
+    flex: 1,
+    minWidth: 0,
+  },
+  todaysGoalTitle: {
+    ...typography.h3,
+    color: '#111827',
+    fontWeight: '700',
+    marginBottom: spacing.xs,
+    fontSize: 18,
+  },
+  todaysGoalSubtitle: {
+    ...typography.body,
+    color: '#6B7280',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: spacing.xs,
+  },
+  todaysGoalDescription: {
+    ...typography.caption,
+    color: '#9CA3AF',
+    fontSize: 12,
+    marginTop: spacing.xs,
+    lineHeight: 16,
+  },
+  todaysGoalPercentage: {
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: spacing.xs,
+    flexShrink: 0,
+  },
+  todaysGoalPercentText: {
+    ...typography.display,
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#6366F1',
+    letterSpacing: -0.5,
+  },
+  todaysGoalProgressContainer: {
+    height: 10,
+    backgroundColor: '#F3F4F6',
+    borderRadius: radius.full,
+    overflow: 'hidden',
+    marginBottom: spacing.lg,
+  },
+  todaysGoalProgressBar: {
+    height: '100%',
+    borderRadius: radius.full,
+  },
+  todaysGoalFooter: {
+    marginBottom: spacing.md,
+  },
+  todaysGoalMotivation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  todaysGoalMotivationText: {
+    ...typography.body,
+    color: '#6366F1',
+    fontWeight: '500',
+    fontSize: 13,
+    lineHeight: 20,
+    flex: 1,
+  },
+  todaysGoalButton: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    ...shadow.md,
+    marginTop: spacing.sm,
+  },
+  todaysGoalButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.md + 2,
     paddingHorizontal: spacing.lg,
   },
-  mockTestButtonText: {
+  todaysGoalButtonText: {
     ...typography.subtitle,
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 15,
     letterSpacing: 0.3,
   },
-  targetContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  targetInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  targetIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  targetLabel: {
-    ...typography.caption,
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginBottom: spacing.xs,
-  },
-  targetExam: {
-    ...typography.h3,
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  daysContainer: {
-    alignItems: 'flex-end',
-  },
-  daysNumber: {
-    ...typography.display,
-    color: '#FFFFFF',
-    lineHeight: 40,
-    fontWeight: '800',
-  },
-  daysLabel: {
-    ...typography.caption,
-    color: 'rgba(255, 255, 255, 0.9)',
-  },
-  goalCard: {
-    marginBottom: spacing.xl,
-    borderRadius: radius.xl + 4,
-    borderWidth: 1,
-    borderColor: colors.authBorder,
-  },
-  goalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.md,
-  },
-  goalTitle: {
-    ...typography.h3,
-    color: colors.authText,
-    fontWeight: '700',
-    marginBottom: spacing.xs,
-  },
-  goalSubtitle: {
-    ...typography.body,
-    color: colors.authTextSecondary,
-  },
-  goalIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: colors.primarySoft,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressContainer: {
-    marginTop: spacing.md,
-  },
-  goalMotivation: {
-    ...typography.body,
-    color: colors.authTextSecondary,
-    marginTop: spacing.md,
-    textAlign: 'center',
-    fontWeight: '500',
-  },
   sectionHeader: {
     marginTop: spacing.xl,
     marginBottom: spacing.lg,
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.lg,
+  },
   sectionTitle: {
-    ...typography.h2,
-    color: colors.authText,
+    ...typography.h3,
+    color: '#111827',
     fontWeight: '700',
     marginBottom: spacing.xs,
+    fontSize: 18,
   },
   sectionSubtitle: {
-    ...typography.body,
-    color: colors.authTextSecondary,
+    ...typography.caption,
+    color: '#6B7280',
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 2,
   },
-  quickActions: {
+  viewAllText: {
+    ...typography.subtitle,
+    color: '#6366F1',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  quickActionsGrid: {
     flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-    alignItems: 'stretch',
+    gap: spacing.lg,
+    marginTop: spacing.md,
   },
-  quickActionWrapper: {
+  quickActionPill: {
     flex: 1,
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    ...shadow.md,
     minWidth: 0,
   },
-  quickActionButton: {
-    width: '100%',
-    borderRadius: radius.xl + 4,
-    overflow: 'hidden',
-    ...shadow.xl,
-    height: 110,
-  },
-  quickActionGradient: {
-    flex: 1,
-    padding: spacing.md,
+  quickActionPillGradient: {
+    paddingVertical: spacing.lg + 6,
+    paddingHorizontal: spacing.xs + 2,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 110,
+    minHeight: 125,
   },
-  quickActionIconContainer: {
-    marginBottom: spacing.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
+  quickActionPillEmoji: {
+    fontSize: 32,
+    marginBottom: spacing.sm - 2,
   },
-  quickActionText: {
-    ...typography.caption,
+  quickActionPillText: {
+    ...typography.subtitle,
     color: '#FFFFFF',
     fontWeight: '700',
-    textAlign: 'center',
-    fontSize: 11,
+    fontSize: 13,
     letterSpacing: 0.2,
-    lineHeight: 14,
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+    lineHeight: 18,
   },
   performanceCard: {
     marginBottom: spacing.lg,
@@ -961,17 +1467,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.authBorder,
-  },
-  metricLabel: {
-    ...typography.caption,
-    color: colors.authTextMuted,
-    marginTop: spacing.xs,
-    marginBottom: spacing.xs,
-  },
-  metricValue: {
-    ...typography.h2,
-    color: colors.authText,
-    fontWeight: '700',
   },
   emptyText: {
     ...typography.body,
@@ -1200,21 +1695,552 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     paddingTop: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: colors.authBorder,
+    borderTopColor: 'rgba(139, 92, 246, 0.1)',
   },
   streakItem: {
     alignItems: 'center',
+    flex: 1,
+  },
+  streakItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  streakDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
   },
   streakLabel: {
     ...typography.caption,
-    color: colors.authTextMuted,
-    marginBottom: spacing.xs,
+    color: '#64748B',
     fontSize: 12,
+    fontWeight: '600',
   },
   streakValue: {
     ...typography.h2,
-    color: colors.authText,
+    color: '#1E293B',
     fontWeight: '700',
     fontSize: 24,
   },
+  recentActivitySection: {
+    marginBottom: spacing.lg,
+  },
+  recentActivityList: {
+    gap: spacing.sm,
+  },
+  recentActivityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
+    padding: spacing.md + 2,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: spacing.md,
+    ...shadow.sm,
+  },
+  recentActivityIcon: {
+    fontSize: 36,
+  },
+  recentActivityContent: {
+    flex: 1,
+  },
+  recentActivityTitle: {
+    ...typography.subtitle,
+    color: '#111827',
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  recentActivityTime: {
+    ...typography.caption,
+    color: '#6B7280',
+    fontSize: 12,
+  },
+  recentActivityScore: {
+    alignItems: 'flex-end',
+  },
+  recentActivityScoreText: {
+    ...typography.h3,
+    color: '#6366F1',
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  welcomeCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
+    padding: spacing.xl + 4,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    ...shadow.md,
+  },
+  welcomeHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: spacing.lg,
+  },
+  welcomeEmoji: {
+    fontSize: 52,
+    marginRight: spacing.md,
+  },
+  welcomeTextContainer: {
+    flex: 1,
+  },
+  welcomeTitle: {
+    ...typography.h2,
+    color: '#111827',
+    fontWeight: '700',
+    marginBottom: spacing.sm,
+    fontSize: 22,
+    lineHeight: 28,
+  },
+  welcomeSubtitle: {
+    ...typography.body,
+    color: '#6B7280',
+    lineHeight: 22,
+    fontSize: 15,
+  },
+  welcomeFeatures: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(139, 92, 246, 0.1)',
+  },
+  welcomeFeature: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  welcomeFeatureText: {
+    ...typography.caption,
+    color: '#64748B',
+    marginTop: spacing.xs,
+    textAlign: 'center',
+    fontSize: 11,
+  },
+  examCountdownHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  examCountdownHintText: {
+    ...typography.caption,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 10,
+  },
+  streakCardHint: {
+    ...typography.caption,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 10,
+    marginTop: spacing.xs,
+  },
+  metricHint: {
+    ...typography.caption,
+    color: '#9CA3AF',
+    fontSize: 10,
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
+  quickActionsSection: {
+    marginBottom: spacing.lg,
+  },
+  quickActionPillHint: {
+    ...typography.caption,
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 10,
+    textAlign: 'center',
+    lineHeight: 14,
+    paddingHorizontal: spacing.xs,
+  },
+  emptyActivityCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
+    padding: spacing.xxxl + 8,
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    ...shadow.sm,
+  },
+  emptyActivityTitle: {
+    ...typography.h3,
+    color: '#111827',
+    fontWeight: '700',
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+    fontSize: 18,
+  },
+  emptyActivityText: {
+    ...typography.body,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+    lineHeight: 22,
+    fontSize: 14,
+  },
+  emptyActivityButton: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    ...shadow.md,
+  },
+  emptyActivityButtonGradient: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+  },
+  emptyActivityButtonText: {
+    ...typography.subtitle,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  subjectPerformanceSection: {
+    marginBottom: spacing.lg,
+  },
+  subjectPerformanceList: {
+    gap: spacing.md,
+  },
+  subjectPerformanceCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl + 4,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.1)',
+  },
+  subjectPerformanceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  subjectPerformanceInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    flex: 1,
+  },
+  subjectPerformanceIcon: {
+    fontSize: 32,
+  },
+  subjectPerformanceName: {
+    ...typography.title,
+    color: '#1E293B',
+    fontWeight: '700',
+    marginBottom: spacing.xs,
+  },
+  subjectPerformanceMeta: {
+    ...typography.caption,
+    color: '#6B7280',
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  subjectPerformanceScore: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    alignItems: 'center',
+  },
+  subjectPerformanceScoreText: {
+    ...typography.h2,
+    color: '#6366F1',
+    fontWeight: '700',
+    fontSize: 22,
+  },
+  subjectPerformanceProgressContainer: {
+    height: 6,
+    backgroundColor: '#F3F4F6',
+    borderRadius: radius.full,
+    overflow: 'hidden',
+    marginBottom: spacing.sm,
+  },
+  subjectPerformanceProgressBar: {
+    height: '100%',
+    borderRadius: radius.full,
+  },
+  subjectPerformanceHint: {
+    ...typography.caption,
+    color: '#9CA3AF',
+    fontSize: 11,
+    marginTop: spacing.xs,
+    fontStyle: 'italic',
+  },
+  subjectGuideCard: {
+    borderRadius: radius.xl + 4,
+    overflow: 'hidden',
+    marginBottom: spacing.lg,
+    ...shadow.lg,
+  },
+  subjectGuideGradient: {
+    padding: spacing.xl,
+  },
+  subjectGuideContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.lg,
+  },
+  subjectGuideLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.md,
+  },
+  subjectGuideIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.xl,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadow.md,
+  },
+  subjectGuideTextContainer: {
+    flex: 1,
+  },
+  subjectGuideTitle: {
+    ...typography.h3,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    marginBottom: spacing.xs,
+    fontSize: 18,
+    lineHeight: 24,
+  },
+  subjectGuideDescription: {
+    ...typography.body,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  subjectGuideRight: {
+    marginLeft: spacing.md,
+  },
+  subjectGuideFeatures: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  subjectGuideFeatureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flex: 1,
+    minWidth: '45%',
+  },
+  subjectGuideFeatureText: {
+    ...typography.caption,
+    color: 'rgba(255, 255, 255, 0.95)',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  premiumBanner: {
+    borderRadius: radius.xl + 6,
+    overflow: 'hidden',
+    marginBottom: spacing.xl,
+    ...shadow.xl,
+    marginHorizontal: -spacing.xs,
+  },
+  premiumBannerGradient: {
+    padding: spacing.xxl + 4,
+    position: 'relative',
+    minHeight: 280,
+    overflow: 'hidden',
+  },
+  premiumDecorativeCircle1: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    top: -80,
+    right: -60,
+  },
+  premiumDecorativeCircle2: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    bottom: -50,
+    left: -40,
+  },
+  premiumDecorativeCircle3: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    top: '50%',
+    right: 20,
+  },
+  premiumFloatingIcons: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+  premiumFloatingIcon1: {
+    position: 'absolute',
+    top: spacing.lg,
+    right: spacing.xl + 10,
+  },
+  premiumFloatingIcon2: {
+    position: 'absolute',
+    bottom: spacing.xl + 20,
+    right: spacing.lg,
+  },
+  premiumFloatingIcon3: {
+    position: 'absolute',
+    top: spacing.xl + 30,
+    left: spacing.lg,
+  },
+  premiumContent: {
+    position: 'relative',
+    zIndex: 10,
+  },
+  premiumHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  premiumBadgeContainer: {
+    borderRadius: radius.full,
+    overflow: 'hidden',
+    ...shadow.md,
+  },
+  premiumBadgeGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical: spacing.xs + 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  premiumBadgeText: {
+    ...typography.caption,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 10,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+  },
+  premiumCrownIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    ...shadow.md,
+  },
+  premiumCrownEmoji: {
+    fontSize: 24,
+  },
+  premiumTitleSection: {
+    marginBottom: spacing.xl,
+  },
+  premiumMainTitle: {
+    ...typography.h1,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 32,
+    lineHeight: 38,
+    marginBottom: spacing.xs,
+    letterSpacing: -0.5,
+  },
+  premiumSubTitle: {
+    ...typography.body,
+    color: 'rgba(255, 255, 255, 0.95)',
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '500',
+  },
+  premiumFeaturesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    marginBottom: spacing.xl,
+  },
+  premiumFeatureBox: {
+    flex: 1,
+    minWidth: '47%',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: radius.lg + 2,
+    padding: spacing.md + 2,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    backdropFilter: 'blur(10px)',
+  },
+  premiumFeatureIconContainer: {
+    marginBottom: spacing.sm,
+  },
+  premiumFeatureIconBg: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  premiumFeatureEmoji: {
+    fontSize: 24,
+  },
+  premiumFeatureNumber: {
+    ...typography.h3,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 16,
+    marginBottom: spacing.xs / 2,
+    textAlign: 'center',
+  },
+  premiumFeatureLabel: {
+    ...typography.caption,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  premiumCTAButton: {
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    ...shadow.lg,
+  },
+  premiumCTAButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md + 4,
+    paddingHorizontal: spacing.xl,
+  },
+  premiumCTAButtonText: {
+    ...typography.subtitle,
+    color: '#667EEA',
+    fontWeight: '800',
+    fontSize: 16,
+    letterSpacing: 0.5,
+  },
+  premiumCTAButtonIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#667EEA',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
+

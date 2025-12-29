@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,6 +8,7 @@ import {
   View,
   Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -102,12 +102,12 @@ export default function LeaderboardScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <LinearGradient colors={colors.gradientAuthLight as [string, string, ...string[]]} style={styles.backgroundGradient}>
+        <View style={styles.backgroundGradient}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Loading leaderboard...</Text>
           </View>
-        </LinearGradient>
+        </View>
       </SafeAreaView>
     );
   }
@@ -115,7 +115,7 @@ export default function LeaderboardScreen() {
   if (error && leaderboard.length === 0) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <LinearGradient colors={colors.gradientAuthLight as [string, string, ...string[]]} style={styles.backgroundGradient}>
+        <View style={styles.backgroundGradient}>
           <View style={styles.errorContainer}>
             <Ionicons name="alert-circle" size={64} color={colors.danger} />
             <Text style={styles.errorText}>{error}</Text>
@@ -131,14 +131,14 @@ export default function LeaderboardScreen() {
               </LinearGradient>
             </TouchableOpacity>
           </View>
-        </LinearGradient>
+        </View>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <LinearGradient colors={colors.gradientAuthLight as [string, string, ...string[]]} style={styles.backgroundGradient}>
+      <View style={styles.backgroundGradient}>
         <ScrollView
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}
@@ -213,7 +213,7 @@ export default function LeaderboardScreen() {
               if (displayLeaderboard.length === 0) {
                 return (
                   <View style={styles.emptyContainer}>
-                    <Ionicons name="trophy-outline" size={64} color={colors.authTextMuted} />
+                    <Ionicons name="trophy-outline" size={64} color="#9CA3AF" />
                     <Text style={styles.emptyText}>No leaderboard data available</Text>
                     <Text style={styles.emptySubtext}>Start practicing to appear on the leaderboard!</Text>
                   </View>
@@ -350,7 +350,7 @@ export default function LeaderboardScreen() {
             })()}
           </Animated.View>
         </ScrollView>
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -358,10 +358,11 @@ export default function LeaderboardScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.authBackground,
+    backgroundColor: '#FAFBFC',
   },
   backgroundGradient: {
     flex: 1,
+    backgroundColor: '#FAFBFC',
   },
   container: {
     flexGrow: 1,
@@ -377,7 +378,8 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...typography.body,
-    color: colors.authTextMuted,
+    color: '#6B7280',
+    fontSize: 14,
   },
   errorContainer: {
     flex: 1,
@@ -390,6 +392,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.danger,
     textAlign: 'center',
+    fontSize: 14,
   },
   retryButton: {
     borderRadius: radius.xl,
@@ -446,14 +449,14 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: colors.authSurface,
+    backgroundColor: '#F9FAFB',
     borderRadius: radius.xl + 2,
     padding: spacing.xs + 2,
     marginBottom: spacing.xl,
     gap: spacing.xs,
     ...shadow.md,
     borderWidth: 1,
-    borderColor: colors.authBorder,
+    borderColor: '#E5E7EB',
   },
   tab: {
     flex: 1,
@@ -470,7 +473,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     ...typography.subtitle,
-    color: colors.authTextMuted,
+    color: '#6B7280',
     fontWeight: '600',
   },
   tabTextActive: {
@@ -489,10 +492,10 @@ const styles = StyleSheet.create({
   entryCard: {
     borderRadius: radius.xl + 2,
     padding: spacing.lg,
-    backgroundColor: colors.authSurface,
-    ...shadow.md,
+    backgroundColor: '#FFFFFF',
+    ...shadow.sm,
     borderWidth: 1,
-    borderColor: colors.authBorder,
+    borderColor: '#E5E7EB',
     marginBottom: spacing.xs,
   },
   entryContent: {
@@ -525,7 +528,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radius.full,
-    backgroundColor: colors.primarySoft,
+    backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -537,7 +540,7 @@ const styles = StyleSheet.create({
   },
   rankNumberDefault: {
     ...typography.subtitle,
-    color: colors.primary,
+    color: '#6366F1',
     fontWeight: '800',
     fontSize: 16,
   },
@@ -564,11 +567,11 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: radius.full,
-    backgroundColor: colors.primarySoft,
+    backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: '#6366F1',
   },
   userName: {
     ...typography.h3,
@@ -608,7 +611,7 @@ const styles = StyleSheet.create({
   },
   scoreLabelDefault: {
     ...typography.caption,
-    color: colors.authTextMuted,
+    color: '#6B7280',
     marginTop: spacing.xs / 2,
     fontWeight: '500',
     fontSize: 11,
@@ -620,14 +623,16 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...typography.body,
-    color: colors.authTextMuted,
+    color: '#6B7280',
     fontWeight: '600',
     textAlign: 'center',
+    fontSize: 14,
   },
   emptySubtext: {
     ...typography.caption,
-    color: colors.authTextMuted,
+    color: '#6B7280',
     textAlign: 'center',
+    fontSize: 12,
   },
   premiumPromptCard: {
     marginBottom: spacing.xl,

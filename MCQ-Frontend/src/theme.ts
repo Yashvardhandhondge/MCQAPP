@@ -51,12 +51,17 @@ export const colors = {
   pink: '#F472B6',
   
   // Gradients - MUST be arrays for LinearGradient
-  gradientPrimary: ['#6366F1', '#8B5CF6'], // Indigo to Purple
-  gradientAccent: ['#10B981', '#059669'],
-  gradientGold: ['#FBBF24', '#F59E0B'],
-  gradientPurple: ['#A78BFA', '#8B5CF6'],
+  gradientPrimary: ['#6366F1', '#8B5CF6'], // Professional indigo to purple
+  gradientAccent: ['#10B981', '#059669'], // Success green
+  gradientGold: ['#F59E0B', '#F97316'], // Warm orange-gold
+  gradientPurple: ['#8B5CF6', '#A78BFA'], // Soft purple
+  gradientPink: ['#EC4899', '#F472B6'], // Vibrant pink
+  gradientOrange: ['#F59E0B', '#EF4444'], // Orange gradient for streak
+  gradientBlue: ['#3B82F6', '#2563EB'], // Professional blue
+  gradientTeal: ['#14B8A6', '#0D9488'], // Modern teal
   gradientAuth: ['#667EEA', '#764BA2'], // Beautiful purple gradient for auth
-  gradientAuthLight: ['#F8FAFF', '#EEF2FF'], // Subtle background gradient
+  gradientAuthLight: ['#F8FAFF', '#FFFFFF'], // Clean white background
+  gradientPurpleLight: ['#F5F3FF', '#EDE9FE'], // Very light purple for backgrounds
 };
 
 export const spacing = {

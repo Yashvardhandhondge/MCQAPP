@@ -3,7 +3,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import {
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,6 +11,7 @@ import {
   Animated,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { AppStackParamList } from '../navigation/types';
@@ -216,7 +216,7 @@ export default function TestsScreen() {
   if (error && years.length === 0 && loadingYears && filter === 'year') {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <LinearGradient colors={colors.gradientAuthLight as [string, string, ...string[]]} style={styles.backgroundGradient}>
+        <View style={styles.backgroundGradient}>
           <View style={styles.errorContainer}>
             <Ionicons name="alert-circle" size={64} color={colors.danger} />
             <Text style={styles.errorText}>{error}</Text>
@@ -232,14 +232,14 @@ export default function TestsScreen() {
               </LinearGradient>
             </TouchableOpacity>
           </View>
-        </LinearGradient>
+        </View>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <LinearGradient colors={colors.gradientAuthLight as [string, string, ...string[]]} style={styles.backgroundGradient}>
+      <View style={styles.backgroundGradient}>
         <ScrollView
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}
@@ -610,7 +610,7 @@ export default function TestsScreen() {
             )}
           </Animated.View>
         </ScrollView>
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -618,10 +618,11 @@ export default function TestsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.authBackground,
+    backgroundColor: '#FAFBFC',
   },
   backgroundGradient: {
     flex: 1,
+    backgroundColor: '#FAFBFC',
   },
   container: {
     flexGrow: 1,
@@ -637,7 +638,8 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...typography.body,
-    color: colors.authTextMuted,
+    color: '#6B7280',
+    fontSize: 14,
   },
   errorContainer: {
     flex: 1,
@@ -650,6 +652,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.danger,
     textAlign: 'center',
+    fontSize: 14,
   },
   retryButton: {
     borderRadius: radius.lg,
@@ -716,7 +719,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     ...typography.subtitle,
-    color: colors.authText,
+    color: '#111827',
     fontWeight: '600',
     fontSize: 16,
   },
@@ -727,13 +730,13 @@ const styles = StyleSheet.create({
   },
   modeContainer: {
     flexDirection: 'row',
-    backgroundColor: colors.authSurface,
+    backgroundColor: '#F9FAFB',
     borderRadius: radius.xl,
     padding: spacing.xs + 2,
     marginBottom: spacing.xl,
     gap: spacing.xs,
     borderWidth: 1,
-    borderColor: colors.authBorder,
+    borderColor: '#E5E7EB',
     ...shadow.sm,
   },
   modeTab: {
@@ -761,7 +764,7 @@ const styles = StyleSheet.create({
   },
   modeText: {
     ...typography.subtitle,
-    color: colors.authTextMuted,
+    color: '#6B7280',
     fontWeight: '600',
     fontSize: 15,
   },
@@ -781,13 +784,13 @@ const styles = StyleSheet.create({
   },
   randomTestSectionTitle: {
     ...typography.h2,
-    color: colors.authText,
+    color: '#111827',
     fontWeight: '700',
     fontSize: 20,
   },
   randomTestSectionSubtitle: {
     ...typography.body,
-    color: colors.authTextSecondary,
+    color: '#6B7280',
     marginBottom: spacing.xl,
     fontSize: 14,
   },
@@ -847,14 +850,14 @@ const styles = StyleSheet.create({
   },
   filterContainer: {
     flexDirection: 'row',
-    backgroundColor: colors.authSurface,
+    backgroundColor: '#F9FAFB',
     borderRadius: radius.xl + 2,
     padding: spacing.xs + 2,
     marginBottom: spacing.xl,
     gap: spacing.xs,
     ...shadow.md,
     borderWidth: 1,
-    borderColor: colors.authBorder,
+    borderColor: '#E5E7EB',
   },
   filterTab: {
     flex: 1,
@@ -871,7 +874,7 @@ const styles = StyleSheet.create({
   },
   filterText: {
     ...typography.subtitle,
-    color: colors.authTextMuted,
+    color: '#6B7280',
     fontWeight: '600',
   },
   filterTextActive: {
@@ -903,7 +906,7 @@ const styles = StyleSheet.create({
   },
   testName: {
     ...typography.h3,
-    color: colors.authText,
+    color: '#111827',
     fontWeight: '700',
     marginBottom: spacing.sm,
   },
@@ -919,11 +922,11 @@ const styles = StyleSheet.create({
   },
   testDuration: {
     ...typography.caption,
-    color: colors.authTextMuted,
+    color: '#6B7280',
   },
   testQuestions: {
     ...typography.caption,
-    color: colors.authTextMuted,
+    color: '#6B7280',
   },
   testStatus: {
     flexDirection: 'row',
@@ -932,7 +935,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.authBorder,
+    borderTopColor: '#E5E7EB',
   },
   statusText: {
     ...typography.body,
@@ -950,12 +953,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...typography.body,
-    color: colors.authTextMuted,
+    color: '#6B7280',
     fontWeight: '600',
   },
   emptySubtext: {
     ...typography.caption,
-    color: colors.authTextMuted,
+    color: '#6B7280',
   },
   yearList: {
     gap: spacing.md,
@@ -973,7 +976,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: radius.lg,
-    backgroundColor: colors.primarySoft,
+    backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -982,13 +985,13 @@ const styles = StyleSheet.create({
   },
   yearTitle: {
     ...typography.h3,
-    color: colors.authText,
+    color: '#111827',
     fontWeight: '700',
     marginBottom: spacing.xs,
   },
   yearSubtitle: {
     ...typography.body,
-    color: colors.authTextSecondary,
+    color: '#6B7280',
   },
   subjectList: {
     gap: spacing.md,

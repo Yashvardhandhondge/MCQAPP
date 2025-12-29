@@ -647,3 +647,72 @@ export async function getDailyViews(): Promise<{
     throw new Error('Failed to get daily views');
   }
 }
+
+// Recent Activity
+export async function getRecentActivity(): Promise<{
+  success: boolean;
+  data: Array<{
+    id: string;
+    title: string;
+    score: string;
+    time: string;
+    icon: string;
+    subject?: string;
+    testType?: string;
+  }>;
+}> {
+  try {
+    const response = await axiosInstance.get('/api/mcq/tests/recent-activity');
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to load recent activity');
+    }
+    throw new Error('Failed to load recent activity');
+  }
+}
+
+// User Rank
+export async function getUserRank(timeframe: 'month' | 'all-time' = 'all-time'): Promise<{
+  success: boolean;
+  data: {
+    rank: number | null;
+    score: number;
+    totalCorrect: number;
+    totalAttempts: number;
+  };
+}> {
+  try {
+    const response = await axiosInstance.get('/api/mcq/leaderboard/my-rank', {
+      params: { timeframe },
+    });
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to load user rank');
+    }
+    throw new Error('Failed to load user rank');
+  }
+}
+
+// Achievements
+export async function getAchievements(): Promise<{
+  success: boolean;
+  data: Array<{
+    id: string;
+    title: string;
+    icon: string;
+    unlocked: boolean;
+    description: string;
+  }>;
+}> {
+  try {
+    const response = await axiosInstance.get('/api/mcq/me/achievements');
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to load achievements');
+    }
+    throw new Error('Failed to load achievements');
+  }
+}

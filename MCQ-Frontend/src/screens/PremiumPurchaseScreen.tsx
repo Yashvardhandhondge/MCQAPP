@@ -18,7 +18,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import type { AppStackParamList } from '../navigation/types';
 import { colors, radius, spacing, typography, shadow } from '../theme';
-import ModernCard from '../components/ui/ModernCard';
 import { getPremiumContent } from '../services/mcq.service';
 
 export default function PremiumPurchaseScreen() {
@@ -175,12 +174,12 @@ export default function PremiumPurchaseScreen() {
   if (contentLoading || !content) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <LinearGradient colors={colors.gradientAuthLight as [string, string, ...string[]]} style={styles.backgroundGradient}>
+        <View style={styles.backgroundGradient}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Loading...</Text>
           </View>
-        </LinearGradient>
+        </View>
       </SafeAreaView>
     );
   }
@@ -190,7 +189,7 @@ export default function PremiumPurchaseScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" />
-      <LinearGradient colors={colors.gradientAuthLight as [string, string, ...string[]]} style={styles.backgroundGradient}>
+      <View style={styles.backgroundGradient}>
         <ScrollView
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}
@@ -211,59 +210,118 @@ export default function PremiumPurchaseScreen() {
                 <Ionicons name="arrow-back" size={24} color={colors.authText} />
               </TouchableOpacity>
               <View style={styles.headerTextContainer}>
-                <Text style={styles.title}>Upgrade to Premium</Text>
+                <Text style={styles.title}>Premium Access</Text>
+                <Text style={styles.titleSubtitle}>Unlock everything in one upgrade</Text>
               </View>
             </View>
 
-            {/* Hero Section */}
+            {/* Hero Section - Premium Banner */}
             <View style={styles.heroSection}>
-              <View style={styles.heroBadge}>
-                <Ionicons name="rocket" size={16} color={colors.primary} />
-                <Text style={styles.heroBadgeText}>{content.heroBadgeText}</Text>
-              </View>
-              <Text style={styles.heroTitle}>
-                {content.heroTitle.replace(/\\n/g, '\n')}
-              </Text>
-              <Text style={styles.heroSubtitle}>
-                {content.heroSubtitle}
-              </Text>
-            </View>
+              <LinearGradient
+                colors={['#667EEA', '#764BA2', '#F093FB', '#4FACFE'] as [string, string, string, string]}
+                style={styles.heroGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                {/* Decorative elements */}
+                <View style={styles.heroCircle1} />
+                <View style={styles.heroCircle2} />
+                <View style={styles.heroCircle3} />
 
-            {/* Value Proposition Card */}
-            <ModernCard variant="elevated" padding="lg" style={styles.valueCard}>
-              <View style={styles.valueCardContent}>
-                <View style={styles.valueIconWrapper}>
-                  <LinearGradient
-                    colors={[colors.primary, colors.primaryDark]}
-                    style={styles.valueIconGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <Ionicons name="wallet" size={28} color="#FFFFFF" />
-                  </LinearGradient>
-                </View>
-                <View style={styles.valueTextWrapper}>
-                  <Text style={styles.valueTitle}>{content.valueTitle}</Text>
-                  <Text style={styles.valueDescription}>
-                    {content.valueDescription}
-                  </Text>
-                </View>
-              </View>
-            </ModernCard>
-
-            {/* Features Grid */}
-            <View style={styles.featuresGrid}>
-              {content.features.map((feature, index) => (
-                <View key={index} style={styles.featureCard}>
-                  <View style={styles.featureIconContainer}>
-                    <Ionicons name={feature.icon as any} size={24} color={colors.primary} />
+                <View style={styles.heroContent}>
+                  <View style={styles.heroTopRow}>
+                    <View style={styles.heroBadgeOuter}>
+                      <LinearGradient
+                        colors={['rgba(255,255,255,0.32)', 'rgba(255,255,255,0.14)'] as [string, string]}
+                        style={styles.heroBadge}
+                      >
+                        <Ionicons name="rocket" size={16} color="#FFFFFF" />
+                        <Text style={styles.heroBadgeText}>{content.heroBadgeText}</Text>
+                      </LinearGradient>
+                    </View>
+                    <View style={styles.heroCrown}>
+                      <Text style={styles.heroCrownEmoji}>👑</Text>
+                    </View>
                   </View>
-                  <Text style={styles.featureCardText}>{feature.text}</Text>
+
+                  <Text style={styles.heroTitle}>
+                    {content.heroTitle.replace(/\\n/g, '\n')}
+                  </Text>
+                  <Text style={styles.heroSubtitle}>
+                    {content.heroSubtitle}
+                  </Text>
+
+                  {/* Quick premium highlights */}
+                  <View style={styles.heroHighlightsRow}>
+                    <View style={styles.heroHighlightPill}>
+                      <Text style={styles.heroHighlightNumber}>20K+</Text>
+                      <Text style={styles.heroHighlightLabel}>Questions</Text>
+                    </View>
+                    <View style={styles.heroHighlightPill}>
+                      <Text style={styles.heroHighlightNumber}>10-20</Text>
+                      <Text style={styles.heroHighlightLabel}>Mock Tests</Text>
+                    </View>
+                    <View style={styles.heroHighlightPill}>
+                      <Text style={styles.heroHighlightNumber}>Smart</Text>
+                      <Text style={styles.heroHighlightLabel}>Analytics</Text>
+                    </View>
+                  </View>
                 </View>
-              ))}
+              </LinearGradient>
             </View>
 
-            {/* Pricing Plans */}
+            {/* Value Proposition - Flowing Gradient Section */}
+            <View style={styles.valueSection}>
+              <LinearGradient
+                colors={['#EEF2FF', '#F5F3FF', '#FFFFFF'] as [string, string, string]}
+                style={styles.valueGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <View style={styles.valueContent}>
+                  <View style={styles.valueIconContainer}>
+                    <LinearGradient
+                      colors={colors.gradientPrimary as [string, string]}
+                      style={styles.valueIconGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons name="wallet" size={28} color="#FFFFFF" />
+                    </LinearGradient>
+                  </View>
+                  <View style={styles.valueTextContainer}>
+                    <Text style={styles.valueTitle}>{content.valueTitle}</Text>
+                    <Text style={styles.valueDescription}>
+                      {content.valueDescription}
+                    </Text>
+                  </View>
+                </View>
+              </LinearGradient>
+            </View>
+
+            {/* Features - Flowing List Design */}
+            <View style={styles.featuresSection}>
+              <View style={styles.featuresList}>
+                {content.features.map((feature, index) => (
+                  <View key={index} style={styles.featureItem}>
+                    <View style={styles.featureItemLeft}>
+                      <View style={styles.featureIconWrapper}>
+                        <LinearGradient
+                          colors={[`${colors.primary}20`, `${colors.primary}08`] as [string, string]}
+                          style={styles.featureIconGradient}
+                        >
+                          <Ionicons name={feature.icon as any} size={22} color={colors.primary} />
+                        </LinearGradient>
+                      </View>
+                      <Text style={styles.featureText}>{feature.text}</Text>
+                    </View>
+                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} style={styles.featureCheck} />
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* Pricing Plans - Stream Selector */}
             <View style={styles.pricingSection}>
               <View style={styles.pricingTitleContainer}>
                 <Text style={styles.pricingTitle}>Select Your Stream</Text>
@@ -275,66 +333,79 @@ export default function PremiumPurchaseScreen() {
                   <TouchableOpacity
                     key={plan.id}
                     style={[
-                      styles.planCard,
-                      isSelected && styles.planCardSelected,
+                      styles.planChip,
+                      isSelected && styles.planChipSelected,
                     ]}
                     activeOpacity={0.9}
                     onPress={() => handlePurchase(plan.id)}
                     disabled={purchasing || loading}
                   >
-                    <View style={styles.planCardInner}>
-                      <View style={styles.planHeader}>
-                        <View style={styles.planHeaderLeft}>
-                          <View style={[styles.planIconWrapper, { backgroundColor: `${plan.gradient[0]}15` }]}>
-                            <Ionicons name={plan.icon as any} size={24} color={plan.gradient[0]} />
-                          </View>
-                          <View style={styles.planTitleSection}>
-                            <Text style={styles.planName}>{plan.name}</Text>
-                            <Text style={styles.planDescription}>{plan.description}</Text>
-                          </View>
-                        </View>
-                        {isSelected && (
-                          <View style={styles.currentBadge}>
-                            <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                          </View>
-                        )}
-                        {plan.isPopular && !isSelected && (
-                          <View style={styles.popularBadge}>
-                            <Text style={styles.popularBadgeText}>Popular</Text>
-                          </View>
-                        )}
-                      </View>
-                      
-                      <View style={styles.planFooter}>
-                        <View style={styles.priceSection}>
-                          <Text style={styles.priceSymbol}>₹</Text>
-                          <Text style={styles.priceAmount}>{plan.price}</Text>
-                          <Text style={styles.pricePeriod}>one-time</Text>
-                        </View>
-                        <TouchableOpacity
+                    <View style={styles.planChipContent}>
+                      <View style={styles.planChipLeft}>
+                        <View
                           style={[
-                            styles.purchaseButton,
-                            isSelected && styles.purchaseButtonActive,
-                            (purchasing || loading) && styles.purchaseButtonDisabled,
+                            styles.planChipIcon,
+                            { borderColor: `${plan.gradient[0]}33` },
+                            isSelected && { backgroundColor: `${plan.gradient[0]}14` },
                           ]}
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            handlePurchase(plan.id);
-                          }}
-                          disabled={purchasing || loading}
-                          activeOpacity={0.8}
                         >
-                          {purchasing && isSelected ? (
-                            <ActivityIndicator color="#FFFFFF" size="small" />
-                          ) : (
-                            <Text style={[
-                              styles.purchaseButtonText,
-                              isSelected && styles.purchaseButtonTextActive
-                            ]}>
-                              {isSelected ? 'Current Plan' : 'Upgrade Now'}
+                          <Ionicons
+                            name={plan.icon as any}
+                            size={22}
+                            color={plan.gradient[0]}
+                          />
+                        </View>
+                        <View style={styles.planChipTextContainer}>
+                          <View style={styles.planNameRow}>
+                            <Text
+                              style={[
+                                styles.planName,
+                                isSelected && styles.planNameSelected,
+                              ]}
+                            >
+                              {plan.name}
                             </Text>
-                          )}
-                        </TouchableOpacity>
+                            {isSelected && (
+                              <View style={styles.selectedBadge}>
+                                <Ionicons name="checkmark-circle" size={18} color={colors.primaryDark} />
+                                <Text style={styles.selectedBadgeText}>Current</Text>
+                              </View>
+                            )}
+                            {plan.isPopular && !isSelected && (
+                              <View style={styles.popularBadge}>
+                                <Text style={styles.popularBadgeText}>Popular</Text>
+                              </View>
+                            )}
+                          </View>
+                          {/* <Text
+                            style={[
+                              styles.planDescription,
+                              isSelected && styles.planDescriptionSelected,
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {plan.description}
+                          </Text> */}
+                        </View>
+                      </View>
+
+                      <View style={styles.planChipRight}>
+                        <Text
+                          style={[
+                            styles.planChipPrice,
+                            isSelected && styles.planChipPriceSelected,
+                          ]}
+                        >
+                          ₹{plan.price}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.planChipOneTime,
+                            isSelected && styles.planChipOneTimeSelected,
+                          ]}
+                        >
+                          one-time
+                        </Text>
                       </View>
                     </View>
                   </TouchableOpacity>
@@ -343,7 +414,7 @@ export default function PremiumPurchaseScreen() {
             </View>
           </Animated.View>
         </ScrollView>
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -351,10 +422,11 @@ export default function PremiumPurchaseScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.authBackground,
+    backgroundColor: '#F3E8FF',
   },
   backgroundGradient: {
     flex: 1,
+    backgroundColor: '#F3E8FF',
   },
   container: {
     flexGrow: 1,
@@ -388,41 +460,59 @@ const styles = StyleSheet.create({
     fontSize: 24,
     letterSpacing: -0.3,
   },
-  featuresGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
+  titleSubtitle: {
+    ...typography.caption,
+    color: colors.authTextMuted,
+    marginTop: spacing.xs / 2,
+    fontSize: 12,
+  },
+  featuresSection: {
     marginBottom: spacing.xxl,
   },
-  featureCard: {
-    width: '48%',
-    backgroundColor: colors.authSurface,
-    borderRadius: radius.lg,
+  featuresList: {
+    gap: spacing.sm,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.authBorder,
-    alignItems: 'center',
+    borderColor: '#E5E7EB',
     ...shadow.sm,
   },
-  featureIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: colors.primarySoft,
+  featureItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.md,
+  },
+  featureIconWrapper: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  featureIconGradient: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.md,
   },
-  featureCardText: {
+  featureText: {
     ...typography.body,
     color: colors.authText,
-    fontSize: 13,
-    textAlign: 'center',
-    fontWeight: '500',
-    lineHeight: 18,
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
+    lineHeight: 20,
+  },
+  featureCheck: {
+    opacity: 0.7,
   },
   pricingSection: {
-    gap: spacing.lg,
+    gap: spacing.md,
   },
   pricingTitleContainer: {
     marginBottom: spacing.xl,
@@ -443,51 +533,57 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
   },
-  planCard: {
-    backgroundColor: colors.authSurface,
+  planChip: {
     borderRadius: radius.xl,
-    marginBottom: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: colors.authBorder,
-    overflow: 'hidden',
-    ...shadow.md,
+    borderColor: '#E5E7EB',
   },
-  planCardSelected: {
-    borderWidth: 2,
+  planChipSelected: {
     borderColor: colors.primary,
-    ...shadow.lg,
+    backgroundColor: '#EEF2FF',
   },
-  planCardInner: {
-    padding: spacing.xl,
-  },
-  planHeader: {
+  planChipContent: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: spacing.xl,
+    gap: spacing.md,
   },
-  planHeaderLeft: {
+  planChipLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
     gap: spacing.md,
   },
-  planIconWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
+  planChipIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.lg,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#F3F4FF',
   },
-  planTitleSection: {
+  planChipTextContainer: {
     flex: 1,
+  },
+  planNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xs / 2,
   },
   planName: {
     ...typography.h3,
     color: colors.authText,
     fontWeight: '700',
-    fontSize: 20,
-    marginBottom: spacing.xs / 2,
+    fontSize: 22,
+  },
+  planNameSelected: {
+    color: colors.primaryDark,
+    fontWeight: '800',
   },
   planDescription: {
     ...typography.body,
@@ -495,13 +591,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  planDescriptionSelected: {
+    color: '#4F46E5',
+    fontWeight: '600',
+  },
   currentBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.full,
-    backgroundColor: colors.primarySoft,
+    display: 'none',
+  },
+  selectedBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: spacing.xs / 2,
+    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(79, 70, 229, 0.2)',
+  },
+  selectedBadgeText: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
+    fontSize: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   popularBadge: {
     backgroundColor: colors.accentSoft,
@@ -515,89 +629,111 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 11,
   },
-  planFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.authBorder,
+  planChipRight: {
+    alignItems: 'flex-end',
   },
-  priceSection: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: spacing.xs / 2,
-  },
-  priceSymbol: {
+  planChipPrice: {
     ...typography.h3,
     color: colors.authText,
     fontWeight: '700',
     fontSize: 18,
   },
-  priceAmount: {
-    ...typography.h1,
-    color: colors.authText,
-    fontWeight: '800',
-    fontSize: 32,
-    letterSpacing: -0.5,
+  planChipPriceSelected: {
+    color: colors.primaryDark,
   },
-  pricePeriod: {
+  planChipOneTime: {
     ...typography.caption,
     color: colors.authTextMuted,
     fontSize: 11,
-    marginLeft: spacing.xs,
   },
-  purchaseButton: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: colors.primary,
-    minWidth: 140,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadow.sm,
-  },
-  purchaseButtonActive: {
-    backgroundColor: colors.primarySoft,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-  },
-  purchaseButtonDisabled: {
-    opacity: 0.6,
-  },
-  purchaseButtonText: {
-    ...typography.subtitle,
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  purchaseButtonTextActive: {
-    color: colors.primary,
+  planChipOneTimeSelected: {
+    color: colors.primaryDark,
   },
   heroSection: {
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.xxxl,
+  },
+  heroGradient: {
+    borderRadius: radius.xl + 6,
+    padding: spacing.xxl,
+    overflow: 'hidden',
+    ...shadow.lg,
+  },
+  heroCircle1: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255, 255, 255, 0.09)',
+    top: -60,
+    right: -50,
+  },
+  heroCircle2: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    bottom: -50,
+    left: -40,
+  },
+  heroCircle3: {
+    position: 'absolute',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    top: '45%',
+    right: 10,
+  },
+  heroContent: {
+    position: 'relative',
+    zIndex: 5,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  heroBadgeOuter: {
+    borderRadius: radius.full,
+    overflow: 'hidden',
+    ...shadow.sm,
   },
   heroBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primarySoft,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical: spacing.xs + 2,
     borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
     gap: spacing.xs,
-    marginBottom: spacing.lg,
   },
   heroBadgeText: {
     ...typography.caption,
-    color: colors.primary,
-    fontWeight: '600',
-    fontSize: 12,
-    letterSpacing: 0.3,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 11,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  heroCrown: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  heroCrownEmoji: {
+    fontSize: 24,
   },
   heroTitle: {
     ...typography.h1,
-    color: colors.authText,
+    color: '#FFFFFF',
     fontWeight: '800',
     fontSize: 32,
     textAlign: 'center',
@@ -607,31 +743,59 @@ const styles = StyleSheet.create({
   },
   heroSubtitle: {
     ...typography.body,
-    color: colors.authTextMuted,
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 24,
-    paddingHorizontal: spacing.lg,
+    color: 'rgba(255,255,255,0.95)',
+    fontSize: 15,
+    textAlign: 'left',
+    lineHeight: 22,
+    marginBottom: spacing.xl,
   },
-  valueCard: {
-    marginBottom: spacing.xxl,
-    backgroundColor: colors.authSurface,
+  heroHighlightsRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  heroHighlightPill: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: radius.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     borderWidth: 1,
-    borderColor: colors.primarySoft,
-    borderRadius: radius.xl + 2,
-    ...shadow.md,
+    borderColor: 'rgba(255,255,255,0.35)',
   },
-  valueCardContent: {
+  heroHighlightNumber: {
+    ...typography.subtitle,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 15,
+    marginBottom: spacing.xs / 2,
+  },
+  heroHighlightLabel: {
+    ...typography.caption,
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  valueSection: {
+    marginBottom: spacing.xxl,
+    borderRadius: radius.xl + 6,
+    overflow: 'hidden',
+    ...shadow.lg,
+  },
+  valueGradient: {
+    padding: spacing.xxl,
+  },
+  valueContent: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.lg,
   },
-  valueIconWrapper: {
-    width: 64,
-    height: 64,
-    borderRadius: radius.lg + 2,
+  valueIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.xl,
     overflow: 'hidden',
-    ...shadow.sm,
+    ...shadow.md,
   },
   valueIconGradient: {
     width: '100%',
@@ -639,7 +803,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  valueTextWrapper: {
+  valueTextContainer: {
     flex: 1,
     paddingTop: spacing.xs,
   },

@@ -86,8 +86,82 @@ const getLeaderboard = async (req, res, next) => {
   }
 };
 
+/**
+ * Get user's current rank
+ * GET /api/mcq/leaderboard/my-rank
+ */
+const getUserRank = async (req, res, next) => {
+  try {
+    const userId = req.user._id.toString();
+    const { timeframe = 'all-time' } = req.query;
+
+    // Calculate date filter
+    let dateFilter = {};
+    if (timeframe === 'month') {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      dateFilter = { answeredAt: { $gte: startOfMonth } };
+    }
+
+    // Aggregate user scores
+    const leaderboardData = await UserAttempt.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: '$user',
+          totalCorrect: {
+            $sum: {
+              $cond: ['$isCorrect', 1, 0],
+            },
+          },
+          totalAttempts: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          userId: '$_id',
+          score: {
+            $multiply: [
+              {
+                $divide: ['$totalCorrect', { $max: ['$totalAttempts', 1] }],
+              },
+              200,
+            ],
+          },
+          totalCorrect: 1,
+          totalAttempts: 1,
+        },
+      },
+      { $sort: { score: -1 } },
+    ]).allowDiskUse(true);
+
+    // Find user's rank
+    const userIndex = leaderboardData.findIndex(
+      (entry) => entry.userId.toString() === userId
+    );
+
+    const rank = userIndex >= 0 ? userIndex + 1 : null;
+    const userData = userIndex >= 0 ? leaderboardData[userIndex] : null;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        rank: rank,
+        score: userData ? parseFloat(userData.score.toFixed(1)) : 0,
+        totalCorrect: userData?.totalCorrect || 0,
+        totalAttempts: userData?.totalAttempts || 0,
+      },
+    });
+  } catch (error) {
+    console.error('Error getting user rank:', error);
+    return next(createError(500, 'Failed to fetch user rank'));
+  }
+};
+
 module.exports = {
   getLeaderboard,
+  getUserRank,
 };
 
 

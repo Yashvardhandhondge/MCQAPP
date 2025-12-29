@@ -31,9 +31,11 @@ const {
   getUserTestSessions,
   getTestReport,
   getTestReports,
+  getRecentActivity,
 } = require('../controllers/test.controller');
 const {
   getLeaderboard,
+  getUserRank,
 } = require('../controllers/leaderboard.controller');
 const {
   getExamConfig,
@@ -61,6 +63,7 @@ const {
 const { adminAuthGuard } = require('../middleware/admin.middleware');
 const { getUserStats, getAllUsers } = require('../controllers/admin.controller');
 const { getPremiumContent, updatePremiumContent } = require('../controllers/premiumContent.controller');
+const { getUserAchievements } = require('../controllers/achievement.controller');
 
 const router = express.Router();
 
@@ -170,6 +173,21 @@ router.get('/tests/reports/:sessionId', getTestReport);
  * @access  Private (requires authentication)
  */
 router.get('/tests/reports', getTestReports);
+
+/**
+ * @route   GET /api/mcq/tests/recent-activity
+ * @desc    Get recent test activity (last 3 completed tests)
+ * @access  Private (requires authentication)
+ */
+router.get('/tests/recent-activity', getRecentActivity);
+
+/**
+ * @route   GET /api/mcq/leaderboard/my-rank
+ * @desc    Get current user's rank
+ * @query   {string} timeframe - 'month' or 'all-time' (default: 'all-time')
+ * @access  Private (requires authentication)
+ */
+router.get('/leaderboard/my-rank', getUserRank);
 
 /**
  * @route   GET /api/mcq/leaderboard
@@ -319,6 +337,13 @@ router.post('/attempts/by-questions', getUserAttemptsByQuestions);
  * @access  Private (requires authentication)
  */
 router.get('/me/streak', getStudyStreakAndTodayProgress);
+
+/**
+ * @route   GET /api/mcq/me/achievements
+ * @desc    Get user achievements
+ * @access  Private (requires authentication)
+ */
+router.get('/me/achievements', getUserAchievements);
 
 /**
  * @route   GET /api/mcq/me/analytics/time-series

@@ -2,13 +2,13 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Animated,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getUserProgress, getTestReports, getTimeSeriesAnalytics } from '../services/mcq.service';
@@ -437,7 +437,7 @@ export default function StatsScreen() {
     if (entries.length === 0) {
       return (
         <View style={styles.emptyStateContainer}>
-          <Ionicons name="book-outline" size={48} color={colors.authTextMuted} />
+          <Ionicons name="book-outline" size={48} color="#9CA3AF" />
           <Text style={styles.emptyStateText}>No chapter attempts yet</Text>
           <Text style={styles.emptyStateSubtext}>Start practicing chapters to see your progress</Text>
         </View>
@@ -539,7 +539,7 @@ export default function StatsScreen() {
     if (entries.length === 0) {
       return (
         <View style={styles.emptyStateContainer}>
-          <Ionicons name="calendar-outline" size={48} color={colors.authTextMuted} />
+          <Ionicons name="calendar-outline" size={48} color="#9CA3AF" />
           <Text style={styles.emptyStateText}>No year-wise attempts yet</Text>
           <Text style={styles.emptyStateSubtext}>Practice questions by year to track your progress</Text>
         </View>
@@ -678,12 +678,12 @@ export default function StatsScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <LinearGradient colors={colors.gradientAuthLight as [string, string, ...string[]]} style={styles.backgroundGradient}>
+        <View style={styles.backgroundGradient}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Loading analytics...</Text>
           </View>
-        </LinearGradient>
+        </View>
       </SafeAreaView>
     );
   }
@@ -691,7 +691,7 @@ export default function StatsScreen() {
   if (error) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <LinearGradient colors={colors.gradientAuthLight as [string, string, ...string[]]} style={styles.backgroundGradient}>
+        <View style={styles.backgroundGradient}>
           <View style={styles.errorContainer}>
             <Ionicons name="alert-circle" size={64} color={colors.danger} />
             <Text style={styles.errorText}>Could not load stats: {error}</Text>
@@ -707,14 +707,14 @@ export default function StatsScreen() {
               </LinearGradient>
             </TouchableOpacity>
           </View>
-        </LinearGradient>
+        </View>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <LinearGradient colors={colors.gradientAuthLight as [string, string, ...string[]]} style={styles.backgroundGradient}>
+      <View style={styles.backgroundGradient}>
         <ScrollView
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}
@@ -991,7 +991,7 @@ export default function StatsScreen() {
                 </TouchableOpacity>
               ) : !progress || progress.perSubject.length === 0 ? (
                 <View style={styles.emptyStateContainer}>
-                  <Ionicons name="library-outline" size={40} color={colors.authTextMuted} />
+                  <Ionicons name="library-outline" size={40} color="#9CA3AF" />
                   <Text style={styles.emptyStateText}>No subject attempts yet</Text>
                 </View>
               ) : (
@@ -1207,7 +1207,7 @@ export default function StatsScreen() {
                 </View>
               ) : testReports.length === 0 ? (
                 <View style={styles.testReportsEmpty}>
-                  <Ionicons name="document-outline" size={48} color={colors.authTextMuted} />
+                  <Ionicons name="document-outline" size={48} color="#9CA3AF" />
                   <Text style={styles.testReportsEmptyText}>No test reports yet</Text>
                   <Text style={styles.testReportsEmptySubtext}>
                     Complete tests to see your analytics here
@@ -1362,7 +1362,7 @@ export default function StatsScreen() {
             </ModernCard>
           </Animated.View>
         </ScrollView>
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -1370,10 +1370,11 @@ export default function StatsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.authBackground,
+    backgroundColor: '#FAFBFC',
   },
   backgroundGradient: {
     flex: 1,
+    backgroundColor: '#FAFBFC',
   },
   container: {
     flexGrow: 1,
@@ -1389,8 +1390,9 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...typography.body,
-    color: colors.authText,
+    color: '#6B7280',
     fontWeight: '600',
+    fontSize: 14,
   },
   errorContainer: {
     flex: 1,
@@ -1404,6 +1406,7 @@ const styles = StyleSheet.create({
     color: colors.danger,
     textAlign: 'center',
     fontWeight: '600',
+    fontSize: 14,
   },
   retryButton: {
     borderRadius: radius.lg,
@@ -1537,7 +1540,7 @@ const styles = StyleSheet.create({
   accuracyCaption: {
     ...typography.caption,
     textAlign: 'center',
-    color: colors.authTextMuted,
+    color: '#6B7280',
   },
   zeroStateBanner: {
     flexDirection: 'row',
@@ -1561,13 +1564,13 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     ...typography.body,
-    color: colors.authTextMuted,
+    color: '#6B7280',
     textAlign: 'center',
     fontWeight: '600',
   },
   emptyStateSubtext: {
     ...typography.caption,
-    color: colors.authTextMuted,
+    color: '#6B7280',
     textAlign: 'center',
   },
   subjectList: {
@@ -1613,7 +1616,7 @@ const styles = StyleSheet.create({
   },
   subjectMeta: {
     ...typography.caption,
-    color: colors.authTextMuted,
+    color: '#6B7280',
     fontSize: 13,
   },
   subjectAccuracyContainer: {
@@ -1716,7 +1719,7 @@ const styles = StyleSheet.create({
   },
   chapterMeta: {
     ...typography.caption,
-    color: colors.authTextMuted,
+    color: '#6B7280',
   },
   chapterAccuracyContainer: {
     alignItems: 'flex-end',
@@ -1847,7 +1850,7 @@ const styles = StyleSheet.create({
   },
   yearAttempts: {
     ...typography.caption,
-    color: colors.authTextMuted,
+    color: '#6B7280',
   },
   yearAccuracyContainer: {
     alignItems: 'flex-end',
@@ -1921,7 +1924,7 @@ const styles = StyleSheet.create({
   },
   testReportsLoadingText: {
     ...typography.body,
-    color: colors.authTextMuted,
+    color: '#6B7280',
   },
   testReportsEmpty: {
     alignItems: 'center',
@@ -1935,7 +1938,7 @@ const styles = StyleSheet.create({
   },
   testReportsEmptySubtext: {
     ...typography.caption,
-    color: colors.authTextMuted,
+    color: '#6B7280',
     textAlign: 'center',
   },
   testStatsGrid: {
@@ -2051,7 +2054,7 @@ const styles = StyleSheet.create({
   },
   testStatLabel: {
     ...typography.caption,
-    color: colors.authTextMuted,
+    color: '#6B7280',
     marginTop: spacing.xs,
   },
   testReportsList: {
@@ -2134,7 +2137,7 @@ const styles = StyleSheet.create({
   },
   testSubjectMeta: {
     ...typography.caption,
-    color: colors.authTextMuted,
+    color: '#6B7280',
     fontSize: 12,
   },
   testSubjectBadge: {
@@ -2202,7 +2205,7 @@ const styles = StyleSheet.create({
   },
   testReportItemMeta: {
     ...typography.caption,
-    color: colors.authTextMuted,
+    color: '#6B7280',
   },
   testReportItemScore: {
     alignItems: 'flex-end',
@@ -2215,7 +2218,7 @@ const styles = StyleSheet.create({
   },
   testReportItemAccuracy: {
     ...typography.caption,
-    color: colors.authTextMuted,
+    color: '#6B7280',
   },
   testReportItemFooter: {
     flexDirection: 'row',
