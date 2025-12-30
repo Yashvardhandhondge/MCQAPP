@@ -61,6 +61,7 @@ export interface Question {
   question: string;
   sourceFile: string;
   subject: string;
+  sub?: string; // Subject field from database (used in mock tests)
   chapter: string;
   correctanswrs: string;
   options: string[];

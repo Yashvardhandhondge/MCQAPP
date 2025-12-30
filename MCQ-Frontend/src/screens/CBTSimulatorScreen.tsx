@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   ActivityIndicator,
   SafeAreaView,
@@ -45,21 +45,46 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [questionStates, setQuestionStates] = useState<QuestionState[]>([]);
   const [markedForReview, setMarkedForReview] = useState<Set<number>>(new Set());
-  const [timeLeft, setTimeLeft] = useState(5400); // 90 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(10800); // 3 hours (180 minutes) in seconds for mock tests, will be set based on test type
   const [submitting, setSubmitting] = useState(false);
   const [showQuestionsOverlay, setShowQuestionsOverlay] = useState(false);
   const [reportModalVisible, setReportModalVisible] = useState(false);
   
-  // Mock test section support
+  // Mock test section support (for UI display only, no timing restrictions)
   const isMockTest = testType === 'mocktest';
   const [currentSection, setCurrentSection] = useState<1 | 2>(1);
-  const [section1TimeLeft, setSection1TimeLeft] = useState(5400); // 90 minutes
-  const [section2TimeLeft, setSection2TimeLeft] = useState(5400); // 90 minutes
-  const [section1Locked, setSection1Locked] = useState(false);
   
-  // Section boundaries for mock test: Section 1 = Q1-100 (indices 0-99, Physics + Chemistry), Section 2 = Q101-150 (indices 100-149, Maths)
-  const SECTION1_END_INDEX = 99; // Last index of section 1 (question 100)
-  const SECTION2_START_INDEX = 100; // First index of section 2 (question 101)
+  // Helper function to get subject from question (check both 'sub' and 'subject' fields)
+  const getQuestionSubject = (question: Question): string => {
+    return question.sub || question.subject || '';
+  };
+  
+  // Calculate section boundaries dynamically based on question subjects
+  // Section 1: Physics and Chemistry
+  // Section 2: Mathematics
+  // Use useMemo to recalculate when questions change
+  const sectionBoundaries = useMemo<{ section1EndIndex: number; section2StartIndex: number }>(() => {
+    if (!isMockTest || questions.length === 0) {
+      return { section1EndIndex: -1, section2StartIndex: -1 };
+    }
+    
+    // Find the last index of Physics or Chemistry questions
+    let section1EndIndex = -1;
+    for (let i = questions.length - 1; i >= 0; i--) {
+      const subject = getQuestionSubject(questions[i]);
+      if (subject === 'Physics' || subject === 'Chemistry') {
+        section1EndIndex = i;
+        break;
+      }
+    }
+    
+    // Section 2 starts right after Section 1
+    const section2StartIndex = section1EndIndex + 1;
+    
+    return { section1EndIndex, section2StartIndex };
+  }, [isMockTest, questions]);
+  
+  const { section1EndIndex, section2StartIndex } = sectionBoundaries;
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -135,10 +160,18 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
           if (states.length > 0) {
             states[0].status = 'not-answered';
           }
-          // Initialize section for mock tests
+          // Initialize timer based on test type
+          if (isMockTest) {
+            setTimeLeft(10800); // 3 hours for mock tests
+          } else {
+            setTimeLeft(5400); // 90 minutes for other tests
+          }
+          
+          // Initialize section for mock tests (UI display only)
           if (isMockTest && response.data.length > 0) {
-            const firstQuestionSubject = response.data[0]?.subject;
-            if (firstQuestionSubject === 'Maths') {
+            const firstQuestionSubject = getQuestionSubject(response.data[0]);
+            // Section 1: Physics or Chemistry, Section 2: Mathematics
+            if (firstQuestionSubject === 'Mathematics' || firstQuestionSubject === 'Maths') {
               setCurrentSection(2);
             } else {
               setCurrentSection(1);
@@ -170,56 +203,6 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
     };
   }, [questionIds]);
 
-  useEffect(() => {
-    // Timer countdown - handle mock test sections separately
-    const interval = setInterval(() => {
-      if (isMockTest) {
-        if (currentSection === 1 && !section1Locked) {
-          setSection1TimeLeft((prev) => {
-            if (prev <= 1) {
-              // Auto-switch to section 2
-              setSection1Locked(true);
-              setCurrentSection(2);
-              setCurrentQuestionIndex(SECTION2_START_INDEX); // Jump to first question of section 2
-              Alert.alert(
-                'Section 1 Completed',
-                'Time for Physics & Chemistry section has ended. You are now in the Mathematics section.',
-                [{ text: 'OK' }]
-              );
-              return 0;
-            }
-            const newTime = prev - 1;
-            setTimeLeft(newTime);
-            return newTime;
-          });
-        } else if (currentSection === 2) {
-          setSection2TimeLeft((prev) => {
-            if (prev <= 1) {
-              clearInterval(interval);
-              handleFinishTest();
-              return 0;
-            }
-            const newTime = prev - 1;
-            setTimeLeft(newTime);
-            return newTime;
-          });
-        }
-      } else {
-        // Regular test timer
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            clearInterval(interval);
-            handleFinishTest();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isMockTest, currentSection, section1Locked]);
-
   const formatTime = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -227,44 +210,85 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
     return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  const handleFinishTest = async () => {
-    if (submitting) return;
+  // Use ref to store latest values for timer callback
+  const questionStatesRef = useRef(questionStates);
+  const submittingRef = useRef(submitting);
 
-    Alert.alert(
-      'Finish Test',
-      'Are you sure you want to submit your answers?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Submit',
-          style: 'destructive',
-          onPress: async () => {
-            setSubmitting(true);
-            try {
-              const answers = questionStates.map((state) => ({
-                questionId: state.id,
-                selectedOption: state.selectedOption || '',
-              }));
+  useEffect(() => {
+    questionStatesRef.current = questionStates;
+    submittingRef.current = submitting;
+  }, [questionStates, submitting]);
 
-              const response = await submitTestSession({
-                sessionId: testId,
-                answers,
-              });
+  const submitTest = async () => {
+    if (submittingRef.current) return;
+    
+    setSubmitting(true);
+    submittingRef.current = true;
+    try {
+      const answers = questionStatesRef.current.map((state) => ({
+        questionId: state.id,
+        selectedOption: state.selectedOption || '',
+      }));
 
-              // Navigate to test results screen
-              navigation.replace('TestResults', {
-                sessionId: response.data.sessionId,
-              });
-            } catch (err) {
-              Alert.alert('Error', err instanceof Error ? err.message : 'Failed to submit test');
-            } finally {
-              setSubmitting(false);
-            }
-          },
-        },
-      ],
-    );
+      const response = await submitTestSession({
+        sessionId: testId,
+        answers,
+      });
+
+      // Navigate to test results screen
+      navigation.replace('TestResults', {
+        sessionId: response.data.sessionId,
+      });
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to submit test');
+      setSubmitting(false);
+      submittingRef.current = false;
+    }
   };
+
+  const handleFinishTest = async (autoSubmit: boolean = false) => {
+    if (submittingRef.current) return;
+
+    if (autoSubmit) {
+      // Auto-submit without confirmation when time runs out
+      Alert.alert(
+        'Time Up!',
+        'Your test has been automatically submitted.',
+        [{ text: 'OK', onPress: submitTest }]
+      );
+    } else {
+      // Manual submit with confirmation
+      Alert.alert(
+        'Finish Test',
+        'Are you sure you want to submit your answers?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Submit',
+            style: 'destructive',
+            onPress: submitTest,
+          },
+        ],
+      );
+    }
+  };
+
+  useEffect(() => {
+    // Timer countdown - single timer for all test types
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          // Auto-submit when time runs out
+          handleFinishTest(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   if (loading) {
     return (
@@ -332,25 +356,16 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
   };
 
   const handleNavigateToQuestion = (index: number) => {
-    // For mock tests, prevent navigation to locked section 1
-    if (isMockTest && section1Locked && index <= SECTION1_END_INDEX) {
-      Alert.alert(
-        'Section Locked',
-        'You cannot go back to Section 1 (Physics & Chemistry) after the time has ended.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-    
     setCurrentQuestionIndex(index);
     const state = questionStates[index];
     setSelectedOption(state?.selectedOption || null);
     
-    // Update current section for mock tests
-    if (isMockTest) {
-      if (index <= SECTION1_END_INDEX) {
+    // Update current section for mock tests based on question subject (UI display only)
+    if (isMockTest && questions[index]) {
+      const questionSubject = getQuestionSubject(questions[index]);
+      if (questionSubject === 'Physics' || questionSubject === 'Chemistry') {
         setCurrentSection(1);
-      } else {
+      } else if (questionSubject === 'Mathematics' || questionSubject === 'Maths') {
         setCurrentSection(2);
       }
     }
@@ -373,15 +388,6 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
 
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
-      // For mock tests, prevent going back to locked section 1
-      if (isMockTest && section1Locked && currentQuestionIndex - 1 <= SECTION1_END_INDEX) {
-        Alert.alert(
-          'Section Locked',
-          'You cannot go back to Section 1 (Physics & Chemistry) after the time has ended.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
       handleNavigateToQuestion(currentQuestionIndex - 1);
     }
   };
@@ -560,7 +566,7 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
 
         {/* Bottom Navigation */}
         <View style={[styles.bottomNavigation, { paddingBottom: insets.bottom }]}>
-          {currentQuestionIndex > 0 && !(isMockTest && section1Locked && currentQuestionIndex <= SECTION1_END_INDEX) && (
+          {currentQuestionIndex > 0 && (
             <TouchableOpacity
               style={styles.prevButton}
               onPress={handlePrevious}
@@ -670,36 +676,24 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
                     const status = getQuestionStatus(index);
                     const isCurrent = index === currentQuestionIndex;
                     const statusColor = getStatusColor(status);
-                    const isLocked = isMockTest && section1Locked && index <= SECTION1_END_INDEX;
                     return (
                       <TouchableOpacity
                         key={index}
                         style={[
                           styles.questionNumberButton,
                           isCurrent && styles.questionNumberButtonActive,
-                          isLocked && styles.questionNumberButtonLocked,
-                          { backgroundColor: isCurrent ? colors.primary : (isLocked ? '#9CA3AF' : statusColor) },
+                          { backgroundColor: isCurrent ? colors.primary : statusColor },
                         ]}
                         onPress={() => {
-                          if (!isLocked) {
-                            handleNavigateToQuestion(index);
-                            setShowQuestionsOverlay(false);
-                          } else {
-                            Alert.alert(
-                              'Section Locked',
-                              'This question is from Section 1 which has been locked.',
-                              [{ text: 'OK' }]
-                            );
-                          }
+                          handleNavigateToQuestion(index);
+                          setShowQuestionsOverlay(false);
                         }}
-                        activeOpacity={isLocked ? 1 : 0.8}
-                        disabled={isLocked}
+                        activeOpacity={0.8}
                       >
                         <Text
                           style={[
                             styles.questionNumberButtonText,
                             isCurrent && styles.questionNumberButtonTextActive,
-                            isLocked && styles.questionNumberButtonTextLocked,
                           ]}
                         >
                           {index + 1}

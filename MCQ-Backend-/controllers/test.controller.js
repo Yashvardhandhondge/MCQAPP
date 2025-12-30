@@ -645,13 +645,20 @@ const submitTestSession = async (req, res, next) => {
     let correctCount = 0;
     let totalMarks = 0;
     const processedAnswers = answers.map((ans) => {
-      const question = questionMap.get(ans.questionId.toString());
-      const isCorrect = question && ans.selectedOption.trim() === question.correctanswrs.trim();
+      // Ensure questionId is converted to string for comparison
+      const questionIdStr = ans.questionId ? ans.questionId.toString() : null;
+      const question = questionIdStr ? questionMap.get(questionIdStr) : null;
       
-      // For mock tests, calculate marks based on subject
+      // Calculate isCorrect - ensure it's always a boolean
+      let isCorrect = false;
+      if (question && ans.selectedOption && question.correctanswrs) {
+        isCorrect = ans.selectedOption.trim() === question.correctanswrs.trim();
+      }
+      
+      // For mock tests, calculate marks based on subject (check both 'sub' and 'subject' fields)
       if (session.testType === 'mocktest' && isCorrect) {
-        const subject = question?.subject;
-        if (subject === 'Maths') {
+        const subject = question?.sub || question?.subject;
+        if (subject === 'Maths' || subject === 'Mathematics') {
           totalMarks += 2; // 2 marks for Maths
         } else if (subject === 'Physics' || subject === 'Chemistry') {
           totalMarks += 1; // 1 mark for Physics and Chemistry
@@ -660,10 +667,19 @@ const submitTestSession = async (req, res, next) => {
       
       if (isCorrect) correctCount++;
       
+      // Ensure questionId is properly formatted (convert string to ObjectId if needed)
+      let questionIdToStore = ans.questionId;
+      if (typeof questionIdToStore === 'string') {
+        const mongoose = require('mongoose');
+        questionIdToStore = mongoose.Types.ObjectId.isValid(questionIdToStore) 
+          ? new mongoose.Types.ObjectId(questionIdToStore) 
+          : questionIdToStore;
+      }
+      
       return {
-        questionId: ans.questionId,
-        selectedOption: ans.selectedOption,
-        isCorrect,
+        questionId: questionIdToStore,
+        selectedOption: ans.selectedOption || '',
+        isCorrect: Boolean(isCorrect), // Explicitly convert to boolean
         answeredAt: new Date(),
       };
     });
@@ -680,8 +696,12 @@ const submitTestSession = async (req, res, next) => {
 
     // Prepare detailed results with questions and answers
     const detailedResults = session.questions.map((questionId) => {
-      const question = questionMap.get(questionId.toString());
-      const answer = processedAnswers.find((a) => a.questionId.toString() === questionId.toString());
+      const questionIdStr = questionId ? questionId.toString() : null;
+      const question = questionIdStr ? questionMap.get(questionIdStr) : null;
+      const answer = processedAnswers.find((a) => {
+        const aIdStr = a.questionId ? a.questionId.toString() : null;
+        return aIdStr === questionIdStr;
+      });
       
       return {
         questionId: questionId,
@@ -690,19 +710,25 @@ const submitTestSession = async (req, res, next) => {
         correctAnswer: question?.correctanswrs || '',
         selectedOption: answer?.selectedOption || '',
         isCorrect: answer?.isCorrect || false,
-        subject: question?.subject || session.subject,
+        subject: question?.sub || question?.subject || session.subject,
         chapter: question?.chapter || session.chapter,
         year: question?.year || session.year,
       };
     });
 
+    // For mock tests, use totalMarks (session.score), for others use correctCount
+    const finalScore = session.testType === 'mocktest' ? session.score : correctCount;
+    const wrongCount = session.testType === 'mocktest' 
+      ? session.totalQuestions - correctCount // Still count wrong answers for mock tests
+      : session.totalQuestions - correctCount;
+    
     res.status(200).json({
       success: true,
       data: {
         sessionId: session._id,
-        score: correctCount,
+        score: finalScore, // Use session.score for mock tests (totalMarks), correctCount for others
         total: session.totalQuestions,
-        wrongCount: session.totalQuestions - correctCount,
+        wrongCount: wrongCount,
         accuracy: session.totalQuestions > 0 ? (correctCount / session.totalQuestions * 100).toFixed(2) : 0,
         duration: session.duration,
         testType: session.testType,
@@ -716,7 +742,12 @@ const submitTestSession = async (req, res, next) => {
     });
   } catch (error) {
     console.error('Error submitting test session:', error);
-    return next(createError(500, 'Failed to submit test session'));
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+    return next(createError(500, error.message || 'Failed to submit test session'));
   }
 };
 
@@ -777,6 +808,7 @@ const getTestReport = async (req, res, next) => {
       try {
         const mockQuestions = await MockTestModel.find({ _id: { $in: session.questions } }).lean();
         allQuestions.push(...mockQuestions);
+        console.log(`Found ${mockQuestions.length} mock test questions for report`);
       } catch (error) {
         console.error('Error querying MockTest collection:', error);
       }
@@ -792,33 +824,52 @@ const getTestReport = async (req, res, next) => {
     }
     
     const questionMap = new Map(allQuestions.map((q) => [q._id.toString(), q]));
+    console.log(`Total questions in map: ${questionMap.size}, Session questions: ${session.questions.length}`);
 
-    // Prepare detailed results
+    // Prepare detailed results - ensure we have data for all questions
     const detailedResults = session.questions.map((questionId) => {
-      const question = questionMap.get(questionId.toString());
-      const answer = session.answers.find((a) => a.questionId.toString() === questionId.toString());
+      const questionIdStr = questionId ? questionId.toString() : null;
+      const question = questionIdStr ? questionMap.get(questionIdStr) : null;
+      
+      // Find matching answer - handle both ObjectId and string comparisons
+      const answer = session.answers.find((a) => {
+        if (!a.questionId) return false;
+        const aIdStr = a.questionId.toString();
+        return aIdStr === questionIdStr;
+      });
+      
+      if (!question) {
+        console.warn(`Question not found for ID: ${questionIdStr}`);
+      }
       
       return {
-        questionId: questionId,
-        question: question?.question || '',
+        questionId: questionIdStr || questionId,
+        question: question?.question || 'Question not found',
         options: question?.options || [],
         correctAnswer: question?.correctanswrs || '',
         selectedOption: answer?.selectedOption || '',
         isCorrect: answer?.isCorrect || false,
-        subject: question?.subject || session.subject,
-        chapter: question?.chapter || session.chapter,
-        year: question?.year || session.year,
+        subject: question?.sub || question?.subject || session.subject || '',
+        chapter: question?.chapter || session.chapter || '',
+        year: question?.year || session.year || '',
       };
     });
+
+    // Calculate correct count for accuracy (for mock tests, score is marks, not count)
+    const correctCount = session.answers.filter((a) => a.isCorrect).length;
+    const wrongCount = session.totalQuestions - correctCount;
+    const accuracy = session.totalQuestions > 0 
+      ? ((correctCount / session.totalQuestions) * 100).toFixed(2) 
+      : '0.00';
 
     res.status(200).json({
       success: true,
       data: {
         sessionId: session._id,
-        score: session.score,
+        score: session.score, // For mock tests this is total marks, for others it's correct count
         total: session.totalQuestions,
-        wrongCount: session.totalQuestions - session.score,
-        accuracy: session.totalQuestions > 0 ? (session.score / session.totalQuestions * 100).toFixed(2) : 0,
+        wrongCount: wrongCount,
+        accuracy: accuracy,
         duration: session.duration,
         testType: session.testType,
         subject: session.subject,
@@ -832,7 +883,12 @@ const getTestReport = async (req, res, next) => {
     });
   } catch (error) {
     console.error('Error getting test report:', error);
-    return next(createError(500, 'Failed to fetch test report'));
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+    return next(createError(500, error.message || 'Failed to fetch test report'));
   }
 };
 
@@ -973,46 +1029,96 @@ const getAvailableMockTests = async (req, res, next) => {
       originalUrl: req.originalUrl,
       path: req.path,
     });
-    // Get distinct sourceFile values from MockTest collection
+    // Get distinct Mocktest values from MockTest collection
+    const distinctMockTests = await MockTestModel.distinct('Mocktest');
+    console.log('Found Mocktest values:', distinctMockTests);
+    
+    // Also check sourceFile as fallback
     const distinctSourceFiles = await MockTestModel.distinct('sourceFile');
-    console.log('Found sourceFiles:', distinctSourceFiles);
+    console.log('Found sourceFile values:', distinctSourceFiles);
     
-    // Filter and extract mock test numbers (e.g., "mock1.json" -> 1)
     const mockTests = [];
-    const sourceFilePattern = /^mock(\d+)\.json$/i;
+    const mockTestPattern = /^MockTest\s*(\d+)$/i;
     
-    for (const sourceFile of distinctSourceFiles) {
-      if (sourceFile) {
-        const match = sourceFile.match(sourceFilePattern);
+    // Process Mocktest field first
+    for (const mocktestValue of distinctMockTests) {
+      if (mocktestValue) {
+        const match = String(mocktestValue).match(mockTestPattern);
         if (match) {
           const mockTestNumber = parseInt(match[1], 10);
           
-          // Count questions for this mock test
-          const questionCount = await MockTestModel.countDocuments({ sourceFile });
+          // Count questions for this mock test using Mocktest field
+          const questionCount = await MockTestModel.countDocuments({ Mocktest: mocktestValue });
           
-          // Count by subject
+          // Count by subject (using 'sub' field from database)
           const physicsCount = await MockTestModel.countDocuments({ 
-            sourceFile, 
-            subject: 'Physics' 
+            Mocktest: mocktestValue, 
+            sub: 'Physics' 
           });
           const chemistryCount = await MockTestModel.countDocuments({ 
-            sourceFile, 
-            subject: 'Chemistry' 
+            Mocktest: mocktestValue, 
+            sub: 'Chemistry' 
           });
           const mathsCount = await MockTestModel.countDocuments({ 
-            sourceFile, 
-            subject: 'Maths' 
+            Mocktest: mocktestValue, 
+            $or: [
+              { sub: 'Mathematics' },
+              { sub: 'Maths' }
+            ]
           });
           
           mockTests.push({
             mockTestNumber,
             name: `MockTest ${mockTestNumber}`,
-            sourceFile,
+            sourceFile: mocktestValue, // Keep for compatibility
             questionCount,
             physicsCount,
             chemistryCount,
             mathsCount,
           });
+        }
+      }
+    }
+    
+    // Fallback: Process sourceFile if no Mocktest values found
+    if (mockTests.length === 0) {
+      const sourceFilePattern = /^mock(\d+)\.json$/i;
+      for (const sourceFile of distinctSourceFiles) {
+        if (sourceFile) {
+          const match = sourceFile.match(sourceFilePattern);
+          if (match) {
+            const mockTestNumber = parseInt(match[1], 10);
+            
+            // Count questions for this mock test
+            const questionCount = await MockTestModel.countDocuments({ sourceFile });
+            
+            // Count by subject (using 'sub' field from database)
+            const physicsCount = await MockTestModel.countDocuments({ 
+              sourceFile, 
+              sub: 'Physics' 
+            });
+            const chemistryCount = await MockTestModel.countDocuments({ 
+              sourceFile, 
+              sub: 'Chemistry' 
+            });
+            const mathsCount = await MockTestModel.countDocuments({ 
+              sourceFile, 
+              $or: [
+                { sub: 'Mathematics' },
+                { sub: 'Maths' }
+              ]
+            });
+            
+            mockTests.push({
+              mockTestNumber,
+              name: `MockTest ${mockTestNumber}`,
+              sourceFile,
+              questionCount,
+              physicsCount,
+              chemistryCount,
+              mathsCount,
+            });
+          }
         }
       }
     }
@@ -1037,16 +1143,36 @@ const getAvailableMockTests = async (req, res, next) => {
 const getMockTestQuestions = async (req, res, next) => {
   try {
     const { mockTestNumber } = req.params;
+    const mocktestValue = `MockTest${mockTestNumber}`;
     const sourceFile = `mock${mockTestNumber}.json`;
     
-    // Get all questions for this mock test, ordered by subject: Physics, Chemistry, Maths
-    const questions = await MockTestModel.find({ sourceFile })
-      .sort({ subject: 1 }) // Sort by subject: Physics, Chemistry, Maths
-      .lean();
+    // Try to get questions using Mocktest field first, fallback to sourceFile
+    let allQuestions = await MockTestModel.find({ Mocktest: mocktestValue }).lean();
     
-    if (questions.length === 0) {
+    if (allQuestions.length === 0) {
+      // Fallback to sourceFile
+      allQuestions = await MockTestModel.find({ sourceFile }).lean();
+    }
+    
+    if (allQuestions.length === 0) {
       return next(createError(404, `Mock test ${mockTestNumber} not found`));
     }
+    
+    // Separate questions by subject (using 'sub' field from database)
+    // Section 1: Physics and Chemistry (ALL Physics first, then ALL Chemistry)
+    // Section 2: Mathematics
+    const physicsQuestions = allQuestions
+      .filter((q) => q.sub === 'Physics')
+      .sort((a, b) => a._id.toString().localeCompare(b._id.toString())); // Sort by _id for consistent order
+    const chemistryQuestions = allQuestions
+      .filter((q) => q.sub === 'Chemistry')
+      .sort((a, b) => a._id.toString().localeCompare(b._id.toString())); // Sort by _id for consistent order
+    const mathsQuestions = allQuestions
+      .filter((q) => q.sub === 'Mathematics' || q.sub === 'Maths')
+      .sort((a, b) => a._id.toString().localeCompare(b._id.toString())); // Sort by _id for consistent order
+    
+    // Sort questions: Section 1 (ALL Physics first, then ALL Chemistry), then Section 2 (ALL Mathematics)
+    const questions = [...physicsQuestions, ...chemistryQuestions, ...mathsQuestions];
     
     // Return question IDs in order
     const questionIds = questions.map((q) => q._id);
@@ -1057,7 +1183,7 @@ const getMockTestQuestions = async (req, res, next) => {
         questions: questionIds,
         questionDetails: questions.map((q) => ({
           _id: q._id,
-          subject: q.subject,
+          subject: q.sub || q.subject, // Use 'sub' field, fallback to 'subject' for compatibility
         })),
       },
     });
@@ -1075,24 +1201,46 @@ const startMockTestSession = async (req, res, next) => {
   try {
     const userId = req.user._id;
     const { mockTestNumber } = req.params;
+    const mocktestValue = `MockTest${mockTestNumber}`;
     const sourceFile = `mock${mockTestNumber}.json`;
     
-    // Get all questions for this mock test, ordered by subject
-    const questions = await MockTestModel.find({ sourceFile })
-      .sort({ subject: 1 }) // Physics, Chemistry, Maths
-      .lean();
+    // Try to get questions using Mocktest field first, fallback to sourceFile
+    let allQuestions = await MockTestModel.find({ Mocktest: mocktestValue }).lean();
     
-    if (questions.length === 0) {
+    if (allQuestions.length === 0) {
+      // Fallback to sourceFile
+      allQuestions = await MockTestModel.find({ sourceFile }).lean();
+    }
+    
+    if (allQuestions.length === 0) {
       return next(createError(404, `Mock test ${mockTestNumber} not found`));
     }
     
-    // Verify structure: Should have 50 Physics, 50 Chemistry, 50 Maths
-    const physicsCount = questions.filter((q) => q.subject === 'Physics').length;
-    const chemistryCount = questions.filter((q) => q.subject === 'Chemistry').length;
-    const mathsCount = questions.filter((q) => q.subject === 'Maths').length;
+    // Separate questions by subject (using 'sub' field from database)
+    // Section 1: Physics and Chemistry (ALL Physics first, then ALL Chemistry)
+    // Section 2: Mathematics
+    const physicsQuestions = allQuestions
+      .filter((q) => q.sub === 'Physics')
+      .sort((a, b) => a._id.toString().localeCompare(b._id.toString())); // Sort by _id for consistent order
+    const chemistryQuestions = allQuestions
+      .filter((q) => q.sub === 'Chemistry')
+      .sort((a, b) => a._id.toString().localeCompare(b._id.toString())); // Sort by _id for consistent order
+    const mathsQuestions = allQuestions
+      .filter((q) => q.sub === 'Mathematics' || q.sub === 'Maths')
+      .sort((a, b) => a._id.toString().localeCompare(b._id.toString())); // Sort by _id for consistent order
     
-    if (physicsCount !== 50 || chemistryCount !== 50 || mathsCount !== 50) {
-      console.warn(`Mock test ${mockTestNumber} has unexpected question distribution: Physics=${physicsCount}, Chemistry=${chemistryCount}, Maths=${mathsCount}`);
+    // Sort questions: Section 1 (ALL Physics first, then ALL Chemistry), then Section 2 (ALL Mathematics)
+    const questions = [...physicsQuestions, ...chemistryQuestions, ...mathsQuestions];
+    
+    // Verify structure
+    const physicsCount = physicsQuestions.length;
+    const chemistryCount = chemistryQuestions.length;
+    const mathsCount = mathsQuestions.length;
+    
+    if (physicsCount === 0 && chemistryCount === 0 && mathsCount === 0) {
+      console.warn(`Mock test ${mockTestNumber} has no questions with valid 'sub' field. Found ${allQuestions.length} total questions.`);
+    } else {
+      console.log(`Mock test ${mockTestNumber} question distribution: Physics=${physicsCount}, Chemistry=${chemistryCount}, Mathematics=${mathsCount}`);
     }
     
     const questionIds = questions.map((q) => q._id);
@@ -1127,9 +1275,8 @@ const startMockTestSession = async (req, res, next) => {
       totalQuestions: questionIds.length,
       status: 'in-progress',
       startedAt: new Date(),
-      currentSection: 1,
-      section1TimeLeft: 5400, // 90 minutes
-      section2TimeLeft: 5400, // 90 minutes
+      currentSection: 1, // Keep for backward compatibility
+      // Note: section timing removed - using single 3-hour timer
     });
     
     await session.save();
