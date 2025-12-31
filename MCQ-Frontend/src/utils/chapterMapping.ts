@@ -138,6 +138,11 @@ export const categorizeChapters = (
   const unclassified: ChapterAnalytics[] = [];
 
   chapters.forEach((chapter) => {
+    // Skip chapters without valid chapter names
+    if (!chapter.chapter || !chapter.chapter.trim()) {
+      return;
+    }
+    
     const chapterInfo = mapping[chapter.chapter];
     
     if (chapterInfo) {

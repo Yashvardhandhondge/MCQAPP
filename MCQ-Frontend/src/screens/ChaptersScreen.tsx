@@ -175,13 +175,15 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
   const chapters = useMemo(() => {
     if (!chaptersData || !selectedStandard) return [];
     
+    let chaptersList: ChapterAnalytics[] = [];
     if (selectedStandard === '11') {
-      return chaptersData.standard11 || [];
+      chaptersList = chaptersData.standard11 || [];
     } else if (selectedStandard === '12') {
-      return chaptersData.standard12 || [];
+      chaptersList = chaptersData.standard12 || [];
     }
     
-    return [];
+    // Filter out chapters without valid chapter names
+    return chaptersList.filter(chapter => chapter.chapter && chapter.chapter.trim().length > 0);
   }, [chaptersData, selectedStandard]);
 
   // Memoize content - must be called unconditionally

@@ -10,8 +10,10 @@ import {
   Animated,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import type { AppStackParamList } from '../navigation/types';
 import {
@@ -717,12 +719,48 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                         </View>
                       </View>
                       <View 
-                        style={[
-                          styles.questionContentWrapper,
-                          question.isBlurred && !isPremium && !revealedQuestions.has(question._id) && styles.blurredContent
-                        ]}
+                        style={styles.questionContentWrapper}
                       >
-                        <MathText style={styles.questionText}>{question.question}</MathText>
+                        {/* Question Text - Show blurred for non-premium users */}
+                        <View style={styles.questionTextContainer}>
+                          {question.isBlurred && !isPremium && !revealedQuestions.has(question._id) ? (
+                            <View style={styles.blurredWrapper}>
+                              <View style={styles.blurredContent}>
+                                <MathText style={[styles.questionText, styles.blurredQuestionText]}>
+                                  {question.question}
+                                </MathText>
+                              </View>
+                              <View style={styles.blurBackgroundLayer} />
+                              <BlurView
+                                intensity={100}
+                                tint="light"
+                                style={styles.blurOverlay}
+                              >
+                                <TouchableOpacity
+                                  style={styles.blurTouchable}
+                                  onPress={() => handleRevealQuestion(question._id)}
+                                  activeOpacity={0.9}
+                                >
+                                  <View style={styles.blurContent}>
+                                    <Ionicons name="eye-off" size={40} color={colors.primary} />
+                                    <Text style={styles.blurTitle} numberOfLines={1}>Tap to Reveal Question</Text>
+                                    <Text style={styles.blurSubtitle} numberOfLines={2}>
+                                      {dailyViewsRemaining !== null && dailyViewsRemaining > 0
+                                        ? `${dailyViewsRemaining} questions remaining today`
+                                        : dailyViewsRemaining === 0
+                                        ? 'Daily limit reached'
+                                        : 'Loading...'}
+                                    </Text>
+                                  </View>
+                                </TouchableOpacity>
+                              </BlurView>
+                            </View>
+                          ) : (
+                            <MathText style={styles.questionText}>
+                              {question.question}
+                            </MathText>
+                          )}
+                        </View>
                       
                       {/* Options List */}
                       <View style={styles.optionsContainer}>
@@ -730,57 +768,79 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                           const state = questionStates.get(question._id);
                           // Allow interaction if showing previous attempts (for reattempts) or if not submitted yet
                           const isDisabled = (!showWithAttempts && state?.isSubmitted) || state?.isSubmitting;
+                          const isBlurred = question.isBlurred && !isPremium && !revealedQuestions.has(question._id);
                           
                           return (
-                            <TouchableOpacity
-                              key={optionIndex}
-                              style={[
-                                getOptionStyle(question._id, option),
-                                isDisabled && styles.optionDisabledTouch,
-                              ]}
-                              onPress={() => handleOptionSelect(question._id, option)}
-                              disabled={isDisabled}
-                              activeOpacity={isDisabled ? 1 : 0.7}
-                            >
-                              <View style={styles.optionContent}>
-                                <View style={styles.optionIconContainer}>
-                                  {getOptionIcon(question._id, option)}
+                            <View key={optionIndex} style={styles.optionWrapper}>
+                              {isBlurred ? (
+                                <View style={styles.optionBlurredWrapper}>
+                                  <View style={styles.optionBlurredContent}>
+                                    <TouchableOpacity
+                                      style={[
+                                        getOptionStyle(question._id, option),
+                                        isDisabled && styles.optionDisabledTouch,
+                                      ]}
+                                      disabled={true}
+                                    >
+                                      <View style={styles.optionContent}>
+                                        <View style={styles.optionIconContainer}>
+                                          {getOptionIcon(question._id, option)}
+                                        </View>
+                                        <MathText
+                                          style={[
+                                            styles.optionText,
+                                            state?.selectedOption === option && styles.optionTextSelected,
+                                            styles.blurredOptionText,
+                                          ]}
+                                        >
+                                          {option}
+                                        </MathText>
+                                      </View>
+                                    </TouchableOpacity>
+                                  </View>
+                                  <View style={styles.optionBlurBackgroundLayer} />
+                                  <BlurView
+                                    intensity={100}
+                                    tint="light"
+                                    style={styles.optionBlurOverlay}
+                                  >
+                                    <TouchableOpacity
+                                      style={styles.optionBlurTouchable}
+                                      onPress={() => handleRevealQuestion(question._id)}
+                                      activeOpacity={0.9}
+                                    />
+                                  </BlurView>
                                 </View>
-                                <MathText
+                              ) : (
+                                <TouchableOpacity
                                   style={[
-                                    styles.optionText,
-                                    state?.selectedOption === option && styles.optionTextSelected,
+                                    getOptionStyle(question._id, option),
+                                    isDisabled && styles.optionDisabledTouch,
                                   ]}
+                                  onPress={() => handleOptionSelect(question._id, option)}
+                                  disabled={isDisabled}
+                                  activeOpacity={isDisabled ? 1 : 0.7}
                                 >
-                                  {option}
-                                </MathText>
-                              </View>
-                            </TouchableOpacity>
+                                  <View style={styles.optionContent}>
+                                    <View style={styles.optionIconContainer}>
+                                      {getOptionIcon(question._id, option)}
+                                    </View>
+                                    <MathText
+                                      style={[
+                                        styles.optionText,
+                                        state?.selectedOption === option && styles.optionTextSelected,
+                                      ]}
+                                    >
+                                      {option}
+                                    </MathText>
+                                  </View>
+                                </TouchableOpacity>
+                              )}
+                            </View>
                           );
                         })}
                       </View>
                       </View>
-
-                      {/* Blur Overlay for locked questions */}
-                      {question.isBlurred && !isPremium && !revealedQuestions.has(question._id) && (
-                        <TouchableOpacity
-                          style={styles.blurOverlay}
-                          onPress={() => handleRevealQuestion(question._id)}
-                          activeOpacity={0.9}
-                        >
-                          <View style={styles.blurContent}>
-                            <Ionicons name="eye-off" size={48} color={colors.primary} />
-                            <Text style={styles.blurTitle}>Tap to Reveal Question</Text>
-                            <Text style={styles.blurSubtitle}>
-                              {dailyViewsRemaining !== null && dailyViewsRemaining > 0
-                                ? `${dailyViewsRemaining} questions remaining today`
-                                : dailyViewsRemaining === 0
-                                ? 'Daily limit reached'
-                                : 'Loading...'}
-                            </Text>
-                          </View>
-                        </TouchableOpacity>
-                      )}
 
                       {/* Previous Attempt Indicator */}
                       {showWithAttempts && questionStates.get(question._id)?.isSubmitted && (
@@ -971,8 +1031,32 @@ const styles = StyleSheet.create({
   questionContentWrapper: {
     position: 'relative',
   },
+  questionTextContainer: {
+    position: 'relative',
+    marginBottom: spacing.md,
+  },
+  blurredWrapper: {
+    position: 'relative',
+    overflow: 'hidden',
+    borderRadius: radius.md,
+    minHeight: 120,
+  },
   blurredContent: {
-    opacity: 0.1,
+    zIndex: 1,
+    opacity: 0,
+  },
+  blurBackgroundLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.md,
+    zIndex: 9,
+  },
+  blurredQuestionText: {
+    opacity: 0,
   },
   blurOverlay: {
     position: 'absolute',
@@ -980,33 +1064,40 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#FFFFFF',
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    zIndex: 10,
+  },
+  blurTouchable: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: radius.xl + 2,
-    zIndex: 10,
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    minHeight: 120,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
   },
   blurContent: {
     alignItems: 'center',
-    padding: spacing.xl,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    width: '100%',
   },
   blurTitle: {
     ...typography.h3,
     color: colors.primary,
     fontWeight: '700',
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
     textAlign: 'center',
+    fontSize: 16,
   },
   blurSubtitle: {
     ...typography.body,
     color: colors.authTextMuted,
     marginTop: spacing.xs,
     textAlign: 'center',
+    fontSize: 12,
+    lineHeight: 16,
+    paddingHorizontal: spacing.xs,
   },
   questionHeader: {
     flexDirection: 'row',
@@ -1056,6 +1147,44 @@ const styles = StyleSheet.create({
   optionsContainer: {
     marginTop: spacing.md,
     gap: spacing.sm,
+  },
+  optionWrapper: {
+    position: 'relative',
+  },
+  optionBlurredWrapper: {
+    position: 'relative',
+    overflow: 'hidden',
+    borderRadius: radius.lg,
+  },
+  optionBlurredContent: {
+    zIndex: 1,
+  },
+  optionBlurBackgroundLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
+    zIndex: 9,
+  },
+  blurredOptionText: {
+    opacity: 0,
+  },
+  optionBlurOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    zIndex: 10,
+  },
+  optionBlurTouchable: {
+    flex: 1,
+    minHeight: 50,
   },
   option: {
     backgroundColor: colors.authSurface,

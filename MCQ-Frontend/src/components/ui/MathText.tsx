@@ -17,12 +17,104 @@ export default function MathText({ children, style, containerStyle }: MathTextPr
   const { width } = useWindowDimensions();
   const [webViewHeight, setWebViewHeight] = useState(50);
 
+  // Convert matrix notation [[...], [...]] to LaTeX format
+  const convertMatrixToLatex = (text: string): string => {
+    if (!text || typeof text !== 'string') return text;
+    
+    // Find all potential matrix patterns by matching balanced brackets
+    // Pattern: [[...], [...], ...] where we have nested arrays
+    const findBalancedBrackets = (str: string, startPos: number): number | null => {
+      let depth = 0;
+      let i = startPos;
+      
+      while (i < str.length) {
+        if (str[i] === '[') {
+          depth++;
+        } else if (str[i] === ']') {
+          depth--;
+          if (depth === 0) {
+            return i;
+          }
+        }
+        i++;
+      }
+      
+      return null;
+    };
+    
+    let result = text;
+    let i = 0;
+    let lastReplacementEnd = -1;
+    
+    // Process from left to right, but track replacements to avoid overlapping
+    while (i < result.length - 1) {
+      // Skip if we're within a previous replacement
+      if (i <= lastReplacementEnd) {
+        i++;
+        continue;
+      }
+      
+      // Look for the start of a potential matrix: [[
+      if (result[i] === '[' && result[i + 1] === '[') {
+        const endPos = findBalancedBrackets(result, i);
+        
+        if (endPos !== null && endPos > i + 2) {
+          const candidate = result.substring(i, endPos + 1);
+          
+          // Try to parse as JSON to validate it's a valid matrix
+          try {
+            const matrix = JSON.parse(candidate);
+            
+            if (Array.isArray(matrix) && matrix.length > 0 && Array.isArray(matrix[0])) {
+              // Convert to LaTeX matrix format
+              const rows = matrix.map((row: any[]) => {
+                if (!Array.isArray(row)) return '';
+                return row.map((cell: any) => {
+                  // Convert cell to string, handle negative numbers and variables
+                  const cellStr = String(cell).trim();
+                  return cellStr;
+                }).join(' & ');
+              }).filter((row: string) => row.length > 0);
+              
+              if (rows.length > 0) {
+                const latexMatrix = `\\begin{pmatrix} ${rows.join(' \\\\ ')} \\end{pmatrix}`;
+                const replacement = `$${latexMatrix}$`;
+                
+                // Replace the matrix
+                result = result.substring(0, i) + replacement + result.substring(endPos + 1);
+                
+                // Track where we made the replacement
+                lastReplacementEnd = i + replacement.length - 1;
+                
+                // Move past the replacement
+                i += replacement.length;
+                continue;
+              }
+            }
+          } catch (e) {
+            // Not a valid matrix, continue searching
+          }
+        }
+      }
+      
+      i++;
+    }
+    
+    return result;
+  };
+
   // Process the text to convert LaTeX to MathJax format
   const { processedHTML, hasMath } = useMemo(() => {
     if (!children) return { processedHTML: '', hasMath: false };
 
     let html = String(children);
     const originalHtml = html;
+
+    // First, convert matrix notation to LaTeX
+    // Store original to check if conversion happened
+    const beforeMatrixConversion = html;
+    html = convertMatrixToLatex(html);
+    const matrixWasConverted = html !== beforeMatrixConversion;
 
     // Check if text contains LaTeX expressions
     // Check for $ delimiters OR LaTeX commands (like \frac, \text, \sqrt, etc.)
@@ -33,8 +125,12 @@ export default function MathText({ children, style, containerStyle }: MathTextPr
                              /\\[^a-zA-Z\s]/.test(html) ||
                              /\\text/.test(html) ||
                              /\\frac/.test(html) ||
-                             /\\sqrt/.test(html);
-    const containsMath = hasDollarDelimiters || hasLatexCommands;
+                             /\\sqrt/.test(html) ||
+                             /\\begin\{pmatrix\}/.test(html) || // Check for matrices
+                             /\\begin\{matrix\}/.test(html) || // Check for other matrix types
+                             /\\end\{pmatrix\}/.test(html); // Check for matrix endings
+    // Also check if we converted a matrix (even if regex doesn't catch it)
+    const containsMath = hasDollarDelimiters || hasLatexCommands || matrixWasConverted;
     
     if (!containsMath) {
       return { processedHTML: html, hasMath: false };
@@ -87,7 +183,8 @@ export default function MathText({ children, style, containerStyle }: MathTextPr
                 inlineMath: [['\\\\(', '\\\\)']],
                 displayMath: [['\\\\[', '\\\\]']],
                 processEscapes: true,
-                processEnvironments: true
+                processEnvironments: true,
+                packages: {'[+]': ['ams', 'base']}
               },
               options: {
                 skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
