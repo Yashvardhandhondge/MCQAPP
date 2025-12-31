@@ -16,7 +16,8 @@ if (__DEV__) {
     // API_BASE_URL ='https://mcqapp-nu.vercel.app';
     // API_BASE_URL = 'http://192.168.29.132:8000';
     // API_BASE_URL = 'http://10.228.232.180:8000';
-    API_BASE_URL = 'http://192.168.29.158:8000';
+    // API_BASE_URL = 'http://192.168.29.158:8000';
+    API_BASE_URL = 'http://10.228.232.180:8000';
 
     // If using Android Emulator instead, use:
     // API_BASE_URL = 'http://10.0.2.2:8000';

@@ -86,32 +86,45 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" />
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        <Animated.View
-          style={{
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          }}
-        >
-          {/* Simple header row */}
-          <View style={styles.headerRow}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={styles.headerBackButton}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="arrow-back" size={22} color={colors.primary} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Profile</Text>
-          </View>
+      <View style={styles.backgroundGradient}>
+        {/* Sticky Header */}
+        <View style={styles.stickyHeader}>
+          <LinearGradient
+            colors={['#FFFFFF', '#F9FAFB']}
+            style={styles.stickyHeaderGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            <View style={styles.headerContent}>
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                style={styles.headerBackButton}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="arrow-back" size={22} color={colors.primary} />
+              </TouchableOpacity>
+              <View style={styles.headerTextContainer}>
+                <Text style={styles.headerTitle}>Profile</Text>
+                <Text style={styles.headerSubtitle}>Manage your account</Text>
+              </View>
+            </View>
+          </LinearGradient>
+        </View>
 
-          {/* Main profile card */}
-          <ModernCard variant="elevated" padding="lg" style={styles.profilePanel}>
-              {/* Avatar overlapping the header */}
-              <View style={styles.avatarWrapper}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            }}
+          >
+            {/* Main profile card */}
+            <View style={styles.profilePanel}>
+              {/* Avatar Section */}
+              <View style={styles.avatarSection}>
                 {hasAvatar ? (
                   <View style={styles.avatarOuter}>
                     <Image
@@ -121,34 +134,70 @@ export default function ProfileScreen() {
                     />
                   </View>
                 ) : (
-                  <LinearGradient
-                    colors={colors.gradientPrimary as [string, string, ...string[]]}
-                    style={styles.avatarPlaceholder}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <Ionicons name="person" size={42} color="#FFFFFF" />
-                  </LinearGradient>
+                  <View style={styles.avatarOuter}>
+                    <LinearGradient
+                      colors={colors.gradientPrimary as [string, string, ...string[]]}
+                      style={styles.avatarPlaceholder}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons name="person" size={48} color="#FFFFFF" />
+                    </LinearGradient>
+                  </View>
                 )}
+                <View style={styles.nameSection}>
+                  <Text style={styles.panelNameText}>{user?.fullName || 'User'}</Text>
+                  <Text style={styles.panelEmailText}>{user?.email || 'user@example.com'}</Text>
+                </View>
               </View>
 
-              {/* Name under avatar */}
-              <Text style={styles.panelNameText}>{user?.fullName || 'User'}</Text>
-
-              {/* Info rows like the design */}
+              {/* Info Section */}
               <View style={styles.infoSection}>
-                {/* Name row */}
-                <View style={styles.infoRow}>
-                  <Ionicons name="person-outline" size={20} color={colors.primary} />
-                  <Text style={styles.infoRowText}>{user?.fullName || 'Add your name'}</Text>
+                {/* Stream row (PCM / PCB / PCMB) */}
+                <View style={styles.infoCard}>
+                  <View style={styles.infoCardHeader}>
+                    <LinearGradient
+                      colors={colors.gradientPrimary as [string, string, ...string[]]}
+                      style={styles.infoIconContainer}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons name="school" size={20} color="#FFFFFF" />
+                    </LinearGradient>
+                    <View style={styles.infoCardContent}>
+                      <Text style={styles.infoCardLabel}>Stream</Text>
+                      <Text style={styles.infoCardValue}>{selectedStreamLabel}</Text>
+                      <Text style={styles.infoCardSubtext}>{selectedStreamDescription}</Text>
+                    </View>
+                  </View>
                 </View>
 
-                {/* Stream row (PCM / PCB / PCMB) */}
-                <View style={styles.infoRow}>
-                  <Ionicons name="school-outline" size={20} color={colors.primary} />
-                  <View style={styles.infoRowTextContainer}>
-                    <Text style={styles.infoRowText}>{selectedStreamLabel}</Text>
-                    <Text style={styles.infoRowSubText}>{selectedStreamDescription}</Text>
+                {/* Subscription row */}
+                <View style={styles.infoCard}>
+                  <View style={styles.infoCardHeader}>
+                    <LinearGradient
+                      colors={user?.subscription === 'premium' ? colors.gradientGold as [string, string, ...string[]] : ['#94A3B8', '#64748B'] as [string, string, ...string[]]}
+                      style={styles.infoIconContainer}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons name={user?.subscription === 'premium' ? 'diamond' : 'diamond-outline'} size={20} color="#FFFFFF" />
+                    </LinearGradient>
+                    <View style={styles.infoCardContent}>
+                      <Text style={styles.infoCardLabel}>Subscription</Text>
+                      <Text style={styles.infoCardValue}>
+                        {user?.subscription === 'premium' ? 'Premium Member' : 'Free Plan'}
+                      </Text>
+                      {user?.subscription !== 'premium' && (
+                        <TouchableOpacity
+                          onPress={() => navigation.navigate('PremiumPurchase')}
+                          activeOpacity={0.8}
+                          style={styles.premiumButton}
+                        >
+                          <Text style={styles.premiumButtonText}>Upgrade Now</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
                 </View>
 
@@ -156,60 +205,45 @@ export default function ProfileScreen() {
                 <TouchableOpacity
                   onPress={() => navigation.navigate('SavedQuestions')}
                   activeOpacity={0.8}
-                  style={styles.infoRow}
+                  style={styles.infoCard}
                 >
-                  <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
-                  <Text style={styles.infoRowText}>Saved questions</Text>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={18}
-                    color={colors.authTextMuted}
-                    style={styles.infoRowChevron}
-                  />
-                </TouchableOpacity>
-
-                {/* Email row */}
-                <View style={styles.infoRow}>
-                  <Ionicons name="mail-outline" size={20} color={colors.primary} />
-                  <View style={styles.infoRowTextContainer}>
-                    <Text style={styles.infoRowText}>{user?.email || 'Add your email'}</Text>
-                  </View>
-                </View>
-
-                {/* Subscription row */}
-                <View style={styles.infoRow}>
-                  <Ionicons name="diamond-outline" size={20} color={colors.primary} />
-                  <View style={styles.infoRowTextContainer}>
-                    <Text style={styles.infoRowText}>Subscription</Text>
-                    <Text style={styles.infoRowSubText}>
-                      {user?.subscription === 'premium' ? 'Premium member' : 'Free plan'}
-                    </Text>
-                  </View>
-                  {user?.subscription !== 'premium' && (
-                    <TouchableOpacity
-                      onPress={() => navigation.navigate('PremiumPurchase')}
-                      activeOpacity={0.8}
-                      style={styles.premiumButton}
+                  <View style={styles.infoCardHeader}>
+                    <LinearGradient
+                      colors={colors.gradientAccent as [string, string, ...string[]]}
+                      style={styles.infoIconContainer}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
                     >
-                      <Text style={styles.premiumButtonText}>Purchase Premium</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
+                      <Ionicons name="bookmark" size={20} color="#FFFFFF" />
+                    </LinearGradient>
+                    <View style={styles.infoCardContent}>
+                      <Text style={styles.infoCardLabel}>Saved Questions</Text>
+                      <Text style={styles.infoCardSubtext}>View your bookmarked questions</Text>
+                    </View>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={20}
+                      color={colors.authTextMuted}
+                    />
+                  </View>
+                </TouchableOpacity>
               </View>
 
-              {/* Logout button only */}
-              <View style={styles.actionsRow}>
+              {/* Actions Section */}
+              <View style={styles.actionsSection}>
                 <TouchableOpacity
-                  activeOpacity={0.9}
+                  activeOpacity={0.8}
                   style={styles.logoutButton}
                   onPress={handleLogout}
                 >
+                  <Ionicons name="log-out-outline" size={20} color={colors.danger} />
                   <Text style={styles.logoutButtonText}>Logout</Text>
                 </TouchableOpacity>
               </View>
-            </ModernCard>
-        </Animated.View>
-      </ScrollView>
+            </View>
+          </Animated.View>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -217,138 +251,194 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.authBackground,
+    backgroundColor: '#F3E8FF',
   },
-  headerRow: {
+  backgroundGradient: {
+    flex: 1,
+    backgroundColor: '#F3E8FF',
+  },
+  stickyHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    ...shadow.sm,
+  },
+  stickyHeaderGradient: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.xl,
+    gap: spacing.md,
   },
   headerBackButton: {
     width: 40,
     height: 40,
     borderRadius: radius.full,
-    backgroundColor: colors.authSurface,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
+    ...shadow.sm,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   headerTitle: {
     ...typography.h2,
-    color: colors.authText,
+    color: '#111827',
     fontWeight: '700',
+    fontSize: 24,
+    marginBottom: spacing.xs / 2,
+  },
+  headerSubtitle: {
+    ...typography.caption,
+    color: '#6B7280',
+    fontSize: 13,
   },
   scrollContainer: {
     flexGrow: 1,
-    paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.xxl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.xxxl,
   },
   profilePanel: {
-    marginTop: 0,
-    paddingTop: spacing.xxxl,
-    borderRadius: radius.xxl,
-    backgroundColor: colors.authSurface,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    marginTop: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.authBorder,
-    ...shadow.lg,
+    borderColor: '#E5E7EB',
+    ...shadow.sm,
   },
-  avatarWrapper: {
+  avatarSection: {
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
+    paddingBottom: spacing.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   avatarOuter: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     overflow: 'hidden',
-    backgroundColor: colors.authSurface,
+    backgroundColor: '#FFFFFF',
     ...shadow.lg,
+    marginBottom: spacing.md,
+    position: 'relative',
   },
   avatarImage: {
     width: '100%',
     height: '100%',
   },
   avatarPlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadow.lg,
+  },
+  nameSection: {
+    alignItems: 'center',
   },
   panelNameText: {
     ...typography.h2,
-    color: colors.authText,
+    color: '#111827',
     textAlign: 'center',
     fontWeight: '700',
-    marginBottom: spacing.lg,
+    fontSize: 22,
+    marginBottom: spacing.xs,
+  },
+  panelEmailText: {
+    ...typography.body,
+    color: '#6B7280',
+    fontSize: 14,
   },
   infoSection: {
-    marginTop: spacing.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.authBorder,
-    paddingTop: spacing.xl,
+    gap: spacing.md,
+    marginBottom: spacing.xl,
   },
-  infoRow: {
+  infoCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  infoCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
+  infoIconContainer: {
+    width: 48,
+    height: 48,
     borderRadius: radius.lg,
-    backgroundColor: colors.authInputBg,
-    marginBottom: spacing.md,
-    minHeight: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.sm,
   },
-  infoRowTextContainer: {
+  infoCardContent: {
     flex: 1,
-    marginLeft: spacing.md,
   },
-  infoRowText: {
-    ...typography.body,
-    color: colors.authText,
-    fontWeight: '500',
+  infoCardLabel: {
+    ...typography.caption,
+    color: '#6B7280',
+    fontSize: 12,
+    marginBottom: spacing.xs / 2,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  infoRowSubText: {
-    ...typography.small,
-    color: colors.authTextMuted,
-    marginTop: 2,
+  infoCardValue: {
+    ...typography.subtitle,
+    color: '#111827',
+    fontWeight: '700',
+    fontSize: 16,
+    marginBottom: spacing.xs / 2,
   },
-  infoRowChevron: {
-    marginLeft: 'auto',
+  infoCardSubtext: {
+    ...typography.caption,
+    color: '#6B7280',
+    fontSize: 13,
   },
   premiumButton: {
-    marginLeft: 'auto',
+    marginTop: spacing.sm,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: radius.md,
     backgroundColor: colors.primary,
+    alignSelf: 'flex-start',
   },
   premiumButtonText: {
-    ...typography.small,
+    ...typography.caption,
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '700',
+    fontSize: 12,
   },
-  actionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: spacing.xl,
-    gap: spacing.md,
+  actionsSection: {
+    marginTop: spacing.md,
+    paddingTop: spacing.xl,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
   },
   logoutButton: {
-    flex: 1,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.authBorder,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.lg,
-    backgroundColor: '#FFFFFF',
+    gap: spacing.sm,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+    paddingVertical: spacing.md,
+    backgroundColor: '#FEF2F2',
   },
   logoutButtonText: {
     ...typography.subtitle,
     color: colors.danger,
-    fontWeight: '600',
+    fontWeight: '700',
+    fontSize: 15,
   },
 });

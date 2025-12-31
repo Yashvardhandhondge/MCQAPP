@@ -107,12 +107,12 @@ export default function TestResultsScreen({ route, navigation }: TestResultsScre
   if (loading) {
     return (
       <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-        <LinearGradient colors={colors.gradientAuthLight} style={styles.backgroundGradient}>
+        <View style={styles.backgroundGradient}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Loading test report...</Text>
           </View>
-        </LinearGradient>
+        </View>
       </View>
     );
   }
@@ -120,7 +120,7 @@ export default function TestResultsScreen({ route, navigation }: TestResultsScre
   if (error || !report) {
     return (
       <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-        <LinearGradient colors={colors.gradientAuthLight} style={styles.backgroundGradient}>
+        <View style={styles.backgroundGradient}>
           <View style={styles.errorContainer}>
             <Ionicons name="alert-circle" size={64} color={colors.danger} />
             <Text style={styles.errorText}>{error || 'Failed to load test report'}</Text>
@@ -128,12 +128,12 @@ export default function TestResultsScreen({ route, navigation }: TestResultsScre
               onPress={() => navigation.goBack()}
               style={styles.backButton}
             >
-              <LinearGradient colors={colors.gradientPrimary} style={styles.backButtonGradient}>
+              <LinearGradient colors={colors.gradientPrimary as [string, string, ...string[]]} style={styles.backButtonGradient}>
                 <Text style={styles.backButtonText}>Go Back</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
-        </LinearGradient>
+        </View>
       </View>
     );
   }
@@ -141,12 +141,37 @@ export default function TestResultsScreen({ route, navigation }: TestResultsScre
   const correctResults = report.results.filter((r: TestResult) => r.isCorrect);
   const wrongResults = report.results.filter((r: TestResult) => !r.isCorrect);
 
+  // Calculate total marks based on subject
+  const calculateMarks = () => {
+    let totalMarks = 0;
+    report.results.forEach((result: TestResult) => {
+      if (result.isCorrect) {
+        const subject = result.subject || '';
+        if (subject === 'Maths' || subject === 'Mathematics') {
+          totalMarks += 2;
+        } else if (subject === 'Physics' || subject === 'Chemistry') {
+          totalMarks += 1;
+        } else {
+          // Default to 1 mark if subject is not recognized
+          totalMarks += 1;
+        }
+      }
+    });
+    return totalMarks;
+  };
+
+  const totalMarks = calculateMarks();
+
   return (
     <View style={[styles.safeArea, { paddingTop: insets.top }]}>
-      <LinearGradient colors={colors.gradientAuthLight} style={styles.backgroundGradient}>
+      <View style={styles.backgroundGradient}>
         <BackHeader
           title="Test Results"
-          subtitle={`${report.subject || 'Test'} ${report.chapter ? `• ${report.chapter}` : ''}`}
+          subtitle={
+            report.testType === 'mocktest' && report.mockTestNumber
+              ? `MockTest ${report.mockTestNumber}`
+              : `${report.subject || 'Test'} ${report.chapter ? `• ${report.chapter}` : ''}`
+          }
           onBack={() => navigation.goBack()}
         />
         <ScrollView
@@ -176,7 +201,7 @@ export default function TestResultsScreen({ route, navigation }: TestResultsScre
               <View style={styles.statsGrid}>
                 <View style={[styles.statCard, styles.statCardCorrect]}>
                   <Ionicons name="checkmark-circle" size={32} color="#10B981" />
-                  <Text style={styles.statValue}>{report.score}</Text>
+                  <Text style={styles.statValue}>{correctResults.length}</Text>
                   <Text style={styles.statLabel}>Correct</Text>
                 </View>
                 <View style={[styles.statCard, styles.statCardWrong]}>
@@ -191,53 +216,13 @@ export default function TestResultsScreen({ route, navigation }: TestResultsScre
                 </View>
               </View>
 
-              <View style={styles.accuracyContainer}>
-                <Text style={styles.accuracyLabel}>Accuracy</Text>
-                <Text style={styles.accuracyValue}>{report.accuracy}%</Text>
+              <View style={styles.marksContainer}>
+                <Text style={styles.marksLabel}>Total Marks</Text>
+                <Text style={styles.marksValue}>{totalMarks}</Text>
               </View>
             </ModernCard>
 
-            {/* Correct Answers Section */}
-            {correctResults.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Ionicons name="checkmark-circle" size={24} color="#10B981" />
-                  <Text style={styles.sectionTitle}>
-                    Correct Answers ({correctResults.length})
-                  </Text>
-                </View>
-                {correctResults.map((result: TestResult, index: number) => (
-                  <ModernCard
-                    key={result.questionId}
-                    variant="elevated"
-                    padding="md"
-                    style={styles.resultCard}
-                  >
-                    <View style={styles.resultHeader}>
-                      <View style={styles.resultNumberCorrect}>
-                        <Text style={styles.resultNumberText}>{index + 1}</Text>
-                      </View>
-                      <MathText style={styles.resultQuestion}>
-                        {result.question}
-                      </MathText>
-                    </View>
-                    <View style={styles.resultAnswer}>
-                      <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-                      <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
-                        <Text style={styles.resultAnswerText}>
-                          Your Answer:{' '}
-                        </Text>
-                        <MathText style={styles.resultAnswerText}>
-                          {result.selectedOption}
-                        </MathText>
-                      </View>
-                    </View>
-                  </ModernCard>
-                ))}
-              </View>
-            )}
-
-            {/* Wrong Answers Section */}
+            {/* Wrong Answers Section - Show directly below results */}
             {wrongResults.length > 0 && (
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
@@ -246,110 +231,91 @@ export default function TestResultsScreen({ route, navigation }: TestResultsScre
                     Wrong Answers ({wrongResults.length})
                   </Text>
                 </View>
-                {wrongResults.map((result: TestResult, index: number) => {
-                  const isExpanded = expandedQuestions.has(result.questionId);
-                  return (
-                    <ModernCard
-                      key={result.questionId}
-                      variant="elevated"
-                      padding="md"
-                      style={styles.resultCard}
-                    >
-                      <TouchableOpacity
-                        onPress={() => toggleQuestion(result.questionId)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={styles.resultHeader}>
-                          <View style={styles.resultNumberWrong}>
-                            <Text style={styles.resultNumberText}>{index + 1}</Text>
-                          </View>
-                          <MathText
-                            style={styles.resultQuestion}
+                {wrongResults.map((result: TestResult, index: number) => (
+                  <ModernCard
+                    key={result.questionId}
+                    variant="elevated"
+                    padding="md"
+                    style={styles.resultCard}
+                  >
+                    <View style={styles.resultHeader}>
+                      <View style={styles.resultNumberWrong}>
+                        <Text style={styles.resultNumberText}>{index + 1}</Text>
+                      </View>
+                      <MathText style={styles.resultQuestion}>
+                        {result.question}
+                      </MathText>
+                    </View>
+
+                    <View style={styles.optionsList}>
+                      {result.options.map((option, optIdx) => {
+                        const isCorrect = option === result.correctAnswer;
+                        const isSelected = option === result.selectedOption;
+                        return (
+                          <View
+                            key={optIdx}
+                            style={[
+                              styles.optionRow,
+                              isCorrect && styles.optionRowCorrect,
+                              isSelected && !isCorrect && styles.optionRowWrong,
+                            ]}
                           >
-                            {result.question}
+                            <View style={styles.optionLabelContainer}>
+                              {isCorrect && (
+                                <Ionicons name="checkmark-circle" size={18} color="#10B981" />
+                              )}
+                              {isSelected && !isCorrect && (
+                                <Ionicons name="close-circle" size={18} color={colors.danger} />
+                              )}
+                              {!isCorrect && !isSelected && (
+                                <View style={styles.optionDot} />
+                              )}
+                            </View>
+                            <MathText
+                              style={[
+                                styles.optionText,
+                                ...(isCorrect ? [styles.optionTextCorrect] : []),
+                                ...(isSelected && !isCorrect ? [styles.optionTextWrong] : []),
+                              ]}
+                            >
+                              {option}
+                            </MathText>
+                          </View>
+                        );
+                      })}
+                    </View>
+
+                    <View style={styles.resultAnswers}>
+                      <View style={[styles.resultAnswer, styles.resultAnswerWrong]}>
+                        <Ionicons name="close-circle" size={20} color={colors.danger} />
+                        <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
+                          <Text style={styles.resultAnswerText}>
+                            Your Answer:{' '}
+                          </Text>
+                          <MathText style={styles.resultAnswerText}>
+                            {result.selectedOption}
                           </MathText>
-                          <Ionicons
-                            name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                            size={20}
-                            color={colors.authTextMuted}
-                          />
-                        </View>
-                      </TouchableOpacity>
-
-                      {isExpanded && (
-                        <View style={styles.expandedContent}>
-                          <View style={styles.optionsList}>
-                            {result.options.map((option, optIdx) => {
-                              const isCorrect = option === result.correctAnswer;
-                              const isSelected = option === result.selectedOption;
-                              return (
-                                <View
-                                  key={optIdx}
-                                  style={[
-                                    styles.optionRow,
-                                    isCorrect && styles.optionRowCorrect,
-                                    isSelected && !isCorrect && styles.optionRowWrong,
-                                  ]}
-                                >
-                                  <View style={styles.optionLabelContainer}>
-                                    {isCorrect && (
-                                      <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-                                    )}
-                                    {isSelected && !isCorrect && (
-                                      <Ionicons name="close-circle" size={18} color={colors.danger} />
-                                    )}
-                                    {!isCorrect && !isSelected && (
-                                      <View style={styles.optionDot} />
-                                    )}
-                                  </View>
-                                  <MathText
-                                    style={[
-                                      styles.optionText,
-                                      isCorrect && styles.optionTextCorrect,
-                                      isSelected && !isCorrect && styles.optionTextWrong,
-                                    ]}
-                                  >
-                                    {option}
-                                  </MathText>
-                                </View>
-                              );
-                            })}
-                          </View>
-                        </View>
-                      )}
-
-                      <View style={styles.resultAnswers}>
-                        <View style={[styles.resultAnswer, styles.resultAnswerWrong]}>
-                          <Ionicons name="close-circle" size={20} color={colors.danger} />
-                          <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
-                            <Text style={styles.resultAnswerText}>
-                              Your Answer:{' '}
-                            </Text>
-                            <MathText style={styles.resultAnswerText}>
-                              {result.selectedOption}
-                            </MathText>
-                          </View>
-                        </View>
-                        <View style={[styles.resultAnswer, styles.resultAnswerCorrect]}>
-                          <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-                          <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
-                            <Text style={styles.resultAnswerText}>
-                              Correct Answer:{' '}
-                            </Text>
-                            <MathText style={styles.resultAnswerText}>
-                              {result.correctAnswer}
-                            </MathText>
-                          </View>
                         </View>
                       </View>
-                    </ModernCard>
-                  );
-                })}
+                      <View style={[styles.resultAnswer, styles.resultAnswerCorrect]}>
+                        <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                        <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
+                          <Text style={styles.resultAnswerText}>
+                            Correct Answer:{' '}
+                          </Text>
+                          <MathText style={styles.resultAnswerText}>
+                            {result.correctAnswer}
+                          </MathText>
+                        </View>
+                      </View>
+                    </View>
+                  </ModernCard>
+                ))}
               </View>
             )}
           </Animated.View>
         </ScrollView>
-      </LinearGradient>
+      </View>
     </View>
   );
 }
@@ -357,10 +323,11 @@ export default function TestResultsScreen({ route, navigation }: TestResultsScre
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.authBackground,
+    backgroundColor: '#F3E8FF',
   },
   backgroundGradient: {
     flex: 1,
+    backgroundColor: '#F3E8FF',
   },
   container: {
     flexGrow: 1,
@@ -466,18 +433,18 @@ const styles = StyleSheet.create({
     color: colors.authTextSecondary,
     marginTop: spacing.xs,
   },
-  accuracyContainer: {
+  marksContainer: {
     alignItems: 'center',
     paddingTop: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.authBorder,
   },
-  accuracyLabel: {
+  marksLabel: {
     ...typography.body,
     color: colors.authTextSecondary,
     marginBottom: spacing.xs,
   },
-  accuracyValue: {
+  marksValue: {
     ...typography.h1,
     color: colors.primary,
     fontWeight: '700',

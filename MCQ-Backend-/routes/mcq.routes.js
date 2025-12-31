@@ -35,6 +35,7 @@ const {
   getAvailableMockTests,
   getMockTestQuestions,
   startMockTestSession,
+  getMockTestResults,
 } = require('../controllers/test.controller');
 const {
   getLeaderboard,
@@ -206,6 +207,14 @@ router.get('/mock-tests/:mockTestNumber/questions', getMockTestQuestions);
  * @access  Private (requires authentication)
  */
 router.post('/mock-tests/:mockTestNumber/start', startMockTestSession);
+
+/**
+ * @route   GET /api/mcq/mock-tests/:mockTestNumber/results
+ * @desc    Get mock test results for a specific mock test
+ * @param   {number} mockTestNumber - Mock test number (1, 2, etc.)
+ * @access  Private (requires authentication)
+ */
+router.get('/mock-tests/:mockTestNumber/results', getMockTestResults);
 
 /**
  * @route   GET /api/mcq/leaderboard/my-rank

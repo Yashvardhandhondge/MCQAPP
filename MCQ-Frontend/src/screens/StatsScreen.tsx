@@ -715,6 +715,35 @@ export default function StatsScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.backgroundGradient}>
+        {/* Sticky Header */}
+        <View style={styles.stickyHeader}>
+          <LinearGradient
+            colors={['#FFFFFF', '#F9FAFB']}
+            style={styles.stickyHeaderGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            <View style={styles.headerContent}>
+              <View style={styles.headerLeftSection}>
+                <View style={styles.headerIconContainer}>
+                  <LinearGradient
+                    colors={colors.gradientPrimary as [string, string, ...string[]]}
+                    style={styles.headerIconGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <Ionicons name="analytics" size={24} color="#FFFFFF" />
+                  </LinearGradient>
+                </View>
+                <View style={styles.headerTextContainer}>
+                  <Text style={styles.title}>Analytics</Text>
+                  <Text style={styles.subtitle}>Track your learning journey</Text>
+                </View>
+              </View>
+            </View>
+          </LinearGradient>
+        </View>
+
         <ScrollView
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}
@@ -725,23 +754,6 @@ export default function StatsScreen() {
               transform: [{ translateY: slideAnim }],
             }}
           >
-            {/* Header */}
-            <LinearGradient
-              colors={colors.gradientPrimary as [string, string, ...string[]]}
-              style={styles.headerGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.headerContent}>
-                <View style={styles.headerIconContainer}>
-                  <Ionicons name="analytics" size={36} color="#FFFFFF" />
-                </View>
-                <View style={styles.headerTextContainer}>
-                  <Text style={styles.title}>Analytics Dashboard</Text>
-                  <Text style={styles.subtitle}>Track your learning journey</Text>
-                </View>
-              </View>
-            </LinearGradient>
 
             {/* Overall Performance Card */}
             <ModernCard variant="elevated" padding="lg" style={styles.overallCard}>
@@ -1370,16 +1382,51 @@ export default function StatsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FAFBFC',
+    backgroundColor: '#F3E8FF',
   },
   backgroundGradient: {
     flex: 1,
-    backgroundColor: '#FAFBFC',
+    backgroundColor: '#F3E8FF',
+  },
+  stickyHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    ...shadow.sm,
+  },
+  stickyHeaderGradient: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerLeftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    flex: 1,
+  },
+  headerIconContainer: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    ...shadow.sm,
+  },
+  headerIconGradient: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   container: {
     flexGrow: 1,
-    paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.xxxl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
     paddingBottom: 100,
   },
   loadingContainer: {
@@ -1423,53 +1470,31 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
   },
-  headerGradient: {
-    borderRadius: radius.xl + 6,
-    padding: spacing.xxl,
-    marginBottom: spacing.xxl,
-    ...shadow.xl,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerIconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: radius.xl + 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.lg,
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
   title: {
-    ...typography.h1,
-    color: '#FFFFFF',
-    fontWeight: '800',
-    marginBottom: spacing.xs,
-    fontSize: 28,
+    ...typography.h2,
+    color: '#111827',
+    fontWeight: '700',
+    fontSize: 24,
+    marginBottom: spacing.xs / 2,
   },
   subtitle: {
-    ...typography.subtitle,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 16,
+    ...typography.caption,
+    color: '#6B7280',
+    fontSize: 13,
   },
   overallCard: {
     marginBottom: spacing.lg,
-    backgroundColor: colors.authSurface,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: colors.authBorder,
-    borderRadius: radius.xl + 2,
+    borderColor: '#E5E7EB',
+    borderRadius: radius.xl,
   },
   sectionCard: {
     marginBottom: spacing.lg,
-    backgroundColor: colors.authSurface,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: colors.authBorder,
-    borderRadius: radius.xl + 2,
+    borderColor: '#E5E7EB',
+    borderRadius: radius.xl,
   },
   cardHeader: {
     marginBottom: spacing.lg,
@@ -1490,9 +1515,10 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...typography.h3,
-    color: colors.authText,
+    color: '#111827',
     fontWeight: '700',
     flex: 1,
+    fontSize: 18,
   },
   metricRow: {
     flexDirection: 'row',
@@ -1567,11 +1593,13 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     fontWeight: '600',
+    fontSize: 15,
   },
   emptyStateSubtext: {
     ...typography.caption,
     color: '#6B7280',
     textAlign: 'center',
+    fontSize: 13,
   },
   subjectList: {
     gap: spacing.sm,
@@ -1579,8 +1607,10 @@ const styles = StyleSheet.create({
   subjectRowTouchable: {
     borderRadius: radius.lg,
     marginBottom: spacing.xs,
-    backgroundColor: colors.authInputBg,
+    backgroundColor: '#F9FAFB',
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   subjectRow: {
     flexDirection: 'row',
@@ -1604,9 +1634,10 @@ const styles = StyleSheet.create({
   },
   subjectName: {
     ...typography.title,
-    color: colors.authText,
+    color: '#111827',
     fontWeight: '600',
     marginBottom: spacing.xs,
+    fontSize: 16,
   },
   subjectMetaRow: {
     flexDirection: 'row',
@@ -1617,7 +1648,7 @@ const styles = StyleSheet.create({
   subjectMeta: {
     ...typography.caption,
     color: '#6B7280',
-    fontSize: 13,
+    fontSize: 12,
   },
   subjectAccuracyContainer: {
     alignItems: 'flex-end',
@@ -1646,13 +1677,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
   },
   collapseGroup: {
-    borderRadius: radius.xl + 2,
+    borderRadius: radius.xl,
     marginBottom: spacing.md,
-    backgroundColor: colors.authSurface,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: colors.authBorder,
+    borderColor: '#E5E7EB',
     overflow: 'hidden',
-    ...shadow.md,
+    ...shadow.sm,
   },
   collapseHeader: {
     paddingHorizontal: spacing.lg,
@@ -1705,7 +1736,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.authBorder,
+    borderBottomColor: '#F3F4F6',
   },
   chapterInfo: {
     flex: 1,
@@ -1714,12 +1745,14 @@ const styles = StyleSheet.create({
   chapterName: {
     ...typography.body,
     fontWeight: '600',
-    color: colors.authText,
+    color: '#111827',
     marginBottom: spacing.xs,
+    fontSize: 14,
   },
   chapterMeta: {
     ...typography.caption,
     color: '#6B7280',
+    fontSize: 12,
   },
   chapterAccuracyContainer: {
     alignItems: 'flex-end',
@@ -1788,10 +1821,12 @@ const styles = StyleSheet.create({
   },
   nestedChapterGroupSimplified: {
     marginTop: spacing.xs,
-    backgroundColor: colors.authInputBg,
+    backgroundColor: '#F9FAFB',
     borderRadius: radius.md,
     overflow: 'hidden',
     marginBottom: spacing.xs,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   nestedHeader: {
     paddingHorizontal: spacing.md,
@@ -1836,7 +1871,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.authBorder,
+    borderBottomColor: '#F3F4F6',
   },
   yearInfo: {
     flex: 1,
@@ -1845,12 +1880,14 @@ const styles = StyleSheet.create({
   yearLabel: {
     ...typography.body,
     fontWeight: '600',
-    color: colors.authText,
+    color: '#111827',
     marginBottom: spacing.xs / 2,
+    fontSize: 14,
   },
   yearAttempts: {
     ...typography.caption,
     color: '#6B7280',
+    fontSize: 12,
   },
   yearAccuracyContainer: {
     alignItems: 'flex-end',
@@ -2078,12 +2115,12 @@ const styles = StyleSheet.create({
     borderColor: colors.authBorder,
   },
   testSubjectGroupClean: {
-    backgroundColor: colors.authSurface,
+    backgroundColor: '#FFFFFF',
     borderRadius: radius.lg,
     overflow: 'hidden',
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.authBorder,
+    borderColor: '#E5E7EB',
   },
   testSubjectHeader: {
     flexDirection: 'row',
@@ -2130,7 +2167,7 @@ const styles = StyleSheet.create({
   },
   testSubjectName: {
     ...typography.subtitle,
-    color: colors.authText,
+    color: '#111827',
     fontWeight: '700',
     fontSize: 15,
     marginBottom: spacing.xs / 2,
@@ -2176,12 +2213,12 @@ const styles = StyleSheet.create({
     borderColor: colors.authBorder,
   },
   testReportItemClean: {
-    backgroundColor: colors.authInputBg,
+    backgroundColor: '#F9FAFB',
     borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.authBorder,
+    borderColor: '#E5E7EB',
   },
   testReportItemContent: {
     flexDirection: 'row',
@@ -2199,13 +2236,15 @@ const styles = StyleSheet.create({
   },
   testReportItemTitle: {
     ...typography.body,
-    color: colors.authText,
+    color: '#111827',
     fontWeight: '600',
     marginBottom: spacing.xs,
+    fontSize: 14,
   },
   testReportItemMeta: {
     ...typography.caption,
     color: '#6B7280',
+    fontSize: 12,
   },
   testReportItemScore: {
     alignItems: 'flex-end',
@@ -2256,9 +2295,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
-    backgroundColor: colors.authInputBg,
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: colors.authBorder,
+    borderColor: '#E5E7EB',
   },
   periodButtonActive: {
     backgroundColor: colors.primary,
@@ -2266,8 +2305,9 @@ const styles = StyleSheet.create({
   },
   periodButtonText: {
     ...typography.caption,
-    color: colors.authText,
+    color: '#6B7280',
     fontWeight: '500',
+    fontSize: 12,
   },
   periodButtonTextActive: {
     color: '#FFFFFF',
@@ -2315,6 +2355,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     overflow: 'hidden',
     marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   lockedSectionGradient: {
     padding: spacing.xxl,

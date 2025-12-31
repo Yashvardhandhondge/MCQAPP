@@ -41,6 +41,10 @@ const MockTestQuestionSchema = new mongoose.Schema(
       trim: true,
       required: [true, 'Source file is required'],
     },
+    MockTest: {
+      type: String,
+      trim: true,
+    },
     solution: {
       type: String,
       trim: true,
@@ -55,7 +59,9 @@ const MockTestQuestionSchema = new mongoose.Schema(
 // Create indexes for better query performance
 MockTestQuestionSchema.index({ sourceFile: 1 });
 MockTestQuestionSchema.index({ subject: 1 });
+MockTestQuestionSchema.index({ MockTest: 1 });
 MockTestQuestionSchema.index({ sourceFile: 1, subject: 1 });
+MockTestQuestionSchema.index({ MockTest: 1, subject: 1 });
 
 // Create model for MockTest collection
 const MockTestModel = mongoose.model('MockTest', MockTestQuestionSchema, 'MockTest');

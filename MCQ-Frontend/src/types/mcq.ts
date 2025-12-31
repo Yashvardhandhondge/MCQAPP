@@ -251,6 +251,7 @@ export interface TestReport {
   chapter?: string;
   year?: string;
   shift?: string;
+  mockTestNumber?: number;
   completedAt: string;
   createdAt: string;
 }

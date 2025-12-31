@@ -775,3 +775,35 @@ export async function startMockTestSession(mockTestNumber: number): Promise<Star
     throw new Error('Failed to start mock test session');
   }
 }
+
+export async function getMockTestResults(mockTestNumber: number): Promise<{
+  success: boolean;
+  data: {
+    mockTestNumber: number;
+    marks: number;
+    totalQuestions: number;
+    correctCount: number;
+    completedAt: string;
+    sessionId: string;
+  } | null;
+}> {
+  try {
+    const response = await axiosInstance.get<{
+      success: boolean;
+      data: {
+        mockTestNumber: number;
+        marks: number;
+        totalQuestions: number;
+        correctCount: number;
+        completedAt: string;
+        sessionId: string;
+      } | null;
+    }>(`/api/mcq/mock-tests/${mockTestNumber}/results`);
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to load mock test results');
+    }
+    throw new Error('Failed to load mock test results');
+  }
+}

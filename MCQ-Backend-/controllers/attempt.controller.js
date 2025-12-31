@@ -113,12 +113,13 @@ const getUserStatsOverview = async (req, res, next) => {
       }
     ]);
 
-    // Overall stats from completed tests
+    // Overall stats from completed tests (excluding mock tests)
     const [overallTestStats] = await TestSession.aggregate([
       { 
         $match: { 
           user: userId,
           status: 'completed',
+          testType: { $ne: 'mocktest' }, // Exclude mock tests
         } 
       },
       {
@@ -159,12 +160,13 @@ const getUserStatsOverview = async (req, res, next) => {
       },
     ]);
 
-    // Per subject stats from completed tests (where subject is specified)
+    // Per subject stats from completed tests (where subject is specified, excluding mock tests)
     const perSubjectTestStats = await TestSession.aggregate([
       { 
         $match: { 
           user: userId,
           status: 'completed',
+          testType: { $ne: 'mocktest' }, // Exclude mock tests
           subject: { $exists: true, $ne: null },
         } 
       },
@@ -542,7 +544,7 @@ const getStudyStreakAndTodayProgress = async (req, res, next) => {
       },
     });
 
-    // Count questions from tests completed today
+    // Count questions from tests completed today (excluding mock tests)
     const TestSession = require('../models/TestSession');
     const todayTests = await TestSession.find({
       user: userId,
@@ -551,6 +553,8 @@ const getStudyStreakAndTodayProgress = async (req, res, next) => {
         $gte: startOfToday,
         $lte: endOfToday,
       },
+      // Exclude mock tests from today's progress
+      testType: { $ne: 'mocktest' },
     });
 
     const todayTestQuestions = todayTests.reduce((sum, test) => sum + (test.totalQuestions || 0), 0);

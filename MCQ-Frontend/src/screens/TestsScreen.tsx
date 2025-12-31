@@ -662,11 +662,11 @@ export default function TestsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FAFBFC',
+    backgroundColor: '#F3E8FF',
   },
   backgroundGradient: {
     flex: 1,
-    backgroundColor: '#FAFBFC',
+    backgroundColor: '#F3E8FF',
   },
   container: {
     flexGrow: 1,

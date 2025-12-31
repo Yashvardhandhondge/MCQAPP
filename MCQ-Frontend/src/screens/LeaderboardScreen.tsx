@@ -139,6 +139,35 @@ export default function LeaderboardScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.backgroundGradient}>
+        {/* Sticky Header */}
+        <View style={styles.stickyHeader}>
+          <LinearGradient
+            colors={['#FFFFFF', '#F9FAFB']}
+            style={styles.stickyHeaderGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            <View style={styles.headerContent}>
+              <View style={styles.headerLeftSection}>
+                <View style={styles.headerIconContainer}>
+                  <LinearGradient
+                    colors={colors.gradientGold as [string, string, ...string[]]}
+                    style={styles.headerIconGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <Ionicons name="trophy" size={24} color="#FFFFFF" />
+                  </LinearGradient>
+                </View>
+                <View style={styles.headerTextContainer}>
+                  <Text style={styles.title}>Leaderboard</Text>
+                  <Text style={styles.subtitle}>Compete with peers and track your progress</Text>
+                </View>
+              </View>
+            </View>
+          </LinearGradient>
+        </View>
+
         <ScrollView
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}
@@ -149,23 +178,6 @@ export default function LeaderboardScreen() {
               transform: [{ translateY: slideAnim }],
             }}
           >
-            {/* Header */}
-            <LinearGradient
-              colors={colors.gradientPrimary as [string, string, ...string[]]}
-              style={styles.headerGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.headerContent}>
-                <View style={styles.headerIconContainer}>
-                  <Ionicons name="trophy" size={36} color="#FFFFFF" />
-                </View>
-                <View style={styles.headerTextContainer}>
-                  <Text style={styles.title}>Leaderboard</Text>
-                  <Text style={styles.subtitle}>Compete with peers and track your progress</Text>
-                </View>
-              </View>
-            </LinearGradient>
 
             {/* Timeframe Tabs */}
             <View style={styles.tabContainer}>
@@ -174,32 +186,40 @@ export default function LeaderboardScreen() {
                 onPress={() => setTimeframe('month')}
                 activeOpacity={0.8}
               >
-                <LinearGradient
-                  colors={timeframe === 'month' ? (colors.gradientPrimary as [string, string, ...string[]]) : (['transparent', 'transparent'] as [string, string, ...string[]])}
-                  style={styles.tabGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                >
-                  <Text style={[styles.tabText, timeframe === 'month' && styles.tabTextActive]}>
-                    This Month
-                  </Text>
-                </LinearGradient>
+                {timeframe === 'month' ? (
+                  <LinearGradient
+                    colors={colors.gradientPrimary as [string, string, ...string[]]}
+                    style={styles.tabGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
+                    <Text style={styles.tabTextActive}>This Month</Text>
+                  </LinearGradient>
+                ) : (
+                  <View style={styles.tabGradient}>
+                    <Text style={styles.tabText}>This Month</Text>
+                  </View>
+                )}
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.tab, timeframe === 'all-time' && styles.tabActive]}
                 onPress={() => setTimeframe('all-time')}
                 activeOpacity={0.8}
               >
-                <LinearGradient
-                  colors={timeframe === 'all-time' ? (colors.gradientPrimary as [string, string, ...string[]]) : (['transparent', 'transparent'] as [string, string, ...string[]])}
-                  style={styles.tabGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                >
-                  <Text style={[styles.tabText, timeframe === 'all-time' && styles.tabTextActive]}>
-                    All Time
-                  </Text>
-                </LinearGradient>
+                {timeframe === 'all-time' ? (
+                  <LinearGradient
+                    colors={colors.gradientPrimary as [string, string, ...string[]]}
+                    style={styles.tabGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
+                    <Text style={styles.tabTextActive}>All Time</Text>
+                  </LinearGradient>
+                ) : (
+                  <View style={styles.tabGradient}>
+                    <Text style={styles.tabText}>All Time</Text>
+                  </View>
+                )}
               </TouchableOpacity>
             </View>
 
@@ -257,6 +277,7 @@ export default function LeaderboardScreen() {
                     {displayLeaderboard.map((entry, index) => {
                   const gradient = getRankGradient(entry.rank, entry.isCurrentUser);
                   const isTopThree = entry.rank <= 3;
+                  const shouldHideRank = !isPremium && entry.isCurrentUser;
                   const rankIcon =
                     entry.rank === 1
                       ? 'trophy'
@@ -290,7 +311,13 @@ export default function LeaderboardScreen() {
                         >
                           <View style={styles.entryContent}>
                             <View style={styles.rankContainer}>
-                              {rankIcon ? (
+                              {shouldHideRank ? (
+                                <View style={styles.rankBadge}>
+                                  <View style={styles.blurOverlay}>
+                                    <Ionicons name="lock-closed" size={16} color="rgba(255, 255, 255, 0.7)" />
+                                  </View>
+                                </View>
+                              ) : rankIcon ? (
                                 <View style={styles.rankIconContainer}>
                                   <Ionicons name={rankIcon as any} size={28} color="#FFFFFF" />
                                 </View>
@@ -320,9 +347,17 @@ export default function LeaderboardScreen() {
                         <View style={styles.entryCard}>
                           <View style={styles.entryContent}>
                             <View style={styles.rankContainer}>
-                              <View style={styles.rankBadgeDefault}>
-                                <Text style={styles.rankNumberDefault}>{entry.rank}</Text>
-                              </View>
+                              {shouldHideRank ? (
+                                <View style={styles.rankBadgeDefault}>
+                                  <View style={styles.blurOverlayDefault}>
+                                    <Ionicons name="lock-closed" size={16} color="#9CA3AF" />
+                                  </View>
+                                </View>
+                              ) : (
+                                <View style={styles.rankBadgeDefault}>
+                                  <Text style={styles.rankNumberDefault}>{entry.rank}</Text>
+                                </View>
+                              )}
                             </View>
                             <View style={styles.userInfo}>
                               <View style={styles.userInfoContent}>
@@ -358,16 +393,51 @@ export default function LeaderboardScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FAFBFC',
+    backgroundColor: '#F3E8FF',
   },
   backgroundGradient: {
     flex: 1,
-    backgroundColor: '#FAFBFC',
+    backgroundColor: '#F3E8FF',
+  },
+  stickyHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    ...shadow.sm,
+  },
+  stickyHeaderGradient: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerLeftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    flex: 1,
+  },
+  headerIconContainer: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    ...shadow.sm,
+  },
+  headerIconGradient: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   container: {
     flexGrow: 1,
-    paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.xxxl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
     paddingBottom: 100,
   },
   loadingContainer: {
@@ -409,39 +479,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
   },
-  headerGradient: {
-    borderRadius: radius.xl + 6,
-    padding: spacing.xxl,
-    marginBottom: spacing.xxl,
-    ...shadow.xl,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerIconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: radius.xl + 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.lg,
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
   title: {
-    ...typography.h1,
-    color: '#FFFFFF',
-    fontWeight: '800',
-    marginBottom: spacing.xs,
-    fontSize: 26,
+    ...typography.h2,
+    color: '#111827',
+    fontWeight: '700',
+    fontSize: 24,
+    marginBottom: spacing.xs / 2,
   },
   subtitle: {
-    ...typography.subtitle,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 15,
+    ...typography.caption,
+    color: '#6B7280',
+    fontSize: 13,
   },
   header: {
     alignItems: 'center',
@@ -449,18 +497,18 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#F9FAFB',
-    borderRadius: radius.xl + 2,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
     padding: spacing.xs + 2,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
     gap: spacing.xs,
-    ...shadow.md,
+    ...shadow.sm,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
   tab: {
     flex: 1,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     overflow: 'hidden',
   },
   tabGradient: {
@@ -469,34 +517,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tabActive: {
-    ...shadow.md,
+    ...shadow.sm,
   },
   tabText: {
     ...typography.subtitle,
     color: '#6B7280',
     fontWeight: '600',
+    fontSize: 14,
   },
   tabTextActive: {
     color: '#FFFFFF',
     fontWeight: '700',
+    fontSize: 14,
   },
   leaderboardList: {
     gap: spacing.sm,
   },
   entryGradient: {
-    borderRadius: radius.xl + 4,
+    borderRadius: radius.xl,
     padding: spacing.lg,
-    ...shadow.xl,
-    marginBottom: spacing.xs,
+    ...shadow.md,
+    marginBottom: spacing.sm,
   },
   entryCard: {
-    borderRadius: radius.xl + 2,
+    borderRadius: radius.xl,
     padding: spacing.lg,
     backgroundColor: '#FFFFFF',
     ...shadow.sm,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
   entryContent: {
     flexDirection: 'row',
@@ -577,14 +627,14 @@ const styles = StyleSheet.create({
     ...typography.h3,
     color: '#FFFFFF',
     fontWeight: '700',
-    fontSize: 18,
+    fontSize: 16,
     flex: 1,
   },
   userNameDefault: {
     ...typography.h3,
-    color: colors.authText,
+    color: '#111827',
     fontWeight: '700',
-    fontSize: 18,
+    fontSize: 16,
   },
   scoreContainer: {
     alignItems: 'flex-end',
@@ -594,13 +644,13 @@ const styles = StyleSheet.create({
     ...typography.h2,
     color: '#FFFFFF',
     fontWeight: '800',
-    fontSize: 24,
+    fontSize: 22,
   },
   userScoreDefault: {
     ...typography.h2,
     color: colors.primary,
     fontWeight: '800',
-    fontSize: 24,
+    fontSize: 22,
   },
   scoreLabel: {
     ...typography.caption,
@@ -626,19 +676,19 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '600',
     textAlign: 'center',
-    fontSize: 14,
+    fontSize: 15,
   },
   emptySubtext: {
     ...typography.caption,
     color: '#6B7280',
     textAlign: 'center',
-    fontSize: 12,
+    fontSize: 13,
   },
   premiumPromptCard: {
-    marginBottom: spacing.xl,
-    borderRadius: radius.xl + 4,
+    marginBottom: spacing.lg,
+    borderRadius: radius.xl,
     overflow: 'hidden',
-    ...shadow.lg,
+    ...shadow.md,
   },
   premiumPromptGradient: {
     padding: spacing.xl,
@@ -661,16 +711,36 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   premiumPromptTitle: {
-    ...typography.h2,
+    ...typography.h3,
     color: '#FFFFFF',
     fontWeight: '800',
     marginBottom: spacing.xs,
-    fontSize: 22,
+    fontSize: 18,
   },
   premiumPromptSubtitle: {
     ...typography.body,
     color: 'rgba(255, 255, 255, 0.95)',
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  blurOverlay: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  blurOverlayDefault: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.full,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
   },
 });

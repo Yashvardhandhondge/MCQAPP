@@ -410,7 +410,11 @@ export default function DashboardScreen() {
 
                     {/* Feature Grid */}
                     <View style={styles.premiumFeaturesGrid}>
-                      <View style={styles.premiumFeatureBox}>
+                      <TouchableOpacity
+                        style={styles.premiumFeatureBox}
+                        onPress={() => (navigation as any).getParent()?.navigate('MainTabs', { screen: 'Chapters' })}
+                        activeOpacity={0.7}
+                      >
                         <View style={styles.premiumFeatureIconContainer}>
                           <LinearGradient
                             colors={['rgba(255, 255, 255, 0.25)', 'rgba(255, 255, 255, 0.15)'] as [string, string]}
@@ -420,10 +424,14 @@ export default function DashboardScreen() {
                           </LinearGradient>
                         </View>
                         <Text style={styles.premiumFeatureNumber}>20K+</Text>
-                        <Text style={styles.premiumFeatureLabel}>Questions</Text>
-                      </View>
+                        <Text style={styles.premiumFeatureLabel}>Previous Year Questions</Text>
+                      </TouchableOpacity>
 
-                      <View style={styles.premiumFeatureBox}>
+                      <TouchableOpacity
+                        style={styles.premiumFeatureBox}
+                        onPress={() => navigation.navigate('MockTestSelection')}
+                        activeOpacity={0.7}
+                      >
                         <View style={styles.premiumFeatureIconContainer}>
                           <LinearGradient
                             colors={['rgba(255, 255, 255, 0.25)', 'rgba(255, 255, 255, 0.15)'] as [string, string]}
@@ -432,9 +440,9 @@ export default function DashboardScreen() {
                             <Text style={styles.premiumFeatureEmoji}>📝</Text>
                           </LinearGradient>
                         </View>
-                        <Text style={styles.premiumFeatureNumber}>10-20</Text>
-                        <Text style={styles.premiumFeatureLabel}>Mock Tests</Text>
-                      </View>
+                        <Text style={styles.premiumFeatureNumber}>15+</Text>
+                        <Text style={styles.premiumFeatureLabel}>Full Length Mock Test</Text>
+                      </TouchableOpacity>
 
                       <View style={styles.premiumFeatureBox}>
                         <View style={styles.premiumFeatureIconContainer}>
@@ -445,11 +453,15 @@ export default function DashboardScreen() {
                             <Text style={styles.premiumFeatureEmoji}>🎯</Text>
                           </LinearGradient>
                         </View>
-                        <Text style={styles.premiumFeatureNumber}>Random</Text>
-                        <Text style={styles.premiumFeatureLabel}>Tests</Text>
+                        <Text style={styles.premiumFeatureNumber}>AI</Text>
+                        <Text style={styles.premiumFeatureLabel}>Solutions</Text>
                       </View>
 
-                      <View style={styles.premiumFeatureBox}>
+                      <TouchableOpacity
+                        style={styles.premiumFeatureBox}
+                        onPress={() => (navigation as any).getParent()?.navigate('MainTabs', { screen: 'Stats' })}
+                        activeOpacity={0.7}
+                      >
                         <View style={styles.premiumFeatureIconContainer}>
                           <LinearGradient
                             colors={['rgba(255, 255, 255, 0.25)', 'rgba(255, 255, 255, 0.15)'] as [string, string]}
@@ -459,8 +471,8 @@ export default function DashboardScreen() {
                           </LinearGradient>
                         </View>
                         <Text style={styles.premiumFeatureNumber}>Advanced</Text>
-                        <Text style={styles.premiumFeatureLabel}>Analytics</Text>
-                      </View>
+                        <Text style={styles.premiumFeatureLabel}>Analytics & Insights</Text>
+                      </TouchableOpacity>
                     </View>
 
                     {/* CTA Button */}
@@ -530,7 +542,7 @@ export default function DashboardScreen() {
               <View style={styles.metricsGrid}>
                 <TouchableOpacity
                   style={styles.metricCard}
-                  onPress={() => (navigation as any).getParent()?.navigate('MainTabs', { screen: 'Tests' })}
+                  onPress={() => (navigation as any).getParent()?.navigate('MainTabs', { screen: 'Chapters' })}
                   activeOpacity={0.7}
                 >
                   <LinearGradient colors={colors.gradientPrimary as [string, string]} style={styles.metricIconContainer}>
@@ -539,7 +551,7 @@ export default function DashboardScreen() {
                   <View style={styles.metricContent}>
                     <Text style={styles.metricValue}>{stats?.overall.totalAttempts ?? 0}</Text>
                     <Text style={styles.metricLabel}>Total Attempts</Text>
-                    <Text style={styles.metricHint}>Tap to see tests</Text>
+                    <Text style={styles.metricHint}>Tap to practice subjects</Text>
                   </View>
                 </TouchableOpacity>
                 

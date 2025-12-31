@@ -13,7 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { AppStackParamList } from '../navigation/types';
-import { getAvailableMockTests, startMockTestSession } from '../services/mcq.service';
+import { getAvailableMockTests, startMockTestSession, getMockTestResults } from '../services/mcq.service';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import BackHeader from '../components/ui/BackHeader';
 
@@ -29,11 +29,18 @@ interface MockTest {
   mathsCount: number;
 }
 
+interface MockTestResult {
+  marks: number;
+  totalQuestions: number;
+  completedAt: string;
+}
+
 export default function MockTestSelectionScreen({ navigation }: MockTestSelectionScreenProps) {
   const [mockTests, setMockTests] = useState<MockTest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [startingTest, setStartingTest] = useState<number | null>(null);
+  const [mockTestResults, setMockTestResults] = useState<Map<number, MockTestResult>>(new Map());
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -65,6 +72,29 @@ export default function MockTestSelectionScreen({ navigation }: MockTestSelectio
         const response = await getAvailableMockTests();
         if (isMounted) {
           setMockTests(response.data);
+          
+          // Fetch results for each mock test
+          const resultsMap = new Map<number, MockTestResult>();
+          await Promise.all(
+            response.data.map(async (mockTest) => {
+              try {
+                const resultResponse = await getMockTestResults(mockTest.mockTestNumber);
+                if (resultResponse.data) {
+                  resultsMap.set(mockTest.mockTestNumber, {
+                    marks: resultResponse.data.marks,
+                    totalQuestions: resultResponse.data.totalQuestions,
+                    completedAt: resultResponse.data.completedAt,
+                  });
+                }
+              } catch (err) {
+                // Silently fail for individual result fetches
+                console.log(`No results found for MockTest ${mockTest.mockTestNumber}`);
+              }
+            })
+          );
+          if (isMounted) {
+            setMockTestResults(resultsMap);
+          }
         }
       } catch (requestError) {
         if (isMounted) {
@@ -189,7 +219,11 @@ export default function MockTestSelectionScreen({ navigation }: MockTestSelectio
                     activeOpacity={0.85}
                   >
                     <LinearGradient
-                      colors={colors.gradientPrimary as [string, string, ...string[]]}
+                      colors={
+                        mockTestResults.has(mockTest.mockTestNumber)
+                          ? (['#10B981', '#059669'] as [string, string]) // Green gradient for completed
+                          : (colors.gradientPrimary as [string, string, ...string[]]) // Purple for not completed
+                      }
                       style={styles.mockTestCard}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
@@ -197,37 +231,59 @@ export default function MockTestSelectionScreen({ navigation }: MockTestSelectio
                       <View style={styles.mockTestContent}>
                         <View style={styles.mockTestLeft}>
                           <View style={styles.mockTestIconContainer}>
-                            <Ionicons name="document-text" size={32} color="#FFFFFF" />
+                            {mockTestResults.has(mockTest.mockTestNumber) ? (
+                              <Ionicons name="trophy" size={24} color="#FFFFFF" />
+                            ) : (
+                              <Ionicons name="document-text" size={24} color="#FFFFFF" />
+                            )}
                           </View>
                           <View style={styles.mockTestInfo}>
-                            <Text style={styles.mockTestTitle}>{mockTest.name}</Text>
-                            <View style={styles.mockTestStats}>
-                              <View style={styles.statItem}>
-                                <Ionicons name="flask" size={14} color="rgba(255, 255, 255, 0.9)" />
-                                <Text style={styles.statText}>
-                                  {mockTest.physicsCount + mockTest.chemistryCount} P&C
-                                </Text>
-                              </View>
-                              <View style={styles.statItem}>
-                                <Ionicons name="calculator" size={14} color="rgba(255, 255, 255, 0.9)" />
-                                <Text style={styles.statText}>
-                                  {mockTest.mathsCount} Maths
-                                </Text>
-                              </View>
-                              <View style={styles.statItem}>
-                                <Ionicons name="document-text" size={14} color="rgba(255, 255, 255, 0.9)" />
-                                <Text style={styles.statText}>
-                                  {mockTest.questionCount} Q
-                                </Text>
-                              </View>
+                            <View style={styles.titleRow}>
+                              <Text style={styles.mockTestTitle}>{mockTest.name}</Text>
+                              {mockTestResults.has(mockTest.mockTestNumber) && (
+                                <View style={styles.completedDot} />
+                              )}
                             </View>
+                            {mockTestResults.has(mockTest.mockTestNumber) ? (
+                              <View style={styles.scoreRow}>
+                                <Ionicons name="star" size={14} color="#FFD700" />
+                                <Text style={styles.scoreText}>
+                                  {Math.round(mockTestResults.get(mockTest.mockTestNumber)?.marks || 0)} marks
+                                </Text>
+                              </View>
+                            ) : (
+                              <View style={styles.mockTestStats}>
+                                <View style={styles.statItem}>
+                                  <Ionicons name="flask" size={12} color="rgba(255, 255, 255, 0.9)" />
+                                  <Text style={styles.statText}>
+                                    {mockTest.physicsCount + mockTest.chemistryCount} P&C
+                                  </Text>
+                                </View>
+                                <View style={styles.statItem}>
+                                  <Ionicons name="calculator" size={12} color="rgba(255, 255, 255, 0.9)" />
+                                  <Text style={styles.statText}>
+                                    {mockTest.mathsCount} Maths
+                                  </Text>
+                                </View>
+                                <View style={styles.statItem}>
+                                  <Ionicons name="document-text" size={12} color="rgba(255, 255, 255, 0.9)" />
+                                  <Text style={styles.statText}>
+                                    {mockTest.questionCount} Q
+                                  </Text>
+                                </View>
+                              </View>
+                            )}
                           </View>
                         </View>
                         <View style={styles.mockTestRight}>
                           {startingTest === mockTest.mockTestNumber ? (
                             <ActivityIndicator size="small" color="#FFFFFF" />
                           ) : (
-                            <Ionicons name="arrow-forward-circle" size={32} color="#FFFFFF" />
+                            <Ionicons 
+                              name={mockTestResults.has(mockTest.mockTestNumber) ? "refresh" : "arrow-forward"} 
+                              size={20} 
+                              color="#FFFFFF" 
+                            />
                           )}
                         </View>
                       </View>
@@ -246,11 +302,11 @@ export default function MockTestSelectionScreen({ navigation }: MockTestSelectio
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FAFBFC',
+    backgroundColor: '#F3E8FF',
   },
   backgroundGradient: {
     flex: 1,
-    backgroundColor: '#FAFBFC',
+    backgroundColor: '#F3E8FF',
   },
   container: {
     flexGrow: 1,
@@ -317,11 +373,11 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   mockTestCard: {
-    borderRadius: radius.xl + 4,
-    padding: spacing.xl,
-    marginBottom: spacing.sm,
-    ...shadow.xl,
-    minHeight: 120,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    ...shadow.md,
+    minHeight: 90,
   },
   mockTestContent: {
     flexDirection: 'row',
@@ -334,25 +390,34 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mockTestIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: radius.xl,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    marginRight: spacing.md,
   },
   mockTestInfo: {
     flex: 1,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
   mockTestTitle: {
-    ...typography.h2,
+    ...typography.h3,
     color: '#FFFFFF',
     fontWeight: '700',
-    marginBottom: spacing.sm,
-    fontSize: 22,
+    fontSize: 18,
+  },
+  completedDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
   },
   mockTestStats: {
     flexDirection: 'row',
@@ -372,6 +437,19 @@ const styles = StyleSheet.create({
   },
   mockTestRight: {
     marginLeft: spacing.md,
+    justifyContent: 'center',
+  },
+  scoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  scoreText: {
+    ...typography.body,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });
 
