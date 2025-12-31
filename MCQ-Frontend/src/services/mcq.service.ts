@@ -342,6 +342,20 @@ export async function getLeaderboard(timeframe: 'month' | 'all-time' = 'all-time
   }
 }
 
+export async function getMockTestLeaderboard(mockTestNumber: number): Promise<LeaderboardResponse> {
+  try {
+    const response = await axiosInstance.get<LeaderboardResponse>(
+      `/api/mcq/leaderboard/mock-test/${mockTestNumber}`
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to load mock test leaderboard');
+    }
+    throw new Error('Failed to load mock test leaderboard');
+  }
+}
+
 // Test Report functions
 export async function getTestReport(sessionId: string): Promise<TestReportResponse> {
   try {

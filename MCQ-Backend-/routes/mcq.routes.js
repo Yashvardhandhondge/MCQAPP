@@ -40,6 +40,7 @@ const {
 const {
   getLeaderboard,
   getUserRank,
+  getMockTestLeaderboard,
 } = require('../controllers/leaderboard.controller');
 const {
   getExamConfig,
@@ -231,6 +232,14 @@ router.get('/leaderboard/my-rank', getUserRank);
  * @access  Private (requires authentication)
  */
 router.get('/leaderboard', getLeaderboard);
+
+/**
+ * @route   GET /api/mcq/leaderboard/mock-test/:mockTestNumber
+ * @desc    Get leaderboard rankings for a specific mock test
+ * @param   {number} mockTestNumber - Mock test number (1, 2, etc.)
+ * @access  Private (requires authentication)
+ */
+router.get('/leaderboard/mock-test/:mockTestNumber', getMockTestLeaderboard);
 
 /**
  * @route   POST /api/mcq/questions/by-ids

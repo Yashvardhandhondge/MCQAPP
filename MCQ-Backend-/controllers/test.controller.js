@@ -998,15 +998,19 @@ const getRecentActivity = async (req, res, next) => {
       }
     };
 
-    const activities = sessions.map((session) => ({
-      id: session._id.toString(),
-      title: getTestTitle(session),
-      score: `${session.score}/${session.totalQuestions}`,
-      time: formatTimeAgo(session.completedAt),
-      icon: SUBJECT_ICONS[session.subject] || '📝',
-      subject: session.subject,
-      testType: session.testType,
-    }));
+    const activities = sessions.map((session) => {
+      // For mock tests, use 200 as the total marks instead of totalQuestions
+      const totalMarks = session.testType === 'mocktest' ? 200 : session.totalQuestions;
+      return {
+        id: session._id.toString(),
+        title: getTestTitle(session),
+        score: `${session.score}/${totalMarks}`,
+        time: formatTimeAgo(session.completedAt),
+        icon: SUBJECT_ICONS[session.subject] || '📝',
+        subject: session.subject,
+        testType: session.testType,
+      };
+    });
 
     res.status(200).json({
       success: true,

@@ -13,20 +13,21 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../navigation/types';
 import { useAuth } from '../context/AuthContext';
 import { colors, radius, spacing, typography, shadow } from '../theme';
-import { getLeaderboard } from '../services/mcq.service';
+import { getMockTestLeaderboard } from '../services/mcq.service';
 import type { LeaderboardEntry } from '../types/mcq';
-import ModernCard from '../components/ui/ModernCard';
+import BackHeader from '../components/ui/BackHeader';
 
-type Timeframe = 'all-time';
+export type MockTestLeaderboardScreenProps = NativeStackScreenProps<AppStackParamList, 'MockTestLeaderboard'>;
 
-export default function LeaderboardScreen() {
+export default function MockTestLeaderboardScreen({ route }: MockTestLeaderboardScreenProps) {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { user } = useAuth();
   const isPremium = user?.subscription === 'premium';
-  const [timeframe, setTimeframe] = useState<Timeframe>('all-time');
+  const { mockTestNumber } = route.params;
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +59,7 @@ export default function LeaderboardScreen() {
       setLoading(true);
       setError(null);
       try {
-        const response = await getLeaderboard(timeframe);
+        const response = await getMockTestLeaderboard(mockTestNumber);
         if (isMounted) {
           setLeaderboard(response.data);
         }
@@ -81,7 +82,7 @@ export default function LeaderboardScreen() {
     return () => {
       isMounted = false;
     };
-  }, [timeframe]);
+  }, [mockTestNumber]);
 
   const getRankGradient = (rank: number, isCurrentUser: boolean): [string, string, ...string[]] | null => {
     if (isCurrentUser) {
@@ -103,6 +104,7 @@ export default function LeaderboardScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.backgroundGradient}>
+          <BackHeader title={`MockTest${mockTestNumber} Leaderboard`} onBack={() => navigation.goBack()} />
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Loading leaderboard...</Text>
@@ -116,6 +118,7 @@ export default function LeaderboardScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.backgroundGradient}>
+          <BackHeader title={`MockTest${mockTestNumber} Leaderboard`} onBack={() => navigation.goBack()} />
           <View style={styles.errorContainer}>
             <Ionicons name="alert-circle" size={64} color={colors.danger} />
             <Text style={styles.errorText}>{error}</Text>
@@ -139,35 +142,7 @@ export default function LeaderboardScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.backgroundGradient}>
-        {/* Sticky Header */}
-        <View style={styles.stickyHeader}>
-          <LinearGradient
-            colors={['#FFFFFF', '#F9FAFB']}
-            style={styles.stickyHeaderGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          >
-            <View style={styles.headerContent}>
-              <View style={styles.headerLeftSection}>
-                <View style={styles.headerIconContainer}>
-                  <LinearGradient
-                    colors={colors.gradientGold as [string, string, ...string[]]}
-                    style={styles.headerIconGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <Ionicons name="trophy" size={24} color="#FFFFFF" />
-                  </LinearGradient>
-                </View>
-                <View style={styles.headerTextContainer}>
-                  <Text style={styles.title}>Leaderboard</Text>
-                  <Text style={styles.subtitle}>Compete with peers and track your progress</Text>
-                </View>
-              </View>
-            </View>
-          </LinearGradient>
-        </View>
-
+        <BackHeader title={`MockTest${mockTestNumber} Leaderboard`} onBack={() => navigation.goBack()} />
         <ScrollView
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}
@@ -178,40 +153,6 @@ export default function LeaderboardScreen() {
               transform: [{ translateY: slideAnim }],
             }}
           >
-
-            {/* Timeframe Tabs */}
-            <View style={styles.tabContainer}>
-              <TouchableOpacity
-                style={[styles.tab, timeframe === 'all-time' && styles.tabActive]}
-                onPress={() => setTimeframe('all-time')}
-                activeOpacity={0.8}
-              >
-                {timeframe === 'all-time' ? (
-                  <LinearGradient
-                    colors={colors.gradientPrimary as [string, string, ...string[]]}
-                    style={styles.tabGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                  >
-                    <Text style={styles.tabTextActive}>All Time</Text>
-                  </LinearGradient>
-                ) : (
-                  <View style={styles.tabGradient}>
-                    <Text style={styles.tabText}>All Time</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.tab]}
-                onPress={() => navigation.navigate('MockTestLeaderboardSelection')}
-                activeOpacity={0.8}
-              >
-                <View style={styles.tabGradient}>
-                  <Text style={styles.tabText}>MockTest</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-
             {/* Leaderboard List */}
             {(() => {
               // Filter leaderboard: show only current user if not premium
@@ -224,7 +165,7 @@ export default function LeaderboardScreen() {
                   <View style={styles.emptyContainer}>
                     <Ionicons name="trophy-outline" size={64} color="#9CA3AF" />
                     <Text style={styles.emptyText}>No leaderboard data available</Text>
-                    <Text style={styles.emptySubtext}>Start practicing to appear on the leaderboard!</Text>
+                    <Text style={styles.emptySubtext}>Complete this mock test to appear on the leaderboard!</Text>
                   </View>
                 );
               }
@@ -253,7 +194,7 @@ export default function LeaderboardScreen() {
                               Purchase Premium
                             </Text>
                             <Text style={styles.premiumPromptSubtitle}>
-                              See your position with 1000's of other users
+                              See your position with other students who took this test
                             </Text>
                           </View>
                           <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
@@ -264,109 +205,108 @@ export default function LeaderboardScreen() {
 
                   <View style={styles.leaderboardList}>
                     {displayLeaderboard.map((entry, index) => {
-                  const gradient = getRankGradient(entry.rank, entry.isCurrentUser);
-                  const isTopThree = entry.rank <= 3;
-                  const shouldHideRank = !isPremium && entry.isCurrentUser;
-                  const rankIcon =
-                    entry.rank === 1
-                      ? 'trophy'
-                      : entry.rank === 2
-                        ? 'medal'
-                        : entry.rank === 3
-                          ? 'medal-outline'
-                          : null;
+                      const gradient = getRankGradient(entry.rank, entry.isCurrentUser);
+                      const shouldHideRank = !isPremium && entry.isCurrentUser;
+                      const rankIcon =
+                        entry.rank === 1
+                          ? 'trophy'
+                          : entry.rank === 2
+                            ? 'medal'
+                            : entry.rank === 3
+                              ? 'medal-outline'
+                              : null;
 
-                  return (
-                    <Animated.View
-                      key={entry.id}
-                      style={{
-                        opacity: fadeAnim,
-                        transform: [
-                          {
-                            translateY: slideAnim.interpolate({
-                              inputRange: [0, 30],
-                              outputRange: [0, 20 + index * 5],
-                            }),
-                          },
-                        ],
-                      }}
-                    >
-                      {gradient ? (
-                        <LinearGradient
-                          colors={gradient as [string, string, ...string[]]}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={styles.entryGradient}
+                      return (
+                        <Animated.View
+                          key={entry.id}
+                          style={{
+                            opacity: fadeAnim,
+                            transform: [
+                              {
+                                translateY: slideAnim.interpolate({
+                                  inputRange: [0, 30],
+                                  outputRange: [0, 20 + index * 5],
+                                }),
+                              },
+                            ],
+                          }}
                         >
-                          <View style={styles.entryContent}>
-                            <View style={styles.rankContainer}>
-                              {shouldHideRank ? (
-                                <View style={styles.rankBadge}>
-                                  <View style={styles.blurOverlay}>
-                                    <Ionicons name="lock-closed" size={16} color="rgba(255, 255, 255, 0.7)" />
+                          {gradient ? (
+                            <LinearGradient
+                              colors={gradient as [string, string, ...string[]]}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 1, y: 1 }}
+                              style={styles.entryGradient}
+                            >
+                              <View style={styles.entryContent}>
+                                <View style={styles.rankContainer}>
+                                  {shouldHideRank ? (
+                                    <View style={styles.rankBadge}>
+                                      <View style={styles.blurOverlay}>
+                                        <Ionicons name="lock-closed" size={16} color="rgba(255, 255, 255, 0.7)" />
+                                      </View>
+                                    </View>
+                                  ) : rankIcon ? (
+                                    <View style={styles.rankIconContainer}>
+                                      <Ionicons name={rankIcon as any} size={28} color="#FFFFFF" />
+                                    </View>
+                                  ) : (
+                                    <View style={styles.rankBadge}>
+                                      <Text style={styles.rankNumber}>{entry.rank}</Text>
+                                    </View>
+                                  )}
+                                </View>
+                                <View style={styles.userInfo}>
+                                  <View style={styles.userInfoContent}>
+                                    {entry.isCurrentUser && (
+                                      <View style={styles.currentUserBadge}>
+                                        <Ionicons name="person" size={12} color="#FFFFFF" />
+                                      </View>
+                                    )}
+                                    <Text style={styles.userName} numberOfLines={1}>{entry.name}</Text>
                                   </View>
                                 </View>
-                              ) : rankIcon ? (
-                                <View style={styles.rankIconContainer}>
-                                  <Ionicons name={rankIcon as any} size={28} color="#FFFFFF" />
+                                <View style={styles.scoreContainer}>
+                                  <Text style={styles.userScore}>{entry.score}</Text>
+                                  <Text style={styles.scoreLabel}>marks</Text>
                                 </View>
-                              ) : (
-                                <View style={styles.rankBadge}>
-                                  <Text style={styles.rankNumber}>{entry.rank}</Text>
+                              </View>
+                            </LinearGradient>
+                          ) : (
+                            <View style={styles.entryCard}>
+                              <View style={styles.entryContent}>
+                                <View style={styles.rankContainer}>
+                                  {shouldHideRank ? (
+                                    <View style={styles.rankBadgeDefault}>
+                                      <View style={styles.blurOverlayDefault}>
+                                        <Ionicons name="lock-closed" size={16} color="#9CA3AF" />
+                                      </View>
+                                    </View>
+                                  ) : (
+                                    <View style={styles.rankBadgeDefault}>
+                                      <Text style={styles.rankNumberDefault}>{entry.rank}</Text>
+                                    </View>
+                                  )}
                                 </View>
-                              )}
-                            </View>
-                            <View style={styles.userInfo}>
-                              <View style={styles.userInfoContent}>
-                                {entry.isCurrentUser && (
-                                  <View style={styles.currentUserBadge}>
-                                    <Ionicons name="person" size={12} color="#FFFFFF" />
+                                <View style={styles.userInfo}>
+                                  <View style={styles.userInfoContent}>
+                                    {entry.isCurrentUser && (
+                                      <View style={styles.currentUserBadgeDefault}>
+                                        <Ionicons name="person" size={12} color={colors.primary} />
+                                      </View>
+                                    )}
+                                    <Text style={styles.userNameDefault} numberOfLines={1}>{entry.name}</Text>
                                   </View>
-                                )}
-                                <Text style={styles.userName} numberOfLines={1}>{entry.name}</Text>
+                                </View>
+                                <View style={styles.scoreContainer}>
+                                  <Text style={styles.userScoreDefault}>{entry.score}</Text>
+                                  <Text style={styles.scoreLabelDefault}>marks</Text>
+                                </View>
                               </View>
                             </View>
-                            <View style={styles.scoreContainer}>
-                              <Text style={styles.userScore}>{entry.score}</Text>
-                              <Text style={styles.scoreLabel}>pts</Text>
-                            </View>
-                          </View>
-                        </LinearGradient>
-                      ) : (
-                        <View style={styles.entryCard}>
-                          <View style={styles.entryContent}>
-                            <View style={styles.rankContainer}>
-                              {shouldHideRank ? (
-                                <View style={styles.rankBadgeDefault}>
-                                  <View style={styles.blurOverlayDefault}>
-                                    <Ionicons name="lock-closed" size={16} color="#9CA3AF" />
-                                  </View>
-                                </View>
-                              ) : (
-                                <View style={styles.rankBadgeDefault}>
-                                  <Text style={styles.rankNumberDefault}>{entry.rank}</Text>
-                                </View>
-                              )}
-                            </View>
-                            <View style={styles.userInfo}>
-                              <View style={styles.userInfoContent}>
-                                {entry.isCurrentUser && (
-                                  <View style={styles.currentUserBadgeDefault}>
-                                    <Ionicons name="person" size={12} color={colors.primary} />
-                                  </View>
-                                )}
-                                <Text style={styles.userNameDefault} numberOfLines={1}>{entry.name}</Text>
-                              </View>
-                            </View>
-                            <View style={styles.scoreContainer}>
-                              <Text style={styles.userScoreDefault}>{entry.score}</Text>
-                              <Text style={styles.scoreLabelDefault}>pts</Text>
-                            </View>
-                          </View>
-                        </View>
-                      )}
-                    </Animated.View>
-                  );
+                          )}
+                        </Animated.View>
+                      );
                     })}
                   </View>
                 </>
@@ -387,41 +327,6 @@ const styles = StyleSheet.create({
   backgroundGradient: {
     flex: 1,
     backgroundColor: '#F3E8FF',
-  },
-  stickyHeader: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    ...shadow.sm,
-  },
-  stickyHeaderGradient: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerLeftSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    flex: 1,
-  },
-  headerIconContainer: {
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    ...shadow.sm,
-  },
-  headerIconGradient: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTextContainer: {
-    flex: 1,
   },
   container: {
     flexGrow: 1,
@@ -467,57 +372,6 @@ const styles = StyleSheet.create({
     ...typography.subtitle,
     color: '#FFFFFF',
     fontWeight: '600',
-  },
-  title: {
-    ...typography.h2,
-    color: '#111827',
-    fontWeight: '700',
-    fontSize: 24,
-    marginBottom: spacing.xs / 2,
-  },
-  subtitle: {
-    ...typography.caption,
-    color: '#6B7280',
-    fontSize: 13,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: spacing.xxl,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: radius.lg,
-    padding: spacing.xs + 2,
-    marginBottom: spacing.lg,
-    gap: spacing.xs,
-    ...shadow.sm,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  tab: {
-    flex: 1,
-    borderRadius: radius.md,
-    overflow: 'hidden',
-  },
-  tabGradient: {
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabActive: {
-    ...shadow.sm,
-  },
-  tabText: {
-    ...typography.subtitle,
-    color: '#6B7280',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  tabTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
   },
   leaderboardList: {
     gap: spacing.sm,
@@ -733,3 +587,4 @@ const styles = StyleSheet.create({
     borderColor: '#D1D5DB',
   },
 });
+

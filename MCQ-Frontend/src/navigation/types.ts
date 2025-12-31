@@ -43,4 +43,6 @@ export type AppStackParamList = {
   SavedQuestionsChapters: { subject: string };
   SavedQuestionsList: { subject: string; chapter: string };
   MockTestSelection: undefined;
+  MockTestLeaderboardSelection: undefined;
+  MockTestLeaderboard: { mockTestNumber: number };
 };
