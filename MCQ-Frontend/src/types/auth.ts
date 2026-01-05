@@ -1,7 +1,8 @@
 export interface User {
   _id: string;
   fullName: string;
-  email: string;
+  email?: string; // Optional for OTP-based login
+  phoneNumber?: string; // Phone number for OTP login
   role: string;
   group?: 'PCM' | 'PCB' | 'PCMB' | null;
   subscription?: 'free' | 'premium';
@@ -19,4 +20,14 @@ export interface AuthResponse {
 export interface ProfileResponse {
   success: boolean;
   user: User;
+}
+
+export interface SendOTPResponse {
+  success: boolean;
+  message?: string;
+  expiresIn?: number; // OTP expiry time in seconds
+}
+
+export interface VerifyOTPResponse extends AuthResponse {
+  // Same as AuthResponse - returns user and token after successful verification
 }

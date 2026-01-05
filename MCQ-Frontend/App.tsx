@@ -9,7 +9,7 @@ import ChapterDetailScreen from './src/screens/ChapterDetailScreen';
 import ChaptersScreen from './src/screens/ChaptersScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import LeaderboardScreen from './src/screens/LeaderboardScreen';
-import LoginScreen from './src/screens/LoginScreen';
+import OTPLoginScreen from './src/screens/OTPLoginScreen';
 import QuestionsScreen from './src/screens/QuestionsScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import StatsScreen from './src/screens/StatsScreen';
@@ -61,13 +61,14 @@ const appStackScreenOptions = {
 function AuthStackNavigator() {
   return (
     <AuthStack.Navigator
+      initialRouteName="OTPLogin"
       screenOptions={{
         headerShown: false,
         animation: 'fade',
         animationDuration: 300,
       }}
     >
-      <AuthStack.Screen name="Login" component={LoginScreen} />
+      <AuthStack.Screen name="OTPLogin" component={OTPLoginScreen} />
       <AuthStack.Screen name="Register" component={RegisterScreen} />
     </AuthStack.Navigator>
   );

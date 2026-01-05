@@ -1,34 +1,32 @@
 import axios from 'axios';
-import type { AuthResponse, ProfileResponse } from '../types/auth';
+import type { AuthResponse, ProfileResponse, SendOTPResponse, VerifyOTPResponse } from '../types/auth';
 import { axiosInstance } from './http';
 
 const FALLBACK_ERROR_MESSAGE = 'Something went wrong';
 
 function extractErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
-    const message = error.response?.data?.message ?? FALLBACK_ERROR_MESSAGE;
-    console.error('🔴 [AUTH ERROR]', {
-      message,
-      status: error.response?.status,
-      data: error.response?.data,
-      url: error.config?.url,
-    });
-    return message;
+    // Error is already logged in http.ts interceptor, just extract the message
+    return error.response?.data?.message ?? FALLBACK_ERROR_MESSAGE;
   }
 
-  console.error('🔴 [AUTH ERROR]', { error });
+  // Only log non-axios errors here
+  if (error instanceof Error) {
+    return error.message;
+  }
+
   return FALLBACK_ERROR_MESSAGE;
 }
 
 export async function register(
   fullName: string,
   email: string,
-  password: string,
+  phoneNumber: string,
 ): Promise<AuthResponse> {
   console.log('📝 [REGISTER] Starting registration...', {
     fullName,
     email,
-    passwordLength: password.length,
+    phoneNumber: phoneNumber.replace(/\d(?=\d{4})/g, '*'), // Mask phone number in logs
     endpoint: '/api/auth/register',
   });
 
@@ -37,7 +35,7 @@ export async function register(
     const { data } = await axiosInstance.post<AuthResponse>('/api/auth/register', {
       fullName,
       email,
-      password,
+      phoneNumber,
     });
     
     console.log('✅ [REGISTER SUCCESS]', {
@@ -48,34 +46,7 @@ export async function register(
 
     return data;
   } catch (error) {
-    console.error('❌ [REGISTER FAILED]', error);
-    throw new Error(extractErrorMessage(error));
-  }
-}
-
-export async function login(email: string, password: string): Promise<AuthResponse> {
-  console.log('🔐 [LOGIN] Starting login...', {
-    email,
-    passwordLength: password.length,
-    endpoint: '/api/auth/login',
-  });
-
-  try {
-    // Use relative URL since axiosInstance already has baseURL set
-    const { data } = await axiosInstance.post<AuthResponse>('/api/auth/login', {
-      email,
-      password,
-    });
-    
-    console.log('✅ [LOGIN SUCCESS]', {
-      user: data.user,
-      hasToken: !!data.token,
-      tokenLength: data.token?.length,
-    });
-
-    return data;
-  } catch (error) {
-    console.error('❌ [LOGIN FAILED]', error);
+    // Error details already logged in http interceptor
     throw new Error(extractErrorMessage(error));
   }
 }
@@ -95,7 +66,7 @@ export async function getProfile(): Promise<ProfileResponse> {
 
     return data;
   } catch (error) {
-    console.error('❌ [GET PROFILE FAILED]', error);
+    // Error details already logged in http interceptor
     throw new Error(extractErrorMessage(error));
   }
 }
@@ -118,7 +89,7 @@ export async function updateUserGroup(group: 'PCM' | 'PCB' | 'PCMB'): Promise<Au
 
     return data;
   } catch (error) {
-    console.error('❌ [UPDATE GROUP FAILED]', error);
+    // Error details already logged in http interceptor
     throw new Error(extractErrorMessage(error));
   }
 }
@@ -142,7 +113,55 @@ export async function upgradeSubscription(group?: 'PCM' | 'PCB' | 'PCMB'): Promi
 
     return data;
   } catch (error) {
-    console.error('❌ [UPGRADE SUBSCRIPTION FAILED]', error);
+    // Error details already logged in http interceptor
+    throw new Error(extractErrorMessage(error));
+  }
+}
+
+export async function sendOTP(phoneNumber: string): Promise<SendOTPResponse> {
+  console.log('📱 [SEND OTP] Sending OTP...', {
+    phoneNumber: phoneNumber.replace(/\d(?=\d{4})/g, '*'), // Mask phone number in logs
+    endpoint: '/api/auth/send-otp',
+  });
+
+  try {
+    const { data } = await axiosInstance.post<SendOTPResponse>('/api/auth/send-otp', {
+      phoneNumber,
+    });
+    
+    console.log('✅ [SEND OTP SUCCESS]', {
+      expiresIn: data.expiresIn,
+    });
+
+    return data;
+  } catch (error) {
+    // Error details already logged in http interceptor
+    throw new Error(extractErrorMessage(error));
+  }
+}
+
+export async function verifyOTP(phoneNumber: string, otp: string): Promise<AuthResponse> {
+  console.log('🔐 [VERIFY OTP] Verifying OTP...', {
+    phoneNumber: phoneNumber.replace(/\d(?=\d{4})/g, '*'), // Mask phone number in logs
+    otpLength: otp.length,
+    endpoint: '/api/auth/verify-otp',
+  });
+
+  try {
+    const { data } = await axiosInstance.post<VerifyOTPResponse>('/api/auth/verify-otp', {
+      phoneNumber,
+      otp,
+    });
+    
+    console.log('✅ [VERIFY OTP SUCCESS]', {
+      user: data.user,
+      hasToken: !!data.token,
+      tokenLength: data.token?.length,
+    });
+
+    return data;
+  } catch (error) {
+    // Error details already logged in http interceptor
     throw new Error(extractErrorMessage(error));
   }
 }

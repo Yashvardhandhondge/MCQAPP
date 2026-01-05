@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
-import { login as loginRequest, register as registerRequest, updateUserGroup as updateUserGroupRequest, upgradeSubscription as upgradeSubscriptionRequest } from '../services/auth.service';
+import { register as registerRequest, updateUserGroup as updateUserGroupRequest, upgradeSubscription as upgradeSubscriptionRequest, sendOTP as sendOTPRequest, verifyOTP as verifyOTPRequest } from '../services/auth.service';
 import { setAuthToken } from '../services/http';
 import type { AuthResponse, User } from '../types/auth';
 
@@ -8,8 +8,9 @@ interface AuthContextValue {
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (fullName: string, email: string, password: string) => Promise<void>;
+  register: (fullName: string, email: string, phoneNumber: string) => Promise<void>;
+  sendOTP: (phoneNumber: string) => Promise<void>;
+  loginWithOTP: (phoneNumber: string, otp: string) => Promise<void>;
   updateUserGroup: (group: 'PCM' | 'PCB' | 'PCMB') => Promise<void>;
   upgradeSubscription: (group?: 'PCM' | 'PCB' | 'PCMB') => Promise<void>;
   // Local-only profile updates (e.g. name, avatar) without hitting backend
@@ -42,44 +43,68 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleAuthError = useCallback((error: unknown, fallback: string) => {
     const message = error instanceof Error ? error.message : fallback;
-    console.error('🔴 [AUTH CONTEXT ERROR]', {
-      message,
-      error,
-    });
+    // Only log non-network errors here (network errors already logged in http interceptor)
+    if (!(error instanceof Error && error.message.includes('Request failed'))) {
+      console.error('🔴 [AUTH CONTEXT ERROR]', { message });
+    }
     throw new Error(message);
   }, []);
 
-  const login = useCallback(
-    async (email: string, password: string) => {
-      console.log('🔐 [AUTH CONTEXT] Login called', { email });
+  const register = useCallback(
+    async (fullName: string, email: string, phoneNumber: string) => {
+      console.log('📝 [AUTH CONTEXT] Register called', {
+        fullName,
+        email,
+        phoneNumber: phoneNumber.replace(/\d(?=\d{4})/g, '*'),
+      });
       setLoading(true);
       try {
-        const response = await loginRequest(email, password);
-        console.log('✅ [AUTH CONTEXT] Login request successful, applying response...');
-        applyAuthResponse(response);
-        console.log('✅ [AUTH CONTEXT] Login complete');
+        // We intentionally do NOT log the user in after registration.
+        // The flow is:
+        // 1) User signs up
+        // 2) User is redirected to OTP login screen
+        // 3) User logs in only after verifying OTP
+        await registerRequest(fullName, email, phoneNumber);
+        console.log('✅ [AUTH CONTEXT] Register request successful (no auto-login)');
       } catch (error) {
-        console.error('❌ [AUTH CONTEXT] Login failed', error);
-        handleAuthError(error, 'Unable to login');
+        console.error('❌ [AUTH CONTEXT] Register failed', error);
+        handleAuthError(error, 'Unable to register');
       } finally {
         setLoading(false);
       }
     },
-    [applyAuthResponse, handleAuthError],
+    [handleAuthError],
   );
 
-  const register = useCallback(
-    async (fullName: string, email: string, password: string) => {
-      console.log('📝 [AUTH CONTEXT] Register called', { fullName, email });
+  const sendOTP = useCallback(
+    async (phoneNumber: string) => {
+      console.log('📱 [AUTH CONTEXT] Send OTP called', { phoneNumber: phoneNumber.replace(/\d(?=\d{4})/g, '*') });
       setLoading(true);
       try {
-        const response = await registerRequest(fullName, email, password);
-        console.log('✅ [AUTH CONTEXT] Register request successful, applying response...');
-        applyAuthResponse(response);
-        console.log('✅ [AUTH CONTEXT] Register complete');
+        await sendOTPRequest(phoneNumber);
+        console.log('✅ [AUTH CONTEXT] OTP sent successfully');
       } catch (error) {
-        console.error('❌ [AUTH CONTEXT] Register failed', error);
-        handleAuthError(error, 'Unable to register');
+        // Error already logged in service layer or http interceptor
+        handleAuthError(error, 'Unable to send OTP');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [handleAuthError],
+  );
+
+  const loginWithOTP = useCallback(
+    async (phoneNumber: string, otp: string) => {
+      console.log('🔐 [AUTH CONTEXT] Login with OTP called', { phoneNumber: phoneNumber.replace(/\d(?=\d{4})/g, '*') });
+      setLoading(true);
+      try {
+        const response = await verifyOTPRequest(phoneNumber, otp);
+        console.log('✅ [AUTH CONTEXT] OTP verification successful, applying response...');
+        applyAuthResponse(response);
+        console.log('✅ [AUTH CONTEXT] Login with OTP complete');
+      } catch (error) {
+        console.error('❌ [AUTH CONTEXT] Login with OTP failed', error);
+        handleAuthError(error, 'Unable to verify OTP');
       } finally {
         setLoading(false);
       }
@@ -149,14 +174,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       token,
       loading,
-      login,
       register,
+      sendOTP,
+      loginWithOTP,
       updateUserGroup,
       upgradeSubscription,
       updateProfile,
       logout,
     }),
-    [loading, login, logout, register, updateUserGroup, upgradeSubscription, updateProfile, token, user],
+    [loading, logout, register, sendOTP, loginWithOTP, updateUserGroup, upgradeSubscription, updateProfile, token, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

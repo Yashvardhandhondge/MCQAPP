@@ -2,6 +2,12 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const validator = require('validator');
 
+// Phone number validation for Indian format (+91 followed by 10 digits)
+const validateIndianPhone = (phone) => {
+  const phoneRegex = /^\+91[6-9]\d{9}$/;
+  return phoneRegex.test(phone);
+};
+
 const userSchema = new mongoose.Schema(
   {
     fullName: {
@@ -13,20 +19,44 @@ const userSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: true,
+      required: false, // Made optional for OTP-based login
       unique: true,
+      sparse: true, // Allows multiple null values
       lowercase: true,
       trim: true,
       validate: {
-        validator: validator.isEmail,
+        validator: function(v) {
+          // Only validate if email is provided
+          if (!v) return true;
+          return validator.isEmail(v);
+        },
         message: 'Please provide a valid email address',
       },
     },
-    password: {
+    phoneNumber: {
       type: String,
       required: true,
+      unique: true,
+      trim: true,
+      validate: {
+        validator: validateIndianPhone,
+        message: 'Phone number must be in Indian format: +91 followed by 10 digits starting with 6-9',
+      },
+      index: true,
+    },
+    password: {
+      type: String,
+      required: false, // Made optional for OTP-based login
       minlength: 8,
       select: false,
+      validate: {
+        validator: function(v) {
+          // Password is required if email is provided (email/password login)
+          if (this.email && !v) return false;
+          return true;
+        },
+        message: 'Password is required when email is provided',
+      },
     },
     role: {
       type: String,
@@ -55,7 +85,8 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.pre('save', async function hashPassword(next) {
-  if (!this.isModified('password')) {
+  // Only hash password if it's modified and exists (for email/password login)
+  if (!this.isModified('password') || !this.password) {
     return next();
   }
 
