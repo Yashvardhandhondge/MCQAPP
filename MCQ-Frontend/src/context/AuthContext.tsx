@@ -1,13 +1,18 @@
-import React, { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { register as registerRequest, updateUserGroup as updateUserGroupRequest, upgradeSubscription as upgradeSubscriptionRequest, sendOTP as sendOTPRequest, verifyOTP as verifyOTPRequest } from '../services/auth.service';
 import { setAuthToken } from '../services/http';
 import type { AuthResponse, User } from '../types/auth';
 
+const AUTH_STORAGE_KEY = '@auth_token';
+const USER_STORAGE_KEY = '@auth_user';
+
 interface AuthContextValue {
   user: User | null;
   token: string | null;
   loading: boolean;
+  initializing: boolean;
   register: (fullName: string, email: string, phoneNumber: string) => Promise<void>;
   sendOTP: (phoneNumber: string) => Promise<void>;
   loginWithOTP: (phoneNumber: string, otp: string) => Promise<void>;
@@ -24,8 +29,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
 
-  const applyAuthResponse = useCallback((response: AuthResponse) => {
+  // Restore auth state from AsyncStorage on app startup
+  useEffect(() => {
+    const restoreAuthState = async () => {
+      try {
+        console.log('🔄 [AUTH CONTEXT] Restoring auth state from storage...');
+        const [storedToken, storedUser] = await Promise.all([
+          AsyncStorage.getItem(AUTH_STORAGE_KEY),
+          AsyncStorage.getItem(USER_STORAGE_KEY),
+        ]);
+
+        if (storedToken && storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            console.log('✅ [AUTH CONTEXT] Found stored auth state', {
+              userId: parsedUser?._id,
+              userName: parsedUser?.fullName,
+            });
+            setUser(parsedUser);
+            setToken(storedToken);
+            setAuthToken(storedToken);
+          } catch (parseError) {
+            console.error('❌ [AUTH CONTEXT] Failed to parse stored user data', parseError);
+            // Clear corrupted data
+            await Promise.all([
+              AsyncStorage.removeItem(AUTH_STORAGE_KEY),
+              AsyncStorage.removeItem(USER_STORAGE_KEY),
+            ]);
+          }
+        } else {
+          console.log('ℹ️ [AUTH CONTEXT] No stored auth state found');
+        }
+      } catch (error) {
+        console.error('❌ [AUTH CONTEXT] Failed to restore auth state', error);
+      } finally {
+        setInitializing(false);
+      }
+    };
+
+    restoreAuthState();
+  }, []);
+
+  const applyAuthResponse = useCallback(async (response: AuthResponse) => {
     console.log('🔄 [AUTH CONTEXT] Applying auth response...', {
       userId: response.user?._id,
       userName: response.user?.fullName,
@@ -37,8 +84,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(response.token);
     setAuthToken(response.token);
 
+    // Persist to AsyncStorage
+    try {
+      await Promise.all([
+        AsyncStorage.setItem(AUTH_STORAGE_KEY, response.token),
+        AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(response.user)),
+      ]);
+      console.log('✅ [AUTH CONTEXT] Auth state persisted to storage');
+    } catch (error) {
+      console.error('❌ [AUTH CONTEXT] Failed to persist auth state', error);
+      // Don't throw - auth still works, just won't persist
+    }
+
     console.log('✅ [AUTH CONTEXT] Auth state updated successfully');
-    // TODO: Persist token/user in AsyncStorage for automatic login on app restart.
   }, []);
 
   const handleAuthError = useCallback((error: unknown, fallback: string) => {
@@ -157,15 +215,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applyAuthResponse, handleAuthError],
   );
 
-  const updateProfile = useCallback((updates: Partial<Pick<User, 'fullName' | 'avatarUrl'>>) => {
-    setUser((prev) => (prev ? { ...prev, ...updates } : prev));
+  const updateProfile = useCallback(async (updates: Partial<Pick<User, 'fullName' | 'avatarUrl'>>) => {
+    setUser((prev) => {
+      const updated = prev ? { ...prev, ...updates } : prev;
+      
+      // Persist updated user to AsyncStorage
+      if (updated) {
+        AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updated)).catch((error) => {
+          console.error('❌ [AUTH CONTEXT] Failed to persist updated profile', error);
+        });
+      }
+      
+      return updated;
+    });
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     console.log('🚪 [AUTH CONTEXT] Logout called');
     setUser(null);
     setToken(null);
     setAuthToken(null);
+    
+    // Clear AsyncStorage
+    try {
+      await Promise.all([
+        AsyncStorage.removeItem(AUTH_STORAGE_KEY),
+        AsyncStorage.removeItem(USER_STORAGE_KEY),
+      ]);
+      console.log('✅ [AUTH CONTEXT] Auth state cleared from storage');
+    } catch (error) {
+      console.error('❌ [AUTH CONTEXT] Failed to clear auth state from storage', error);
+    }
+    
     console.log('✅ [AUTH CONTEXT] Logout complete');
   }, []);
 
@@ -174,6 +255,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       token,
       loading,
+      initializing,
       register,
       sendOTP,
       loginWithOTP,
@@ -182,7 +264,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateProfile,
       logout,
     }),
-    [loading, logout, register, sendOTP, loginWithOTP, updateUserGroup, upgradeSubscription, updateProfile, token, user],
+    [loading, initializing, logout, register, sendOTP, loginWithOTP, updateUserGroup, upgradeSubscription, updateProfile, token, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

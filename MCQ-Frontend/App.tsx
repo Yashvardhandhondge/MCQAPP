@@ -261,7 +261,12 @@ function AppStackNavigator() {
 }
 
 function RootNavigator() {
-  const { user } = useAuth();
+  const { user, initializing } = useAuth();
+  
+  // Show loading screen while checking AsyncStorage for auth state
+  if (initializing) {
+    return null; // Or you can return a loading component here
+  }
   
   if (!user) {
     return <AuthStackNavigator />;

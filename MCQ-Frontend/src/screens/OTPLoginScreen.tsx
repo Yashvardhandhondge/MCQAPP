@@ -2,7 +2,6 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 import {
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,6 +14,7 @@ import {
   TextInput,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
@@ -360,8 +360,7 @@ export default function OTPLoginScreen() {
                     </TouchableOpacity>
                   </View>
 
-                  {/* Footer Text */}
-                  <Text style={styles.footerTextCard}>Beautiful authentication experience ✨</Text>
+                  
                 </View>
               )}
 
@@ -519,8 +518,7 @@ export default function OTPLoginScreen() {
                 </View>
               )}
 
-              {/* Footer */}
-              <Text style={styles.footerText}>Beautiful authentication experience ✨</Text>
+              
             </Animated.View>
           </ScrollView>
         </SafeAreaView>
@@ -551,7 +549,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: radius.xxl + 4,
-    padding: spacing.xxl + 4,
+    padding: spacing.xl,
     ...shadow.xl,
     borderWidth: 1,
     borderColor: '#E9D5FF',
@@ -569,35 +567,35 @@ const styles = StyleSheet.create({
   },
   iconSection: {
     alignItems: 'center',
-    marginBottom: spacing.xxl,
-    marginTop: spacing.md,
+    marginBottom: spacing.lg,
+    marginTop: spacing.sm,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
+    width: 72,
+    height: 72,
     borderRadius: radius.xl + 4,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
     ...shadow.lg,
   },
   lockEmoji: {
-    fontSize: 40,
+    fontSize: 36,
   },
   title: {
     ...typography.h1,
     color: '#111827',
     fontWeight: '700',
-    marginBottom: spacing.sm,
-    fontSize: 28,
+    marginBottom: spacing.xs,
+    fontSize: 26,
   },
   subtitle: {
     ...typography.body,
     color: '#6B7280',
     textAlign: 'center',
     marginBottom: spacing.xs,
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
   },
   phoneNumberText: {
     ...typography.subtitle,
@@ -690,14 +688,16 @@ const styles = StyleSheet.create({
   otpContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.xl,
-    paddingHorizontal: spacing.sm,
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xs,
+    width: '100%',
   },
   otpInput: {
-    width: 56,
-    height: 64,
-    borderRadius: radius.xl,
+    flex: 1,
+    maxWidth: 48,
+    height: 56,
+    borderRadius: radius.lg,
     borderWidth: 2,
     borderColor: '#E5E7EB',
     backgroundColor: '#F9FAFB',
@@ -705,7 +705,8 @@ const styles = StyleSheet.create({
     ...typography.h2,
     color: '#111827',
     fontWeight: '700',
-    fontSize: 24,
+    fontSize: 22,
+    minWidth: 44,
   },
   otpInputFilled: {
     borderColor: '#6366F1',
@@ -717,8 +718,8 @@ const styles = StyleSheet.create({
   },
   resendSection: {
     alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.md,
+    gap: spacing.xs,
+    marginTop: spacing.sm,
   },
   resendLabel: {
     ...typography.caption,
@@ -794,14 +795,15 @@ const styles = StyleSheet.create({
   primaryButton: {
     borderRadius: radius.xl,
     overflow: 'hidden',
-    marginTop: spacing.xl,
+    marginTop: spacing.lg,
     ...shadow.lg,
   },
   buttonGradient: {
-    paddingVertical: spacing.lg + 2,
+    paddingVertical: spacing.md + 4,
+    paddingHorizontal: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 56,
+    minHeight: 52,
   },
   primaryButtonText: {
     ...typography.subtitle,
@@ -819,7 +821,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F3FF',
     borderRadius: radius.lg,
     padding: spacing.md + 2,
-    marginTop: spacing.xl,
+    marginTop: spacing.md,
     borderWidth: 1,
     borderColor: '#E9D5FF',
     gap: spacing.xs,

@@ -2,7 +2,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 import {
-  SafeAreaView,
+  
   ScrollView,
   StyleSheet,
   Text,
@@ -14,6 +14,7 @@ import {
   StatusBar,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
@@ -302,8 +303,7 @@ export default function RegisterScreen() {
                 </View>
               </Animated.View>
 
-              {/* Footer */}
-              <Text style={styles.footerText}>Beautiful authentication experience ✨</Text>
+            
             </Animated.View>
           </ScrollView>
         </SafeAreaView>

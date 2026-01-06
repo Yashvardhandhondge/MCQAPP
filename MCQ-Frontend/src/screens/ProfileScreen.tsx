@@ -1,14 +1,15 @@
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useRef, useEffect } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated, StatusBar, Alert } from 'react-native';
+import {  ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated, StatusBar, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { openBrowserAsync } from 'expo-web-browser';
 import { useAuth } from '../context/AuthContext';
 import type { AppStackParamList } from '../navigation/types';
 import { colors, radius, spacing, typography, shadow } from '../theme';
-import ModernCard from '../components/ui/ModernCard';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const GROUP_INFO: Record<string, { label: string; description: string; gradient: string[]; icon: string }> = {
   PCM: {
@@ -30,6 +31,33 @@ const GROUP_INFO: Record<string, { label: string; description: string; gradient:
     icon: 'school',
   },
 };
+
+const SOCIAL_MEDIA_LINKS: Array<{ name: string; url: string; icon: string; gradient: string[] }> = [
+  {
+    name: 'YouTube',
+    url: 'https://www.youtube.com/@Yash_Aradhye',
+    icon: 'logo-youtube',
+    gradient: ['#FF0000', '#CC0000'],
+  },
+  {
+    name: 'Instagram',
+    url: 'https://www.instagram.com/Yash_aradhye/',
+    icon: 'logo-instagram',
+    gradient: ['#E4405F', '#C13584'],
+  },
+  {
+    name: 'Facebook',
+    url: 'https://facebook.com/yourpage',
+    icon: 'logo-facebook',
+    gradient: ['#1877F2', '#0C63D4'],
+  },
+  {
+    name: 'Twitter',
+    url: 'https://twitter.com/yourhandle',
+    icon: 'logo-twitter',
+    gradient: ['#1DA1F2', '#0D8BD9'],
+  },
+];
 
 export default function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
@@ -76,6 +104,14 @@ export default function ProfileScreen() {
       { cancelable: true }
     );
   }, [logout]);
+
+  const handleSocialMediaPress = useCallback(async (url: string) => {
+    try {
+      await openBrowserAsync(url);
+    } catch (error) {
+      console.error('Error opening social media link:', error);
+    }
+  }, []);
 
   const groupInfo = user?.group ? GROUP_INFO[user.group] : null;
 
@@ -227,6 +263,42 @@ export default function ProfileScreen() {
                     />
                   </View>
                 </TouchableOpacity>
+
+                {/* Social media row */}
+                <View style={styles.infoCard}>
+                  <View style={styles.infoCardHeader}>
+                    <LinearGradient
+                      colors={colors.gradientPrimary as [string, string, ...string[]]}
+                      style={styles.infoIconContainer}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons name="share-social" size={20} color="#FFFFFF" />
+                    </LinearGradient>
+                    <View style={styles.infoCardContent}>
+                      <Text style={styles.infoCardLabel}>Follow us on</Text>
+                      <View style={styles.socialIconsContainer}>
+                        {SOCIAL_MEDIA_LINKS.map((social) => (
+                          <TouchableOpacity
+                            key={social.name}
+                            onPress={() => handleSocialMediaPress(social.url)}
+                            activeOpacity={0.8}
+                            style={styles.socialIconButton}
+                          >
+                            <LinearGradient
+                              colors={social.gradient as [string, string, ...string[]]}
+                              style={styles.socialIconContainer}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 1, y: 1 }}
+                            >
+                              <Ionicons name={social.icon as any} size={20} color="#FFFFFF" />
+                            </LinearGradient>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+                </View>
               </View>
 
               {/* Actions Section */}
@@ -440,5 +512,22 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontWeight: '700',
     fontSize: 15,
+  },
+  socialIconsContainer: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  socialIconButton: {
+    borderRadius: radius.md,
+    overflow: 'hidden',
+  },
+  socialIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.sm,
   },
 });
