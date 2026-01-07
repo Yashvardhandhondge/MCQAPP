@@ -632,7 +632,7 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
               />
               <Text style={[
                 styles.toggleText,
-                showWithAttempts && styles.toggleTextActive
+                showWithAttempts ? styles.toggleTextActive : undefined
               ]}>
                 {showWithAttempts ? 'Showing My Attempts' : 'Show My Attempts'}
               </Text>
@@ -778,7 +778,7 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                                     <TouchableOpacity
                                       style={[
                                         getOptionStyle(question._id, option),
-                                        isDisabled && styles.optionDisabledTouch,
+                                        isDisabled ? styles.optionDisabledTouch : undefined,
                                       ]}
                                       disabled={true}
                                     >
@@ -789,7 +789,7 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                                         <MathText
                                           style={[
                                             styles.optionText,
-                                            state?.selectedOption === option && styles.optionTextSelected,
+                                            ...(state?.selectedOption === option ? [styles.optionTextSelected] : []),
                                             styles.blurredOptionText,
                                           ]}
                                         >
@@ -815,7 +815,7 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                                 <TouchableOpacity
                                   style={[
                                     getOptionStyle(question._id, option),
-                                    isDisabled && styles.optionDisabledTouch,
+                                    isDisabled ? styles.optionDisabledTouch : undefined,
                                   ]}
                                   onPress={() => handleOptionSelect(question._id, option)}
                                   disabled={isDisabled}
@@ -828,7 +828,7 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                                     <MathText
                                       style={[
                                         styles.optionText,
-                                        state?.selectedOption === option && styles.optionTextSelected,
+                                        ...(state?.selectedOption === option ? [styles.optionTextSelected] : []),
                                       ]}
                                     >
                                       {option}
@@ -938,7 +938,7 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                             </View>
                           ) : questionStates.get(question._id)?.solution ? (
                             <MathText style={styles.solutionText}>
-                              {questionStates.get(question._id)?.solution}
+                              {questionStates.get(question._id)!.solution!}
                             </MathText>
                           ) : null}
                         </Animated.View>
