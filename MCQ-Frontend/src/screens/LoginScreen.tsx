@@ -261,16 +261,17 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    justifyContent: 'center',
     paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.xxxl,
-    paddingBottom: spacing.xxl,
+    paddingVertical: spacing.xxl,
   },
   content: {
     flex: 1,
+    justifyContent: 'center',
   },
   logoSection: {
     alignItems: 'center',
-    marginBottom: spacing.xxxl,
+    marginBottom: spacing.xxl,
   },
   logoContainer: {
     width: 88,
@@ -298,7 +299,7 @@ const styles = StyleSheet.create({
     color: colors.authTextMuted,
   },
   welcomeSection: {
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.xl,
   },
   welcomeTitle: {
     ...typography.h2,
@@ -314,11 +315,14 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.authSurface,
     borderRadius: radius.xl + 4,
-    padding: spacing.xxl + 4,
+    padding: spacing.xxl + 8,
     marginBottom: spacing.xxl,
     ...shadow.xl,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.8)',
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
   },
   loginButton: {
     borderRadius: radius.xl,

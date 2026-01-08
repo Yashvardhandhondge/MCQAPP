@@ -19,7 +19,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import type { AuthStackParamList } from '../navigation/types';
-import TabSelector from '../components/ui/TabSelector';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import { formatPhoneNumber, validatePhoneNumber } from '../utils/phoneValidation';
 
@@ -239,13 +238,6 @@ export default function OTPLoginScreen() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleTabChange = useCallback((tab: 'signup' | 'login' | 'otp') => {
-    if (tab === 'signup') {
-      navigation.navigate('Register');
-    } else if (tab === 'otp' && step === 1) {
-      // Already on OTP screen, do nothing
-    }
-  }, [navigation, step]);
 
   return (
     <KeyboardAvoidingView
@@ -272,9 +264,6 @@ export default function OTPLoginScreen() {
                 },
               ]}
             >
-              {/* Tab Selector */}
-              <TabSelector activeTab={step === 2 ? 'otp' : 'login'} onTabChange={handleTabChange} />
-
               {/* Step 1: Phone Number Input */}
               {step === 1 && (
                 <View style={styles.card}>
@@ -539,21 +528,24 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    justifyContent: 'center',
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingVertical: spacing.xxl,
   },
   content: {
     flex: 1,
+    justifyContent: 'center',
   },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: radius.xxl + 4,
-    padding: spacing.xl,
+    padding: spacing.xxl + 8,
     ...shadow.xl,
     borderWidth: 1,
     borderColor: '#E9D5FF',
     width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
   },
   backButton: {
     marginBottom: spacing.md,
@@ -567,8 +559,7 @@ const styles = StyleSheet.create({
   },
   iconSection: {
     alignItems: 'center',
-    marginBottom: spacing.lg,
-    marginTop: spacing.sm,
+    marginBottom: spacing.xl,
   },
   iconContainer: {
     width: 72,

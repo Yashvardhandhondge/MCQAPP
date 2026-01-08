@@ -19,7 +19,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import type { AuthStackParamList } from '../navigation/types';
-import TabSelector from '../components/ui/TabSelector';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import { formatPhoneNumber, validatePhoneNumber } from '../utils/phoneValidation';
 
@@ -131,11 +130,6 @@ export default function RegisterScreen() {
     }
   }, [email, fullName, phoneNumber, formattedPhone, register, navigation]);
 
-  const handleTabChange = useCallback((tab: 'signup' | 'login' | 'otp') => {
-    if (tab === 'login' || tab === 'otp') {
-      navigation.navigate('OTPLogin');
-    }
-  }, [navigation]);
 
   return (
     <KeyboardAvoidingView
@@ -162,9 +156,6 @@ export default function RegisterScreen() {
                 },
               ]}
             >
-              {/* Tab Selector */}
-              <TabSelector activeTab="signup" onTabChange={handleTabChange} />
-
               {/* Form Card */}
               <Animated.View 
                 style={[
@@ -324,24 +315,28 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    justifyContent: 'center',
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xxl,
+    paddingVertical: spacing.xxl,
   },
   content: {
     flex: 1,
+    justifyContent: 'center',
   },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: radius.xxl + 4,
-    padding: spacing.xxl,
+    padding: spacing.xxl + 8,
     ...shadow.xl,
     borderWidth: 1,
     borderColor: '#E9D5FF',
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
   },
   iconSection: {
     alignItems: 'center',
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.xl,
   },
   iconContainer: {
     width: 80,
