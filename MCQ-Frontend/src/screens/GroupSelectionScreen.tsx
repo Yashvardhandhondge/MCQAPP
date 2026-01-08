@@ -1,4 +1,4 @@
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 import {
@@ -59,9 +59,12 @@ const GROUP_OPTIONS: GroupOption[] = [
 
 export default function GroupSelectionScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  const route = useRoute();
+  const editMode = (route.params as { editMode?: boolean } | undefined)?.editMode ?? false;
+  
   const { user, updateUserGroup } = useAuth();
 
-  const [selectedGroup, setSelectedGroup] = useState<GroupType | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<GroupType | null>(user?.group || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,12 +72,12 @@ export default function GroupSelectionScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
 
-  // If user already has a group, navigate to main tabs
+  // If user already has a group and NOT in edit mode, navigate to main tabs
   useEffect(() => {
-    if (user?.group) {
+    if (user?.group && !editMode) {
       navigation.replace('MainTabs');
     }
-  }, [user?.group, navigation]);
+  }, [user?.group, navigation, editMode]);
 
   useEffect(() => {
     // Entrance animations
@@ -104,14 +107,18 @@ export default function GroupSelectionScreen() {
 
     try {
       await updateUserGroup(selectedGroup);
-      // Navigate to main tabs after successful group selection
-      navigation.replace('MainTabs');
+      // If in edit mode, go back to previous screen; otherwise navigate to main tabs
+      if (editMode) {
+        navigation.goBack();
+      } else {
+        navigation.replace('MainTabs');
+      }
     } catch (updateError) {
       const message = updateError instanceof Error ? updateError.message : 'Failed to update group';
       setError(message);
       setLoading(false);
     }
-  }, [selectedGroup, updateUserGroup, navigation]);
+  }, [selectedGroup, updateUserGroup, navigation, editMode]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -131,6 +138,15 @@ export default function GroupSelectionScreen() {
             ]}
           >
             <View style={styles.header}>
+              {editMode && (
+                <TouchableOpacity
+                  onPress={() => navigation.goBack()}
+                  style={styles.backButton}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="arrow-back" size={24} color={colors.authText} />
+                </TouchableOpacity>
+              )}
               <View style={styles.iconContainer}>
                 <LinearGradient
                   colors={colors.gradientPrimary}
@@ -139,9 +155,13 @@ export default function GroupSelectionScreen() {
                   <Ionicons name="school-outline" size={48} color="#FFFFFF" />
                 </LinearGradient>
               </View>
-              <Text style={styles.title}>Choose your subject combination</Text>
+              <Text style={styles.title}>
+                {editMode ? 'Change your stream' : 'Choose your subject combination'}
+              </Text>
               <Text style={styles.subtitle}>
-                Select your group to personalize your learning experience
+                {editMode 
+                  ? 'Select a new stream to update your profile'
+                  : 'Select your group to personalize your learning experience'}
               </Text>
             </View>
 
@@ -234,7 +254,7 @@ export default function GroupSelectionScreen() {
                 style={styles.submitButtonGradient}
               >
                 <Text style={styles.submitButtonText}>
-                  {loading ? 'Saving...' : 'Continue'}
+                  {loading ? 'Saving...' : editMode ? 'Save Changes' : 'Continue'}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -264,6 +284,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xxl,
     marginTop: spacing.lg,
+    position: 'relative',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: 40,
+    height: 40,
+    borderRadius: radius.full,
+    backgroundColor: colors.authSurface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.sm,
+    zIndex: 1,
   },
   iconContainer: {
     marginBottom: spacing.lg,

@@ -12,7 +12,7 @@ export type TabParamList = {
 };
 
 export type AppStackParamList = {
-  GroupSelection: undefined;
+  GroupSelection: { editMode?: boolean } | undefined;
   MainTabs: undefined;
   ChapterDetail: { subject: string; chapter: string; standard?: '11' | '12'; chapterNumber?: number };
   PracticeByYear: { subject: string; chapter: string; standard?: '11' | '12'; chapterNumber?: number };

@@ -113,6 +113,10 @@ export default function ProfileScreen() {
     }
   }, []);
 
+  const handleEditStream = useCallback(() => {
+    navigation.navigate('GroupSelection', { editMode: true });
+  }, [navigation]);
+
   const groupInfo = user?.group ? GROUP_INFO[user.group] : null;
 
   const selectedStreamLabel = groupInfo?.label ?? 'Select your stream';
@@ -190,7 +194,11 @@ export default function ProfileScreen() {
               {/* Info Section */}
               <View style={styles.infoSection}>
                 {/* Stream row (PCM / PCB / PCMB) */}
-                <View style={styles.infoCard}>
+                <TouchableOpacity
+                  onPress={handleEditStream}
+                  activeOpacity={0.8}
+                  style={styles.infoCard}
+                >
                   <View style={styles.infoCardHeader}>
                     <LinearGradient
                       colors={colors.gradientPrimary as [string, string, ...string[]]}
@@ -205,8 +213,15 @@ export default function ProfileScreen() {
                       <Text style={styles.infoCardValue}>{selectedStreamLabel}</Text>
                       <Text style={styles.infoCardSubtext}>{selectedStreamDescription}</Text>
                     </View>
+                    <TouchableOpacity
+                      onPress={handleEditStream}
+                      activeOpacity={0.8}
+                      style={styles.editIconButton}
+                    >
+                      <Ionicons name="pencil" size={20} color={colors.primary} />
+                    </TouchableOpacity>
                   </View>
-                </View>
+                </TouchableOpacity>
 
                 {/* Subscription row */}
                 <View style={styles.infoCard}>
@@ -529,5 +544,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...shadow.sm,
+  },
+  editIconButton: {
+    padding: spacing.xs,
+    borderRadius: radius.md,
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
   },
 });
