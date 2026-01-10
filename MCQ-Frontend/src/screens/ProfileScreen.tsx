@@ -1,7 +1,8 @@
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useCallback, useRef, useEffect } from 'react';
-import {  ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated, StatusBar, Alert } from 'react-native';
+import React, { useCallback, useRef, useEffect, useState } from 'react';
+import {  ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated, StatusBar, Alert, Platform, ActivityIndicator } from 'react-native';
+import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -10,6 +11,8 @@ import { useAuth } from '../context/AuthContext';
 import type { AppStackParamList } from '../navigation/types';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { getAppVersion, isVersionOutdated } from '../services/appVersion.service';
+import UpdateRequiredModal from '../components/UpdateRequiredModal';
 
 const GROUP_INFO: Record<string, { label: string; description: string; gradient: string[]; icon: string }> = {
   PCM: {
@@ -67,6 +70,18 @@ export default function ProfileScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
 
+  // Version state
+  const [currentVersion, setCurrentVersion] = useState('');
+  const [requiredVersion, setRequiredVersion] = useState('');
+  const [requiredVersionCode, setRequiredVersionCode] = useState<number | undefined>(undefined);
+  const [currentVersionCode, setCurrentVersionCode] = useState<number | undefined>(undefined);
+  const [updateMessage, setUpdateMessage] = useState('');
+  const [playStoreUrl, setPlayStoreUrl] = useState('');
+  const [updateUrl, setUpdateUrl] = useState('');
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [isVersionCheckLoading, setIsVersionCheckLoading] = useState(false);
+  const [isUpdateAvailable, setIsUpdateAvailable] = useState(false);
+
   useEffect(() => {
     // Entrance animations
     Animated.parallel([
@@ -82,7 +97,62 @@ export default function ProfileScreen() {
         useNativeDriver: true,
       }),
     ]).start();
+
+    // Check app version on mount
+    checkAppVersion();
   }, []);
+
+  const checkAppVersion = async () => {
+    try {
+      setIsVersionCheckLoading(true);
+      
+      // Get current app version
+      const currentVer = Constants.expoConfig?.version || '1.0.0';
+      const currentVerCode = Platform.OS === 'android' 
+        ? Constants.expoConfig?.android?.versionCode 
+        : undefined;
+      
+      setCurrentVersion(currentVer);
+      setCurrentVersionCode(currentVerCode);
+
+      // Fetch required version from backend
+      const versionResponse = await getAppVersion();
+      
+      if (versionResponse.success && versionResponse.data.isUpdateRequired) {
+        const { requiredVersion: reqVersion, requiredVersionCode, updateMessage: msg, playStoreUrl: url, updateUrl: update } = versionResponse.data;
+        
+        setRequiredVersion(reqVersion);
+        setRequiredVersionCode(requiredVersionCode);
+        setUpdateMessage(msg || 'A new version of the app is available. Please update to continue.');
+        setPlayStoreUrl(url || '');
+        setUpdateUrl(update || '');
+
+        // Check if update is needed
+        const needsUpdate = isVersionOutdated(currentVer, reqVersion, currentVerCode, requiredVersionCode);
+        setIsUpdateAvailable(needsUpdate);
+      } else {
+        setIsUpdateAvailable(false);
+      }
+    } catch (error) {
+      console.error('❌ [VERSION CHECK] Failed to check app version:', error);
+      setIsUpdateAvailable(false);
+    } finally {
+      setIsVersionCheckLoading(false);
+    }
+  };
+
+  const handleUpdateClick = () => {
+    // Show the update modal with all necessary info
+    setShowUpdateModal(true);
+  };
+
+  const handleUpdateComplete = () => {
+    setShowUpdateModal(false);
+    // Recheck version after update
+    setTimeout(() => {
+      checkAppVersion();
+    }, 1000);
+  };
 
   const handleLogout = useCallback(() => {
     Alert.alert(
@@ -279,6 +349,60 @@ export default function ProfileScreen() {
                   </View>
                 </TouchableOpacity>
 
+                {/* App Version row */}
+                <View style={styles.infoCard}>
+                  <View style={styles.infoCardHeader}>
+                    <LinearGradient
+                      colors={isUpdateAvailable ? ['#F59E0B', '#D97706'] : colors.gradientPrimary as [string, string, ...string[]]}
+                      style={styles.infoIconContainer}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons name={isUpdateAvailable ? 'arrow-up-circle' : 'information-circle'} size={20} color="#FFFFFF" />
+                    </LinearGradient>
+                    <View style={styles.infoCardContent}>
+                      <Text style={styles.infoCardLabel}>App Version</Text>
+                      {isVersionCheckLoading ? (
+                        <View style={styles.versionLoadingContainer}>
+                          <ActivityIndicator size="small" color={colors.primary} />
+                          <Text style={styles.infoCardSubtext}>Checking version...</Text>
+                        </View>
+                      ) : (
+                        <>
+                          <Text style={styles.infoCardValue}>Current: {currentVersion || '1.0.0'}</Text>
+                          {requiredVersion && (
+                            <Text style={[styles.infoCardSubtext, isUpdateAvailable && styles.updateAvailableText]}>
+                              Required: {requiredVersion}
+                            </Text>
+                          )}
+                          {isUpdateAvailable && (
+                            <TouchableOpacity
+                              onPress={handleUpdateClick}
+                              activeOpacity={0.8}
+                              style={styles.updateButtonInCard}
+                            >
+                              <LinearGradient
+                                colors={['#F59E0B', '#D97706']}
+                                style={styles.updateButtonGradient}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                              >
+                                <Ionicons name="arrow-down-circle" size={16} color="#FFFFFF" />
+                                <Text style={styles.updateButtonTextInCard}>Update Available</Text>
+                              </LinearGradient>
+                            </TouchableOpacity>
+                          )}
+                          {!isUpdateAvailable && !isVersionCheckLoading && requiredVersion && currentVersion === requiredVersion && (
+                            <Text style={[styles.infoCardSubtext, styles.versionUpToDateText]}>
+                              ✓ You're on the latest version
+                            </Text>
+                          )}
+                        </>
+                      )}
+                    </View>
+                  </View>
+                </View>
+
                 {/* Social media row */}
                 <View style={styles.infoCard}>
                   <View style={styles.infoCardHeader}>
@@ -331,6 +455,19 @@ export default function ProfileScreen() {
           </Animated.View>
         </ScrollView>
       </View>
+      
+      {/* Update Modal */}
+      <UpdateRequiredModal
+        visible={showUpdateModal}
+        updateMessage={updateMessage}
+        playStoreUrl={playStoreUrl}
+        updateUrl={updateUrl}
+        requiredVersion={requiredVersion}
+        requiredVersionCode={requiredVersionCode}
+        currentVersion={currentVersion}
+        currentVersionCode={currentVersionCode}
+        onUpdate={handleUpdateComplete}
+      />
     </SafeAreaView>
   );
 }
@@ -551,5 +688,39 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F9FF',
     borderWidth: 1,
     borderColor: colors.primary + '30',
+  },
+  versionLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  updateAvailableText: {
+    color: '#F59E0B',
+    fontWeight: '600',
+  },
+  versionUpToDateText: {
+    color: '#10B981',
+    fontWeight: '600',
+    marginTop: spacing.xs / 2,
+  },
+  updateButtonInCard: {
+    marginTop: spacing.sm,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    alignSelf: 'flex-start',
+  },
+  updateButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  updateButtonTextInCard: {
+    ...typography.caption,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
   },
 });

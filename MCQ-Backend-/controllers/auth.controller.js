@@ -312,6 +312,55 @@ const verifyOTP = async (req, res, next) => {
   }
 };
 
+/**
+ * Login with email and password
+ * POST /api/auth/login
+ * Body: { email: string, password: string }
+ */
+const login = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate inputs
+    if (!email || !password) {
+      return next(createError(400, 'Email and password are required'));
+    }
+
+    // Find user by email and include password (since select: false in schema)
+    const user = await User.findOne({ email }).select('+password');
+
+    if (!user) {
+      return next(createError(401, 'Invalid email or password'));
+    }
+
+    // Check if user has a password (admin users with email/password login)
+    if (!user.password) {
+      return next(createError(401, 'Invalid email or password'));
+    }
+
+    // Compare password
+    const isPasswordValid = await user.comparePassword(password);
+
+    if (!isPasswordValid) {
+      return next(createError(401, 'Invalid email or password'));
+    }
+
+    console.log(`[Login] User logged in via email/password: ${user._id} (${email}), role: ${user.role}`);
+
+    // Build auth payload and return
+    const response = buildAuthPayload(user);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Logged in successfully',
+      ...response,
+    });
+  } catch (error) {
+    console.error('[Login] Login error:', error);
+    return next(createError(500, 'Failed to login. Please try again.'));
+  }
+};
+
 module.exports = {
   register,
   profile,
@@ -319,5 +368,6 @@ module.exports = {
   upgradeSubscription,
   sendOTP,
   verifyOTP,
+  login,
 };
 

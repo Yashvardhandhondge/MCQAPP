@@ -69,6 +69,8 @@ const { adminAuthGuard } = require('../middleware/admin.middleware');
 const { getUserStats, getAllUsers } = require('../controllers/admin.controller');
 const { getPremiumContent, updatePremiumContent } = require('../controllers/premiumContent.controller');
 const { getUserAchievements } = require('../controllers/achievement.controller');
+const { getAppVersion, setAppVersion, disableUpdateRequirement } = require('../controllers/appVersion.controller');
+const { initiateAppUpdate, updateDownloadStatus, getMyUpdateInitiations } = require('../controllers/appUpdateInitiation.controller');
 
 const router = express.Router();
 
@@ -76,6 +78,7 @@ const router = express.Router();
  * Public endpoints (no auth required)
  */
 router.get('/premium-content', getPremiumContent);
+router.get('/app-version', getAppVersion);
 
 /**
  * Apply auth middleware to all routes below
@@ -541,5 +544,53 @@ router.get('/admin/users', ...adminAuthGuard, getAllUsers);
  * @access  Private (requires admin role)
  */
 router.put('/admin/premium-content', ...adminAuthGuard, updatePremiumContent);
+
+/**
+ * @route   PUT /api/mcq/admin/app-version
+ * @desc    Set required app version (Admin only)
+ * @body    {string} requiredVersion - Required version string (e.g., "1.0.1")
+ * @body    {number} requiredVersionCode - Required version code (e.g., 2)
+ * @body    {string} updateMessage - Optional custom update message
+ * @body    {string} playStoreUrl - Optional Play Store URL
+ * @access  Private (requires admin role)
+ */
+router.put('/admin/app-version', ...adminAuthGuard, setAppVersion);
+
+/**
+ * @route   DELETE /api/mcq/admin/app-version
+ * @desc    Disable update requirement (Admin only)
+ * @access  Private (requires admin role)
+ */
+router.delete('/admin/app-version', ...adminAuthGuard, disableUpdateRequirement);
+
+/**
+ * @route   POST /api/mcq/app-update/initiate
+ * @desc    Record when user initiates app update (clicks "Update Now")
+ * @body    {string} requiredVersion - Required version
+ * @body    {number} requiredVersionCode - Required version code
+ * @body    {string} currentVersion - User's current version
+ * @body    {number} currentVersionCode - User's current version code
+ * @body    {string} updateUrl - Update URL if provided
+ * @body    {string} playStoreUrl - Play Store URL if provided
+ * @body    {object} deviceInfo - Device information
+ * @access  Private (requires authentication)
+ */
+router.post('/app-update/initiate', initiateAppUpdate);
+
+/**
+ * @route   PUT /api/mcq/app-update/status/:initiationId
+ * @desc    Update download status (downloading, downloaded, failed, installed)
+ * @param   {string} initiationId - Update initiation ID
+ * @body    {string} downloadStatus - New status
+ * @access  Private (requires authentication)
+ */
+router.put('/app-update/status/:initiationId', updateDownloadStatus);
+
+/**
+ * @route   GET /api/mcq/app-update/my-updates
+ * @desc    Get user's update initiation history
+ * @access  Private (requires authentication)
+ */
+router.get('/app-update/my-updates', getMyUpdateInitiations);
 
 module.exports = router;
