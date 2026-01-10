@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { register as registerRequest, updateUserGroup as updateUserGroupRequest, upgradeSubscription as upgradeSubscriptionRequest, sendOTP as sendOTPRequest, verifyOTP as verifyOTPRequest } from '../services/auth.service';
 import { setAuthToken } from '../services/http';
+import { registerDeviceWithBackend, setOneSignalUserId, removeOneSignalUserId } from '../services/oneSignal.service';
 import type { AuthResponse, User } from '../types/auth';
 
 const AUTH_STORAGE_KEY = '@auth_token';
@@ -51,6 +52,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(parsedUser);
             setToken(storedToken);
             setAuthToken(storedToken);
+            
+            // Register device with OneSignal when restoring auth state
+            // Give OneSignal time to initialize (it's initialized in App.tsx)
+            setTimeout(async () => {
+              try {
+                if (parsedUser?._id) {
+                  setOneSignalUserId(parsedUser._id);
+                  // Try to register device - it will retry if OneSignal isn't ready yet
+                  await registerDeviceWithBackend();
+                }
+              } catch (error) {
+                console.error('Failed to register device on auth restore:', error);
+              }
+            }, 2000);
           } catch (parseError) {
             console.error('❌ [AUTH CONTEXT] Failed to parse stored user data', parseError);
             // Clear corrupted data
@@ -94,6 +109,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('❌ [AUTH CONTEXT] Failed to persist auth state', error);
       // Don't throw - auth still works, just won't persist
+    }
+
+    // Register device with OneSignal and backend
+    try {
+      if (response.user?._id) {
+        setOneSignalUserId(response.user._id);
+        // Delay device registration slightly to ensure OneSignal is initialized
+        setTimeout(() => {
+          registerDeviceWithBackend().catch((err) => {
+            console.error('Failed to register device with backend:', err);
+          });
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('❌ [AUTH CONTEXT] Failed to register OneSignal device', error);
+      // Don't throw - auth still works without device registration
     }
 
     console.log('✅ [AUTH CONTEXT] Auth state updated successfully');
@@ -235,6 +266,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setToken(null);
     setAuthToken(null);
+    
+    // Remove OneSignal user ID
+    try {
+      removeOneSignalUserId();
+    } catch (error) {
+      console.error('❌ [AUTH CONTEXT] Failed to remove OneSignal user ID', error);
+    }
     
     // Clear AsyncStorage
     try {

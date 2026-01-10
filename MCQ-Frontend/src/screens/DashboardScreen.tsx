@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import type { AppStackParamList } from '../navigation/types';
 import { getDashboard, getUserStats, getExamConfig, getStudyStreak, getTimeSeriesAnalytics, generateRandomTest, getRecentActivity, getUserRank } from '../services/mcq.service';
+import { getNotifications } from '../services/notification.service';
 import type { DashboardData, SubjectSummary, UserStatsData } from '../types/mcq';
 import { colors, radius, shadow, spacing, typography } from '../theme';
 import GradientButton from '../components/ui/GradientButton';
@@ -94,6 +95,7 @@ export default function DashboardScreen() {
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<UserStatsData | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [examConfig, setExamConfig] = useState<{
     daysUntilExam: number;
     targetYear: string;
@@ -207,6 +209,17 @@ export default function DashboardScreen() {
 
       if (rankResponse.status === 'fulfilled') {
         setUserRank(rankResponse.value.data.rank);
+      }
+
+      // Fetch unread notification count (non-blocking)
+      try {
+        const notificationsResponse = await getNotifications();
+        if (notificationsResponse.success) {
+          setUnreadCount(notificationsResponse.data.unreadCount);
+        }
+      } catch (notificationError) {
+        // Silently fail - notifications are not critical for dashboard
+        console.log('Failed to fetch notification count:', notificationError);
       }
     } catch (requestError) {
       const message =
@@ -332,6 +345,24 @@ export default function DashboardScreen() {
                   onPress={() => (navigation as any).getParent()?.navigate('MainTabs', { screen: 'Leaderboard' })}
                   activeOpacity={0.7}
                 >
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => navigation.navigate('Notifications')} 
+                  style={styles.notificationButton} 
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.notificationButtonContainer}>
+                    <LinearGradient colors={colors.gradientPrimary as [string, string]} style={styles.notificationGradient}>
+                      <Ionicons name="notifications-outline" size={18} color="#FFFFFF" />
+                    </LinearGradient>
+                    {unreadCount > 0 && (
+                      <View style={styles.notificationBadge}>
+                        <Text style={styles.notificationBadgeText}>
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.profileButton} activeOpacity={0.7}>
                   <LinearGradient colors={colors.gradientPrimary as [string, string]} style={styles.profileGradient}>
@@ -1125,6 +1156,43 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 14,
     lineHeight: 18,
+  },
+  notificationButton: {
+    marginRight: spacing.sm,
+  },
+  notificationButtonContainer: {
+    position: 'relative',
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    ...shadow.lg,
+  },
+  notificationGradient: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: colors.danger,
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    ...shadow.sm,
+  },
+  notificationBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   profileButton: {
     borderRadius: radius.xl,

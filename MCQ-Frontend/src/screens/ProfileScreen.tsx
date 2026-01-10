@@ -12,6 +12,7 @@ import type { AppStackParamList } from '../navigation/types';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAppVersion, isVersionOutdated } from '../services/appVersion.service';
+import { registerDeviceWithBackend, getPlayerId } from '../services/oneSignal.service';
 import UpdateRequiredModal from '../components/UpdateRequiredModal';
 
 const GROUP_INFO: Record<string, { label: string; description: string; gradient: string[]; icon: string }> = {
@@ -81,6 +82,9 @@ export default function ProfileScreen() {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [isVersionCheckLoading, setIsVersionCheckLoading] = useState(false);
   const [isUpdateAvailable, setIsUpdateAvailable] = useState(false);
+  const [notificationStatus, setNotificationStatus] = useState<'checking' | 'registered' | 'not-registered' | 'error'>('checking');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [playerId, setPlayerId] = useState<string | null>(null);
 
   useEffect(() => {
     // Entrance animations
@@ -100,7 +104,73 @@ export default function ProfileScreen() {
 
     // Check app version on mount
     checkAppVersion();
+    
+    // Check notification device registration status
+    checkNotificationStatus();
   }, []);
+
+  const checkNotificationStatus = async () => {
+    try {
+      setNotificationStatus('checking');
+      const currentPlayerId = await getPlayerId();
+      setPlayerId(currentPlayerId);
+      
+      if (currentPlayerId) {
+        // If we have a player ID, try to register/verify with backend
+        // This will update the backend if the player ID changed, or confirm if it's the same
+        const success = await registerDeviceWithBackend();
+        setNotificationStatus(success ? 'registered' : 'not-registered');
+      } else {
+        // No player ID means OneSignal isn't initialized or requires native build
+        setNotificationStatus('not-registered');
+      }
+    } catch (error) {
+      console.error('Error checking notification status:', error);
+      // If OneSignal isn't available (e.g., Expo Go), set to not-registered instead of error
+      if (error instanceof Error && (error.message.includes('native') || error.message.includes('Expo'))) {
+        setNotificationStatus('not-registered');
+      } else {
+        setNotificationStatus('error');
+      }
+    }
+  };
+
+  const handleRegisterDevice = async () => {
+    try {
+      setIsRegistering(true);
+      const success = await registerDeviceWithBackend();
+      
+      if (success) {
+        setNotificationStatus('registered');
+        Alert.alert(
+          'Success',
+          'Your device has been registered for push notifications!',
+          [{ text: 'OK' }]
+        );
+        // Recheck status to get updated player ID
+        await checkNotificationStatus();
+      } else {
+        setNotificationStatus('not-registered');
+        Alert.alert(
+          'Registration Failed',
+          Platform.OS === 'web' 
+            ? 'Push notifications are not available on web. Please use the mobile app.'
+            : 'Unable to register device. Make sure you are using a native build (not Expo Go). OneSignal requires native code to work.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Error registering device:', error);
+      setNotificationStatus('error');
+      Alert.alert(
+        'Error',
+        'Failed to register device. Please try again later.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsRegistering(false);
+    }
+  };
 
   const checkAppVersion = async () => {
     try {
@@ -348,6 +418,91 @@ export default function ProfileScreen() {
                     />
                   </View>
                 </TouchableOpacity>
+
+                {/* Push Notifications row */}
+                <View style={styles.infoCard}>
+                  <View style={styles.infoCardHeader}>
+                    <LinearGradient
+                      colors={notificationStatus === 'registered' ? colors.gradientAccent as [string, string] : notificationStatus === 'error' ? ['#EF4444', '#DC2626'] : ['#94A3B8', '#64748B']}
+                      style={styles.infoIconContainer}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons 
+                        name={notificationStatus === 'registered' ? 'notifications' : 'notifications-off-outline'} 
+                        size={20} 
+                        color="#FFFFFF" 
+                      />
+                    </LinearGradient>
+                    <View style={styles.infoCardContent}>
+                      <Text style={styles.infoCardLabel}>Push Notifications</Text>
+                      {notificationStatus === 'checking' ? (
+                        <View style={styles.versionLoadingContainer}>
+                          <ActivityIndicator size="small" color={colors.primary} />
+                          <Text style={styles.infoCardSubtext}>Checking status...</Text>
+                        </View>
+                      ) : notificationStatus === 'registered' ? (
+                        <>
+                          <Text style={[styles.infoCardValue, styles.notificationRegistered]}>Enabled</Text>
+                          <Text style={[styles.infoCardSubtext, styles.notificationRegisteredSubtext]}>
+                            You'll receive notifications from admin
+                          </Text>
+                          {playerId && (
+                            <Text style={[styles.infoCardSubtext, { fontSize: 10, marginTop: 4, fontFamily: 'monospace' }]}>
+                              Device ID: {playerId.substring(0, 8)}...
+                            </Text>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <Text style={styles.infoCardValue}>
+                            {notificationStatus === 'error' ? 'Error' : 'Not Registered'}
+                          </Text>
+                          <Text style={styles.infoCardSubtext}>
+                            {Platform.OS === 'web' 
+                              ? 'Push notifications are not available on web'
+                              : 'Register your device to receive notifications'
+                            }
+                          </Text>
+                          {Platform.OS !== 'web' && (
+                            <TouchableOpacity
+                              onPress={handleRegisterDevice}
+                              activeOpacity={0.8}
+                              style={styles.registerDeviceButton}
+                              disabled={isRegistering}
+                            >
+                              {isRegistering ? (
+                                <View style={styles.registerDeviceButtonContent}>
+                                  <ActivityIndicator size="small" color="#FFFFFF" />
+                                  <Text style={styles.registerDeviceButtonText}>Registering...</Text>
+                                </View>
+                              ) : (
+                                <LinearGradient
+                                  colors={colors.gradientPrimary as [string, string]}
+                                  style={styles.registerDeviceButtonGradient}
+                                  start={{ x: 0, y: 0 }}
+                                  end={{ x: 1, y: 0 }}
+                                >
+                                  <Ionicons name="notifications-outline" size={16} color="#FFFFFF" />
+                                  <Text style={styles.registerDeviceButtonText}>Register Device</Text>
+                                </LinearGradient>
+                              )}
+                            </TouchableOpacity>
+                          )}
+                        </>
+                      )}
+                    </View>
+                    {notificationStatus === 'registered' && (
+                      <TouchableOpacity
+                        onPress={checkNotificationStatus}
+                        activeOpacity={0.8}
+                        style={styles.refreshButton}
+                      >
+                        <Ionicons name="refresh" size={18} color={colors.primary} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
 
                 {/* App Version row */}
                 <View style={styles.infoCard}>
@@ -640,6 +795,47 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: '#FFFFFF',
     fontWeight: '700',
+    fontSize: 12,
+  },
+  registerDeviceButton: {
+    marginTop: spacing.sm,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    alignSelf: 'flex-start',
+  },
+  registerDeviceButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  registerDeviceButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  registerDeviceButtonText: {
+    ...typography.caption,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  refreshButton: {
+    padding: spacing.xs,
+    borderRadius: radius.md,
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
+  },
+  notificationRegistered: {
+    color: colors.success,
+    fontWeight: '700',
+  },
+  notificationRegisteredSubtext: {
+    color: colors.success,
     fontSize: 12,
   },
   actionsSection: {

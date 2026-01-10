@@ -77,6 +77,11 @@ const userSchema = new mongoose.Schema(
       type: [mongoose.Schema.Types.ObjectId],
       default: [],
     },
+    oneSignalPlayerId: {
+      type: String,
+      required: false,
+      default: null,
+    },
   },
   {
     timestamps: true,

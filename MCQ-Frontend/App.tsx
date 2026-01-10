@@ -1,4 +1,4 @@
-import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { DefaultTheme, NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React, { useEffect, useState, useRef } from 'react';
@@ -33,9 +33,12 @@ import SavedQuestionsListScreen from './src/screens/SavedQuestionsListScreen';
 import MockTestSelectionScreen from './src/screens/MockTestSelectionScreen';
 import MockTestLeaderboardSelectionScreen from './src/screens/MockTestLeaderboardSelectionScreen';
 import MockTestLeaderboardScreen from './src/screens/MockTestLeaderboardScreen';
+import NotificationsScreen from './src/screens/NotificationsScreen';
+import NotificationDetailScreen from './src/screens/NotificationDetailScreen';
 import BottomTabBar from './src/components/ui/BottomTabBar';
 import UpdateRequiredModal from './src/components/UpdateRequiredModal';
 import { getAppVersion, isVersionOutdated } from './src/services/appVersion.service';
+import { initializeOneSignal, setNotificationOpenedHandler, registerDeviceWithBackend, setOneSignalUserId, removeOneSignalUserId } from './src/services/oneSignal.service';
 import { colors, typography } from './src/theme';
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -264,6 +267,24 @@ function AppStackNavigator() {
           animationDuration: 300,
         }}
       />
+      <AppStack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          animationDuration: 300,
+        }}
+      />
+      <AppStack.Screen
+        name="NotificationDetail"
+        component={NotificationDetailScreen}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          animationDuration: 300,
+        }}
+      />
     </AppStack.Navigator>
   );
 }
@@ -294,6 +315,7 @@ function AppWithVersionCheck() {
   const [currentVersion, setCurrentVersion] = useState('');
   const [currentVersionCode, setCurrentVersionCode] = useState<number | undefined>(undefined);
   const appState = useRef(AppState.currentState);
+  const navigationRef = useRef<NavigationContainerRef<AppStackParamList>>(null);
 
   const checkAppVersion = async () => {
     try {
@@ -369,6 +391,25 @@ function AppWithVersionCheck() {
   };
 
   useEffect(() => {
+    // Initialize OneSignal when app starts
+    try {
+      initializeOneSignal();
+      
+      // Set up notification opened handler for navigation
+      setNotificationOpenedHandler((notificationId?: string) => {
+        // Use a small delay to ensure navigation is ready
+        setTimeout(() => {
+          if (notificationId && navigationRef.current?.isReady()) {
+            navigationRef.current.navigate('NotificationDetail', { notificationId });
+          } else if (navigationRef.current?.isReady()) {
+            navigationRef.current.navigate('Notifications');
+          }
+        }, 500);
+      });
+    } catch (error) {
+      console.error('Failed to initialize OneSignal:', error);
+    }
+
     // Check version after a short delay to ensure app is initialized
     const timer = setTimeout(() => {
       checkAppVersion();
@@ -397,7 +438,7 @@ function AppWithVersionCheck() {
 
   return (
     <>
-      <NavigationContainer theme={navigationTheme}>
+      <NavigationContainer theme={navigationTheme} ref={navigationRef}>
         <AuthProvider>
           <RootNavigator />
         </AuthProvider>

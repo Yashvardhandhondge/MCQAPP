@@ -45,4 +45,6 @@ export type AppStackParamList = {
   MockTestSelection: undefined;
   MockTestLeaderboardSelection: undefined;
   MockTestLeaderboard: { mockTestNumber: number };
+  Notifications: undefined;
+  NotificationDetail: { notificationId: string };
 };

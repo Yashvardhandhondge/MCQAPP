@@ -71,6 +71,7 @@ const { getPremiumContent, updatePremiumContent } = require('../controllers/prem
 const { getUserAchievements } = require('../controllers/achievement.controller');
 const { getAppVersion, setAppVersion, disableUpdateRequirement } = require('../controllers/appVersion.controller');
 const { initiateAppUpdate, updateDownloadStatus, getMyUpdateInitiations } = require('../controllers/appUpdateInitiation.controller');
+const notificationRoutes = require('./notification.routes');
 
 const router = express.Router();
 
@@ -592,5 +593,39 @@ router.put('/app-update/status/:initiationId', updateDownloadStatus);
  * @access  Private (requires authentication)
  */
 router.get('/app-update/my-updates', getMyUpdateInitiations);
+
+/**
+ * Notification routes (user endpoints)
+ */
+router.use('/notifications', notificationRoutes);
+
+/**
+ * Admin notification routes
+ */
+const { sendNotification, getNotificationStats, getDeviceRegistrationStats } = require('../controllers/notification.controller');
+
+/**
+ * @route   POST /api/mcq/admin/notifications/send
+ * @desc    Send notification to users (Admin only)
+ * @body    {string} title - Notification title
+ * @body    {string} message - Notification message
+ * @body    {string} targetAudience - 'premium', 'non-premium', or 'all'
+ * @access  Private (requires admin role)
+ */
+router.post('/admin/notifications/send', ...adminAuthGuard, sendNotification);
+
+/**
+ * @route   GET /api/mcq/admin/notifications/stats
+ * @desc    Get notification statistics (Admin only)
+ * @access  Private (requires admin role)
+ */
+router.get('/admin/notifications/stats', ...adminAuthGuard, getNotificationStats);
+
+/**
+ * @route   GET /api/mcq/admin/notifications/device-stats
+ * @desc    Get device registration statistics (Admin only)
+ * @access  Private (requires admin role)
+ */
+router.get('/admin/notifications/device-stats', ...adminAuthGuard, getDeviceRegistrationStats);
 
 module.exports = router;

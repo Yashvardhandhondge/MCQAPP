@@ -164,6 +164,18 @@ export default function AdminDashboardPage() {
             Dashboard
           </Link>
           <Link
+            href="/admin/notifications"
+            className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+          >
+            Send Notifications
+          </Link>
+          <Link
+            href="/admin/notifications/device-stats"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Device Stats
+          </Link>
+          <Link
             href="/admin/premium-content"
             className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
           >
