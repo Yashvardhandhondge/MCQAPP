@@ -1,7 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useRef, useEffect, useState } from 'react';
-import {  ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated, StatusBar, Alert, Platform, ActivityIndicator } from 'react-native';
+import {  ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated, StatusBar, Alert, Platform, ActivityIndicator, AppState, AppStateStatus } from 'react-native';
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -85,6 +85,7 @@ export default function ProfileScreen() {
   const [notificationStatus, setNotificationStatus] = useState<'checking' | 'registered' | 'not-registered' | 'error'>('checking');
   const [isRegistering, setIsRegistering] = useState(false);
   const [playerId, setPlayerId] = useState<string | null>(null);
+  const appState = useRef(AppState.currentState);
 
   useEffect(() => {
     // Entrance animations
@@ -107,6 +108,25 @@ export default function ProfileScreen() {
     
     // Check notification device registration status
     checkNotificationStatus();
+
+    // Listen for app state changes to recheck version when app comes to foreground
+    // This is important because after Play Store update, user returns to app
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        console.log('📱 [PROFILE VERSION CHECK] App came to foreground, rechecking version...');
+        // Recheck version when app comes to foreground
+        // This ensures that if user updates the app via Play Store and reopens, the check will run again
+        checkAppVersion();
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   const checkNotificationStatus = async () => {
@@ -182,6 +202,9 @@ export default function ProfileScreen() {
         ? Constants.expoConfig?.android?.versionCode 
         : undefined;
       
+      console.log('📱 [PROFILE VERSION CHECK] Current app version:', currentVer);
+      console.log('📱 [PROFILE VERSION CHECK] Current versionCode:', currentVerCode);
+      
       setCurrentVersion(currentVer);
       setCurrentVersionCode(currentVerCode);
 
@@ -191,6 +214,9 @@ export default function ProfileScreen() {
       if (versionResponse.success && versionResponse.data.isUpdateRequired) {
         const { requiredVersion: reqVersion, requiredVersionCode, updateMessage: msg, playStoreUrl: url, updateUrl: update } = versionResponse.data;
         
+        console.log('📱 [PROFILE VERSION CHECK] Required version:', reqVersion);
+        console.log('📱 [PROFILE VERSION CHECK] Required versionCode:', requiredVersionCode);
+        
         setRequiredVersion(reqVersion);
         setRequiredVersionCode(requiredVersionCode);
         setUpdateMessage(msg || 'A new version of the app is available. Please update to continue.');
@@ -198,13 +224,32 @@ export default function ProfileScreen() {
         setUpdateUrl(update || '');
 
         // Check if update is needed
+        // This function returns true only if current version is LESS than required version
+        // If current >= required, it returns false (no update needed)
         const needsUpdate = isVersionOutdated(currentVer, reqVersion, currentVerCode, requiredVersionCode);
+        
+        console.log('📱 [PROFILE VERSION CHECK] Update needed?', needsUpdate);
+        console.log('📱 [PROFILE VERSION CHECK] Version comparison:', {
+          currentVersion: currentVer,
+          currentVersionCode,
+          requiredVersion: reqVersion,
+          requiredVersionCode,
+          isOutdated: needsUpdate
+        });
+        
         setIsUpdateAvailable(needsUpdate);
       } else {
+        console.log('📱 [PROFILE VERSION CHECK] No update required (isUpdateRequired is false)');
         setIsUpdateAvailable(false);
+        // Clear version info if no update required
+        setRequiredVersion('');
+        setRequiredVersionCode(undefined);
+        setUpdateMessage('');
+        setPlayStoreUrl('');
+        setUpdateUrl('');
       }
     } catch (error) {
-      console.error('❌ [VERSION CHECK] Failed to check app version:', error);
+      console.error('❌ [PROFILE VERSION CHECK] Failed to check app version:', error);
       setIsUpdateAvailable(false);
     } finally {
       setIsVersionCheckLoading(false);
