@@ -66,7 +66,7 @@ const register = async (req, res, next) => {
 
     if (existingUserByPhone) {
       console.log('Found existing user ID:', existingUserByPhone._id);
-      return next(createError(409, `User with phone number ${phoneNumber} already exists`));
+      return next(createError(409, 'You already registered through this number, please login or use another number'));
     }
 
     // Create user without password (OTP-based authentication only)
@@ -180,6 +180,12 @@ const sendOTP = async (req, res, next) => {
     const phoneRegex = /^\+91[6-9]\d{9}$/;
     if (!phoneNumber || !phoneRegex.test(phoneNumber)) {
       return next(createError(400, 'Invalid phone number format. Must be in Indian format: +91 followed by 10 digits starting with 6-9'));
+    }
+
+    // Check if user exists before sending OTP (login requires existing account)
+    const existingUser = await User.findOne({ phoneNumber });
+    if (!existingUser) {
+      return next(createError(404, 'No account found with this phone number. Please sign up first.'));
     }
 
     // Delete any existing OTPs for this phone number

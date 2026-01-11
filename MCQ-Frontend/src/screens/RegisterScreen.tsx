@@ -229,7 +229,7 @@ export default function RegisterScreen() {
                       <Ionicons name="call-outline" size={20} color="#6366F1" style={styles.inputIcon} />
                       <TextInput
                         style={styles.input}
-                        placeholder="+91 98765 43210"
+                        placeholder="98765 43210"
                         placeholderTextColor="#9CA3AF"
                         value={phoneNumber}
                         onChangeText={handlePhoneChange}
