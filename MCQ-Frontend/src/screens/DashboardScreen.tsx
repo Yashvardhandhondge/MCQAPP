@@ -457,7 +457,7 @@ export default function DashboardScreen() {
                           </LinearGradient>
                         </View>
                         <Text style={styles.premiumFeatureNumber}>20K+</Text>
-                        <Text style={styles.premiumFeatureLabel}>Previous Year Questions</Text>
+                        <Text style={styles.premiumFeatureLabel}>Chapterwise PYQs</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
@@ -583,8 +583,8 @@ export default function DashboardScreen() {
                   </LinearGradient>
                   <View style={styles.metricContent}>
                     <Text style={styles.metricValue}>{stats?.overall.totalAttempts ?? 0}</Text>
-                    <Text style={styles.metricLabel}>Total Attempts</Text>
-                    <Text style={styles.metricHint}>Tap to practice subjects</Text>
+                    <Text style={styles.metricLabel} numberOfLines={2}>Total Attempts</Text>
+                    <Text style={styles.metricHint} numberOfLines={2}>Tap to practice subjects</Text>
                   </View>
                 </TouchableOpacity>
                 
@@ -594,8 +594,8 @@ export default function DashboardScreen() {
                   </LinearGradient>
                   <View style={styles.metricContent}>
                     <Text style={styles.metricValue}>{accuracyPercent}%</Text>
-                    <Text style={styles.metricLabel}>Accuracy</Text>
-                    <Text style={styles.metricHint}>Keep practicing!</Text>
+                    <Text style={styles.metricLabel} numberOfLines={2}>Accuracy</Text>
+                    <Text style={styles.metricHint} numberOfLines={2}>Keep practicing!</Text>
                   </View>
                 </View>
                 
@@ -605,8 +605,8 @@ export default function DashboardScreen() {
                   </LinearGradient>
                   <View style={styles.metricContent}>
                     <Text style={styles.metricValue}>{stats?.overall.totalCorrect ?? 0}</Text>
-                    <Text style={styles.metricLabel}>Correct Answers</Text>
-                    <Text style={styles.metricHint}>Great job!</Text>
+                    <Text style={styles.metricLabel} numberOfLines={2}>Correct Answers</Text>
+                    <Text style={styles.metricHint} numberOfLines={2}>Great job!</Text>
                   </View>
                 </View>
 
@@ -620,8 +620,8 @@ export default function DashboardScreen() {
                   </LinearGradient>
                   <View style={styles.metricContent}>
                     <Text style={styles.metricValue}>#{userRank || '--'}</Text>
-                    <Text style={styles.metricLabel}>Your Rank</Text>
-                    <Text style={styles.metricHint}>Tap to see leaderboard</Text>
+                    <Text style={styles.metricLabel} numberOfLines={2}>Your Rank</Text>
+                    <Text style={styles.metricHint} numberOfLines={2}>Tap to see leaderboard</Text>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -1321,30 +1321,38 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   metricCard: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: spacing.md,
+    justifyContent: 'flex-start',
+    gap: spacing.sm + 2,
     backgroundColor: '#F9FAFB',
     borderRadius: radius.lg,
-    padding: spacing.md + 2,
+    paddingVertical: spacing.lg + 4,
+    paddingHorizontal: spacing.md,
     flex: 1,
     minWidth: '47%',
+    minHeight: 160,
     borderWidth: 1,
     borderColor: '#F3F4F6',
   },
   metricIconContainer: {
-    width: 52,
-    height: 52,
+    width: 56,
+    height: 56,
     borderRadius: radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: spacing.xs,
     ...shadow.sm,
   },
   metricEmoji: {
     fontSize: 26,
   },
   metricContent: {
-    flex: 1,
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: spacing.xs,
+    minHeight: 80,
+    justifyContent: 'flex-start',
   },
   metricValue: {
     ...typography.h2,
@@ -1352,13 +1360,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: spacing.xs,
     fontSize: 22,
+    textAlign: 'center',
+    lineHeight: 28,
   },
   metricLabel: {
     ...typography.caption,
     color: '#374151',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     marginBottom: spacing.xs,
+    textAlign: 'center',
+    lineHeight: 18,
+    width: '100%',
   },
   todaysGoalCard: {
     backgroundColor: '#FFFFFF',
@@ -1937,6 +1950,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
     fontStyle: 'italic',
+    textAlign: 'center',
+    lineHeight: 14,
+    paddingHorizontal: spacing.xs,
   },
   quickActionsSection: {
     marginBottom: spacing.lg,

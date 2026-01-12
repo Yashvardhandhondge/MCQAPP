@@ -23,7 +23,7 @@ function DashboardMockup() {
           </div>
           <div className="bg-white/20 rounded-lg p-3 backdrop-blur">
             <div className="text-xs opacity-90">Streak</div>
-            <div className="text-xl font-bold">12 days</div>
+            <div className="text-xl font-bold">30 days</div>
           </div>
           <div className="bg-white/20 rounded-lg p-3 backdrop-blur">
             <div className="text-xs opacity-90">Rank</div>
