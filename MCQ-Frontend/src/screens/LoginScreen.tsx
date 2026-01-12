@@ -14,6 +14,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
 import { useAuth } from '../context/AuthContext';
 import type { AuthStackParamList } from '../navigation/types';
 import ModernInput from '../components/ui/ModernInput';
@@ -128,16 +129,13 @@ export default function LoginScreen() {
                     ],
                   }}
                 >
-                  <LinearGradient
-                    colors={colors.gradientPrimary}
-                    style={styles.logoContainer}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <Text style={styles.logoText}>MHT</Text>
-                  </LinearGradient>
+                  <Image
+                    source={require('../../assets/images/app-logo.png')}
+                    style={styles.logoImage}
+                    contentFit="contain"
+                  />
                 </Animated.View>
-                <Text style={styles.brandText}>MHT-CET Prep</Text>
+                <Text style={styles.brandText}>MHT CET Saarthi PYQ</Text>
                 <Text style={styles.tagline}>Your Path to Success</Text>
               </Animated.View>
 
@@ -273,20 +271,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xxl,
   },
-  logoContainer: {
-    width: 88,
-    height: 88,
-    borderRadius: radius.xl + 4,
-    justifyContent: 'center',
-    alignItems: 'center',
+  logoImage: {
+    width: 200,
+    height: 200,
     marginBottom: spacing.lg,
     ...shadow.xl,
-  },
-  logoText: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 2,
   },
   brandText: {
     ...typography.h1,
