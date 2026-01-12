@@ -351,10 +351,12 @@ export default function DashboardScreen() {
                   style={styles.notificationButton} 
                   activeOpacity={0.7}
                 >
-                  <View style={styles.notificationButtonContainer}>
-                    <LinearGradient colors={colors.gradientPrimary as [string, string]} style={styles.notificationGradient}>
-                      <Ionicons name="notifications-outline" size={18} color="#FFFFFF" />
-                    </LinearGradient>
+                  <View style={styles.notificationButtonWrapper}>
+                    <View style={styles.notificationButtonContainer}>
+                      <LinearGradient colors={colors.gradientPrimary as [string, string]} style={styles.notificationGradient}>
+                        <Ionicons name="notifications-outline" size={18} color="#FFFFFF" />
+                      </LinearGradient>
+                    </View>
                     {unreadCount > 0 && (
                       <View style={styles.notificationBadge}>
                         <Text style={styles.notificationBadgeText}>
@@ -1160,8 +1162,12 @@ const styles = StyleSheet.create({
   notificationButton: {
     marginRight: spacing.sm,
   },
-  notificationButtonContainer: {
+  notificationButtonWrapper: {
     position: 'relative',
+    width: 44,
+    height: 44,
+  },
+  notificationButtonContainer: {
     borderRadius: radius.xl,
     overflow: 'hidden',
     ...shadow.lg,
@@ -1175,24 +1181,27 @@ const styles = StyleSheet.create({
   },
   notificationBadge: {
     position: 'absolute',
-    top: -2,
-    right: -2,
-    backgroundColor: colors.danger,
-    borderRadius: 10,
-    minWidth: 18,
-    height: 18,
+    top: -6,
+    right: -6,
+    backgroundColor: '#EF4444',
+    borderRadius: 12,
+    minWidth: 22,
+    height: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4,
-    borderWidth: 2,
+    paddingHorizontal: 6,
+    borderWidth: 3,
     borderColor: '#FFFFFF',
-    ...shadow.sm,
+    zIndex: 10,
+    ...shadow.md,
   },
   notificationBadgeText: {
     color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
     textAlign: 'center',
+    lineHeight: 13,
+    includeFontPadding: false,
   },
   profileButton: {
     borderRadius: radius.xl,

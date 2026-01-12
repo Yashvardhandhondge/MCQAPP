@@ -582,6 +582,8 @@ export async function getPremiumContent(): Promise<{
       gradient: [string, string];
       icon: string;
       isPopular: boolean;
+      discountPrice?: number | null;
+      discountEndDate?: string | null;
     }>;
   };
 }> {

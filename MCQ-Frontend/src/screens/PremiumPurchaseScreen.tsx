@@ -44,6 +44,8 @@ export default function PremiumPurchaseScreen() {
       gradient: [string, string];
       icon: string;
       isPopular: boolean;
+      discountPrice?: number | null;
+      discountEndDate?: string | null;
     }>;
   } | null>(null);
   const [contentLoading, setContentLoading] = useState(true);
@@ -86,6 +88,14 @@ export default function PremiumPurchaseScreen() {
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
+
+  // Helper function to check if discount is active
+  const isDiscountActive = (plan: { discountPrice?: number | null; discountEndDate?: string | null }) => {
+    if (!plan.discountPrice || !plan.discountEndDate) return false;
+    const endDate = new Date(plan.discountEndDate);
+    const now = new Date();
+    return endDate > now;
+  };
 
   useEffect(() => {
     // Fetch premium content
@@ -433,22 +443,55 @@ export default function PremiumPurchaseScreen() {
                       </View>
 
                       <View style={styles.planChipRight}>
-                        <Text
-                          style={[
-                            styles.planChipPrice,
-                            isSelected && styles.planChipPriceSelected,
-                          ]}
-                        >
-                          ₹{plan.price}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.planChipOneTime,
-                            isSelected && styles.planChipOneTimeSelected,
-                          ]}
-                        >
-                          one-time
-                        </Text>
+                        {isDiscountActive(plan) ? (
+                          <View style={styles.discountPriceContainer}>
+                            <View style={styles.priceRow}>
+                              <Text
+                                style={[
+                                  styles.planChipPriceOriginal,
+                                  isSelected && styles.planChipPriceOriginalSelected,
+                                ]}
+                              >
+                                ₹{plan.price}
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.planChipPrice,
+                                  isSelected && styles.planChipPriceSelected,
+                                ]}
+                              >
+                                ₹{plan.discountPrice}
+                              </Text>
+                            </View>
+                            <Text
+                              style={[
+                                styles.planChipOneTime,
+                                isSelected && styles.planChipOneTimeSelected,
+                              ]}
+                            >
+                              one-time
+                            </Text>
+                          </View>
+                        ) : (
+                          <>
+                            <Text
+                              style={[
+                                styles.planChipPrice,
+                                isSelected && styles.planChipPriceSelected,
+                              ]}
+                            >
+                              ₹{plan.price}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.planChipOneTime,
+                                isSelected && styles.planChipOneTimeSelected,
+                              ]}
+                            >
+                              one-time
+                            </Text>
+                          </>
+                        )}
                       </View>
                     </View>
                   </TouchableOpacity>
@@ -742,6 +785,25 @@ const styles = StyleSheet.create({
   },
   planChipOneTimeSelected: {
     color: colors.primaryDark,
+  },
+  discountPriceContainer: {
+    alignItems: 'flex-end',
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  planChipPriceOriginal: {
+    ...typography.h3,
+    color: colors.authTextMuted,
+    fontWeight: '500',
+    fontSize: 14,
+    textDecorationLine: 'line-through',
+  },
+  planChipPriceOriginalSelected: {
+    color: colors.primaryDark,
+    opacity: 0.6,
   },
   heroSection: {
     marginBottom: spacing.xxxl,

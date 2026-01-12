@@ -17,6 +17,8 @@ interface PricingPlan {
   gradient: [string, string];
   icon: string;
   isPopular: boolean;
+  discountPrice?: number | null;
+  discountEndDate?: string | null;
 }
 
 interface PremiumContent {
@@ -328,6 +330,37 @@ export default function PremiumContentPage() {
                         type="number"
                         value={plan.price}
                         onChange={(e) => updatePricingPlan(index, 'price', parseInt(e.target.value) || 0)}
+                        className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-black dark:text-zinc-50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                        Discount Price (₹)
+                      </label>
+                      <input
+                        type="number"
+                        value={plan.discountPrice ?? ''}
+                        onChange={(e) => updatePricingPlan(index, 'discountPrice', e.target.value === '' ? null : parseInt(e.target.value) || null)}
+                        className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-black dark:text-zinc-50"
+                        placeholder="Optional"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                        Discount End Date
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={plan.discountEndDate ? (() => {
+                          const date = new Date(plan.discountEndDate);
+                          const year = date.getFullYear();
+                          const month = String(date.getMonth() + 1).padStart(2, '0');
+                          const day = String(date.getDate()).padStart(2, '0');
+                          const hours = String(date.getHours()).padStart(2, '0');
+                          const minutes = String(date.getMinutes()).padStart(2, '0');
+                          return `${year}-${month}-${day}T${hours}:${minutes}`;
+                        })() : ''}
+                        onChange={(e) => updatePricingPlan(index, 'discountEndDate', e.target.value ? new Date(e.target.value).toISOString() : null)}
                         className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-black dark:text-zinc-50"
                       />
                     </div>

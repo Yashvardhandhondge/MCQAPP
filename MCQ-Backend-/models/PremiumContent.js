@@ -99,6 +99,15 @@ const premiumContentSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
           },
+          discountPrice: {
+            type: Number,
+            min: 0,
+            default: null,
+          },
+          discountEndDate: {
+            type: Date,
+            default: null,
+          },
         },
       ],
       default: [

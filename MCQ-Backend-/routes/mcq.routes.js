@@ -602,7 +602,7 @@ router.use('/notifications', notificationRoutes);
 /**
  * Admin notification routes
  */
-const { sendNotification, getNotificationStats, getDeviceRegistrationStats } = require('../controllers/notification.controller');
+const { sendNotification, getNotificationStats, getDeviceRegistrationStats, getAllNotifications, updateNotification, deleteNotification } = require('../controllers/notification.controller');
 
 /**
  * @route   POST /api/mcq/admin/notifications/send
@@ -627,5 +627,31 @@ router.get('/admin/notifications/stats', ...adminAuthGuard, getNotificationStats
  * @access  Private (requires admin role)
  */
 router.get('/admin/notifications/device-stats', ...adminAuthGuard, getDeviceRegistrationStats);
+
+/**
+ * @route   GET /api/mcq/admin/notifications
+ * @desc    Get all notifications (Admin only)
+ * @access  Private (requires admin role)
+ */
+router.get('/admin/notifications', ...adminAuthGuard, getAllNotifications);
+
+/**
+ * @route   PUT /api/mcq/admin/notifications/:id
+ * @desc    Update notification (Admin only)
+ * @body    {string} title - Notification title (optional)
+ * @body    {string} message - Notification message (optional)
+ * @body    {string} url - Notification URL (optional)
+ * @body    {string} targetAudience - 'premium', 'non-premium', or 'all' (optional)
+ * @access  Private (requires admin role)
+ */
+router.put('/admin/notifications/:id', ...adminAuthGuard, updateNotification);
+
+/**
+ * @route   DELETE /api/mcq/admin/notifications/:id
+ * @desc    Delete notification (Admin only)
+ * @param   {string} id - Notification ID
+ * @access  Private (requires admin role)
+ */
+router.delete('/admin/notifications/:id', ...adminAuthGuard, deleteNotification);
 
 module.exports = router;

@@ -9,7 +9,7 @@ const { sendNotificationToPlayers } = require('../utils/oneSignalService');
  */
 const sendNotification = async (req, res, next) => {
   try {
-    const { title, message, targetAudience } = req.body;
+    const { title, message, targetAudience, url } = req.body;
 
     // Validate required fields
     if (!title || !message || !targetAudience) {
@@ -108,6 +108,7 @@ const sendNotification = async (req, res, next) => {
       title,
       message,
       targetAudience,
+      url: url || null,
       sentBy: req.user._id,
       sentTo: users.map((user) => user._id),
       readBy: [],
@@ -437,6 +438,116 @@ const getNotificationStats = async (req, res, next) => {
   }
 };
 
+/**
+ * Get all notifications (Admin only)
+ * GET /api/mcq/admin/notifications
+ */
+const getAllNotifications = async (req, res, next) => {
+  try {
+    const notifications = await Notification.find()
+      .populate('sentBy', 'fullName email')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Add stats to each notification
+    const notificationsWithStats = notifications.map((notification) => ({
+      ...notification,
+      sentToCount: notification.sentTo.length,
+      readByCount: notification.readBy.length,
+      readRate: notification.sentTo.length > 0 
+        ? ((notification.readBy.length / notification.sentTo.length) * 100).toFixed(2)
+        : 0,
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        notifications: notificationsWithStats,
+        totalCount: notificationsWithStats.length,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching all notifications:', error);
+    return next(createError(500, 'Failed to fetch notifications'));
+  }
+};
+
+/**
+ * Update notification (Admin only)
+ * PUT /api/mcq/admin/notifications/:id
+ */
+const updateNotification = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { title, message, url, targetAudience } = req.body;
+
+    // Find the notification
+    const notification = await Notification.findById(id);
+    if (!notification) {
+      return next(createError(404, 'Notification not found'));
+    }
+
+    // Validate required fields if provided
+    if (title !== undefined && !title.trim()) {
+      return next(createError(400, 'Title cannot be empty'));
+    }
+    if (message !== undefined && !message.trim()) {
+      return next(createError(400, 'Message cannot be empty'));
+    }
+    if (targetAudience !== undefined && !['premium', 'non-premium', 'all'].includes(targetAudience)) {
+      return next(createError(400, 'Invalid target audience. Must be: premium, non-premium, or all'));
+    }
+
+    // Update fields
+    if (title !== undefined) notification.title = title.trim();
+    if (message !== undefined) notification.message = message.trim();
+    if (url !== undefined) notification.url = url.trim() || null;
+    if (targetAudience !== undefined) notification.targetAudience = targetAudience;
+
+    await notification.save();
+
+    // Populate sentBy before returning
+    await notification.populate('sentBy', 'fullName email');
+
+    res.status(200).json({
+      success: true,
+      message: 'Notification updated successfully',
+      data: {
+        notification,
+      },
+    });
+  } catch (error) {
+    console.error('Error updating notification:', error);
+    return next(createError(500, 'Failed to update notification'));
+  }
+};
+
+/**
+ * Delete notification (Admin only)
+ * DELETE /api/mcq/admin/notifications/:id
+ */
+const deleteNotification = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const notification = await Notification.findByIdAndDelete(id);
+    if (!notification) {
+      return next(createError(404, 'Notification not found'));
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Notification deleted successfully',
+      data: {
+        notificationId: id,
+      },
+    });
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+    return next(createError(500, 'Failed to delete notification'));
+  }
+};
+
 module.exports = {
   sendNotification,
   getUserNotifications,
@@ -444,4 +555,7 @@ module.exports = {
   registerDevice,
   getNotificationStats,
   getDeviceRegistrationStats,
+  getAllNotifications,
+  updateNotification,
+  deleteNotification,
 };

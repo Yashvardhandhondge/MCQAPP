@@ -16,6 +16,7 @@ export interface Notification {
   isRead: boolean;
   createdAt: string;
   updatedAt: string;
+  url?: string;
 }
 
 export interface NotificationsResponse {

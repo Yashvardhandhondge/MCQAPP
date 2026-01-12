@@ -36,6 +36,11 @@ const notificationSchema = new mongoose.Schema(
         ref: 'User',
       },
     ],
+    url: {
+      type: String,
+      trim: true,
+      default: null,
+    },
   },
   {
     timestamps: true,
