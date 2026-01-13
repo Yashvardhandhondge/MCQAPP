@@ -4,7 +4,7 @@
     "slug": "mcqapp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/app-logo.png",
+    "icon": "./assets/images/image.png",
     "scheme": "mcqfrontend",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -17,23 +17,23 @@
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#1a3a5c",
-        "foregroundImage": "./assets/images/app-logo.png",
-        "backgroundImage": "./assets/images/app-logo.png",
-        "monochromeImage": "./assets/images/app-logo.png"
+        "foregroundImage": "./assets/images/image.png",
+        "backgroundImage": "./assets/images/image.png",
+        "monochromeImage": "./assets/images/image.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/app-logo.png"
+      "favicon": "./assets/images/image.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/app-logo.png",
+          "image": "./assets/images/image.png",
           "imageWidth": 300,
           "resizeMode": "contain",
           "backgroundColor": "#1a3a5c",
