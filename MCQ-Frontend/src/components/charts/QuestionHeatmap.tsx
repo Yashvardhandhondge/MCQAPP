@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing, typography } from '../../theme';
 
@@ -43,6 +43,8 @@ const startOfWeekMonday = (date: Date) => {
 };
 
 const QuestionHeatmap: React.FC<Props> = ({ data }) => {
+  const scrollViewRef = useRef<ScrollView>(null);
+
   const weeks = useMemo(() => {
     if (!data || data.length === 0) {
       return [] as Array<Array<{ date: string; count: number; isFuture: boolean }>>;
@@ -81,6 +83,16 @@ const QuestionHeatmap: React.FC<Props> = ({ data }) => {
     return calendar;
   }, [data]);
 
+  const handleWeeksContainerLayout = () => {
+    // After layout, scroll to the end to show most recent data (like GitHub)
+    if (scrollViewRef.current && weeks.length > 0) {
+      // Use a small delay to ensure layout is complete
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: false });
+      }, 150);
+    }
+  };
+
   if (!data || data.length === 0) {
     return (
       <View style={styles.emptyState}>
@@ -100,8 +112,16 @@ const QuestionHeatmap: React.FC<Props> = ({ data }) => {
             </Text>
           ))}
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.weeksContainer}>
+        <ScrollView 
+          ref={scrollViewRef}
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <View 
+            style={styles.weeksContainer}
+            onLayout={handleWeeksContainerLayout}
+          >
             {weeks.map((week, idx) => (
               <View key={`week-${idx}`} style={styles.weekColumn}>
                 {week.map((day) => (
@@ -153,6 +173,9 @@ const styles = StyleSheet.create({
   dayLabel: {
     ...typography.caption,
     color: colors.authTextMuted,
+  },
+  scrollContent: {
+    paddingRight: spacing.sm,
   },
   weeksContainer: {
     flexDirection: 'row',

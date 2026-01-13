@@ -50,16 +50,10 @@ const SOCIAL_MEDIA_LINKS: Array<{ name: string; url: string; icon: string; gradi
     gradient: ['#E4405F', '#C13584'],
   },
   {
-    name: 'Facebook',
-    url: 'https://facebook.com/yourpage',
-    icon: 'logo-facebook',
-    gradient: ['#1877F2', '#0C63D4'],
-  },
-  {
-    name: 'Twitter',
-    url: 'https://twitter.com/yourhandle',
-    icon: 'logo-twitter',
-    gradient: ['#1DA1F2', '#0D8BD9'],
+    name: 'WhatsApp',
+    url: 'https://wa.me/yournumber',
+    icon: 'logo-whatsapp',
+    gradient: ['#25D366', '#128C7E'],
   },
 ];
 

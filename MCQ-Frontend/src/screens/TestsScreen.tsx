@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import ModernCard from '../components/ui/ModernCard';
 import GradientButton from '../components/ui/GradientButton';
+import BackHeader from '../components/ui/BackHeader';
 import { getDistinctYears, generateRandomTest } from '../services/mcq.service';
 
 type FilterType = 'year' | 'subject';
@@ -240,6 +241,18 @@ export default function TestsScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.backgroundGradient}>
+        {showTestOptions ? (
+          <BackHeader 
+            title="PYQ Tests" 
+            subtitle="Previous Year Question Papers"
+            onBack={() => setShowTestOptions(false)} 
+          />
+        ) : (
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>PYQ Tests</Text>
+            <Text style={styles.headerSubtitle}>Previous Year Question Papers</Text>
+          </View>
+        )}
         <ScrollView
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}
@@ -250,121 +263,59 @@ export default function TestsScreen() {
               transform: [{ translateY: slideAnim }],
             }}
           >
-            {/* Header - Show PYQ banner only on initial screen */}
-            {!showTestOptions && (
-              <LinearGradient
-                colors={colors.gradientPrimary as [string, string, ...string[]]}
-                style={styles.headerGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <View style={styles.headerContent}>
-                  <View style={styles.headerIconContainer}>
-                    <Ionicons name="document-text" size={32} color="#FFFFFF" />
-                  </View>
-                  <View style={styles.headerTextContainer}>
-                    <Text style={styles.title}>PYQ Tests</Text>
-                    <Text style={styles.subtitle}>Previous Year Question Papers</Text>
-                  </View>
-                </View>
-              </LinearGradient>
-            )}
 
-            {/* Back Button Header - Show when test options are visible */}
-            {showTestOptions && (
-              <View style={styles.backHeader}>
+            {/* Initial Simple UI - Show only if test options are not shown */}
+            {!showTestOptions && (
+              <View style={styles.initialCardsContainer}>
+                {/* Start Random Test Card */}
                 <TouchableOpacity
-                  onPress={() => setShowTestOptions(false)}
+                  onPress={() => setShowTestOptions(true)}
                   activeOpacity={0.7}
-                  style={styles.backButton}
+                  style={styles.initialCard}
                 >
-                  <Ionicons name="arrow-back" size={24} color={colors.authText} />
-                  <Text style={styles.backButtonText}>Back</Text>
+                  <View style={styles.initialCardContent}>
+                    <View style={styles.initialCardLeft}>
+                      <View style={styles.initialCardIconContainer}>
+                        <Ionicons name="shuffle" size={24} color={colors.primary} />
+                      </View>
+                      <View style={styles.initialCardText}>
+                        <Text style={styles.initialCardTitle}>Start Random Test</Text>
+                        <Text style={styles.initialCardSubtitle}>
+                          Practice with random questions
+                        </Text>
+                      </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.authTextMuted} />
+                  </View>
+                </TouchableOpacity>
+
+                {/* Give Mock Test Card */}
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('MockTestSelection')}
+                  activeOpacity={0.7}
+                  style={styles.initialCard}
+                >
+                  <View style={styles.initialCardContent}>
+                    <View style={styles.initialCardLeft}>
+                      <View style={styles.initialCardIconContainer}>
+                        <Ionicons name="document-text" size={24} color={colors.primary} />
+                      </View>
+                      <View style={styles.initialCardText}>
+                        <Text style={styles.initialCardTitle}>Give Mock Test</Text>
+                        <Text style={styles.initialCardSubtitle}>
+                          Full-length MHT CET mock tests
+                        </Text>
+                      </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.authTextMuted} />
+                  </View>
                 </TouchableOpacity>
               </View>
             )}
 
-            {/* Initial Simple UI - Show only if test options are not shown */}
-            {!showTestOptions && (
-              <Animated.View
-                style={{
-                  opacity: fadeAnim,
-                  transform: [{ translateY: slideAnim }],
-                }}
-              >
-                <View style={styles.initialCardsContainer}>
-                  {/* Start Random Test Card */}
-                  <TouchableOpacity
-                    onPress={() => setShowTestOptions(true)}
-                    activeOpacity={0.85}
-                    style={styles.testCard}
-                  >
-                    <LinearGradient
-                      colors={colors.gradientPrimary as [string, string, ...string[]]}
-                      style={styles.testCardGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <View style={styles.testCardContent}>
-                        <View style={styles.testCardLeft}>
-                          <View style={styles.testCardIconContainer}>
-                            <Ionicons name="shuffle" size={32} color="#FFFFFF" />
-                          </View>
-                          <View style={styles.testCardText}>
-                            <Text style={styles.testCardTitle}>Start Random Test</Text>
-                            <Text style={styles.testCardSubtitle}>
-                              Practice with random questions
-                            </Text>
-                          </View>
-                        </View>
-                        <Ionicons name="arrow-forward-circle" size={28} color="#FFFFFF" />
-                      </View>
-                    </LinearGradient>
-                  </TouchableOpacity>
-
-                  {/* Give Mock Test Card */}
-                  <TouchableOpacity
-                    onPress={() => navigation.navigate('MockTestSelection')}
-                    activeOpacity={0.85}
-                    style={styles.testCard}
-                  >
-                    <LinearGradient
-                      colors={colors.gradientAccent as [string, string, ...string[]]}
-                      style={styles.testCardGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <View style={styles.testCardContent}>
-                        <View style={styles.testCardLeft}>
-                          <View style={styles.testCardIconContainer}>
-                            <Ionicons name="document-text" size={32} color="#FFFFFF" />
-                          </View>
-                          <View style={styles.testCardText}>
-                            <Text style={styles.testCardTitle}>Give Mock Test</Text>
-                            <Text style={styles.testCardSubtitle}>
-                              Full-length MHT CET mock tests
-                            </Text>
-                          </View>
-                        </View>
-                        <Ionicons name="arrow-forward-circle" size={28} color="#FFFFFF" />
-                      </View>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </View>
-              </Animated.View>
-            )}
-
             {/* Full Test Options UI - Show only if test options are shown */}
             {showTestOptions && (
-              <>
-                {/* Main Test Mode Selection */}
-                <Animated.View
-                  style={{
-                    opacity: fadeAnim,
-                    transform: [{ translateY: slideAnim }],
-                  }}
-                >
-              <ModernCard variant="elevated" padding="lg" style={styles.mainSectionCard}>
+              <View style={styles.contentCard}>
                 {/* Mode Selection Tabs */}
                 <View style={styles.modeContainer}>
                   <TouchableOpacity
@@ -381,7 +332,7 @@ export default function TestsScreen() {
                       >
                         <Ionicons 
                           name="list" 
-                          size={20} 
+                          size={18} 
                           color="#FFFFFF" 
                           style={{ marginRight: spacing.xs }}
                         />
@@ -393,7 +344,7 @@ export default function TestsScreen() {
                       <View style={styles.modeTabInactive}>
                         <Ionicons 
                           name="list" 
-                          size={20} 
+                          size={18} 
                           color={colors.authTextMuted} 
                           style={{ marginRight: spacing.xs }}
                         />
@@ -417,7 +368,7 @@ export default function TestsScreen() {
                       >
                         <Ionicons 
                           name="shuffle" 
-                          size={20} 
+                          size={18} 
                           color="#FFFFFF" 
                           style={{ marginRight: spacing.xs }}
                         />
@@ -429,7 +380,7 @@ export default function TestsScreen() {
                       <View style={styles.modeTabInactive}>
                         <Ionicons 
                           name="shuffle" 
-                          size={20} 
+                          size={18} 
                           color={colors.authTextMuted} 
                           style={{ marginRight: spacing.xs }}
                         />
@@ -444,11 +395,7 @@ export default function TestsScreen() {
                 {/* Content based on selected mode */}
                 {testMode === 'random' ? (
                   <View style={styles.randomTestSection}>
-                    <View style={styles.randomTestHeader}>
-                      <Ionicons name="shuffle" size={24} color={colors.primary} />
-                      <Text style={styles.randomTestSectionTitle}>Random Practice Test</Text>
-                    </View>
-                    <Text style={styles.randomTestSectionSubtitle}>
+                    <Text style={styles.sectionSubtitle}>
                       Get 10, 50, or 100 random questions from all subjects
                     </Text>
                     <View style={styles.randomTestOptions}>
@@ -457,35 +404,25 @@ export default function TestsScreen() {
                           key={option.count}
                           onPress={() => handleGenerateRandomTest(option.count)}
                           disabled={generatingRandom === option.count}
-                          activeOpacity={0.85}
-                          style={styles.randomTestOptionWrapper}
+                          activeOpacity={0.7}
+                          style={styles.randomTestCard}
                         >
-                          <LinearGradient
-                            colors={colors.gradientPrimary as [string, string, ...string[]]}
-                            style={[
-                              styles.randomTestOptionCard,
-                              generatingRandom === option.count && styles.randomTestOptionCardLoading,
-                            ]}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                          >
+                          <View style={styles.randomTestCardContent}>
+                            <View style={styles.randomTestCardLeft}>
+                              <View style={styles.randomTestIconContainer}>
+                                <Ionicons name="shuffle" size={24} color={colors.primary} />
+                              </View>
+                              <View style={styles.randomTestInfo}>
+                                <Text style={styles.randomTestTitle}>{option.count} Questions</Text>
+                                <Text style={styles.randomTestSubtitle}>Random practice test</Text>
+                              </View>
+                            </View>
                             {generatingRandom === option.count ? (
-                              <View style={styles.randomTestOptionLoadingContainer}>
-                                <ActivityIndicator color="#FFFFFF" size="large" />
-                                <Text style={styles.randomTestOptionLoadingText}>Generating...</Text>
-                              </View>
+                              <ActivityIndicator size="small" color={colors.primary} />
                             ) : (
-                              <View style={styles.randomTestOptionContent}>
-                                <View style={styles.randomTestOptionNumberContainer}>
-                                  <Text style={styles.randomTestOptionCount}>{option.count}</Text>
-                                  <Text style={styles.randomTestOptionLabel}>Questions</Text>
-                                </View>
-                                <View style={styles.randomTestOptionArrowContainer}>
-                                  <Ionicons name="arrow-forward-circle" size={32} color="#FFFFFF" />
-                                </View>
-                              </View>
+                              <Ionicons name="chevron-forward" size={20} color={colors.authTextMuted} />
                             )}
-                          </LinearGradient>
+                          </View>
                         </TouchableOpacity>
                       ))}
                     </View>
@@ -497,7 +434,7 @@ export default function TestsScreen() {
                       <TouchableOpacity
                         style={[styles.filterTab, filter === 'year' && styles.filterTabActive]}
                         onPress={() => setFilter('year')}
-                        activeOpacity={0.8}
+                        activeOpacity={0.7}
                       >
                         <LinearGradient
                           colors={filter === 'year' ? (colors.gradientPrimary as [string, string, ...string[]]) : (['transparent', 'transparent'] as [string, string, ...string[]])}
@@ -518,7 +455,7 @@ export default function TestsScreen() {
                       <TouchableOpacity
                         style={[styles.filterTab, filter === 'subject' && styles.filterTabActive]}
                         onPress={() => setFilter('subject')}
-                        activeOpacity={0.8}
+                        activeOpacity={0.7}
                       >
                         <LinearGradient
                           colors={filter === 'subject' ? (colors.gradientPrimary as [string, string, ...string[]]) : (['transparent', 'transparent'] as [string, string, ...string[]])}
@@ -571,26 +508,30 @@ export default function TestsScreen() {
                               <TouchableOpacity
                                 onPress={() => handleStartYearTest(year)}
                                 disabled={generatingYearTest === year}
-                                activeOpacity={0.85}
+                                activeOpacity={0.7}
+                                style={styles.yearCard}
                               >
-                                <ModernCard variant="elevated" padding="lg" style={styles.yearCard}>
-                                  <View style={styles.yearCardContent}>
+                                <View style={styles.yearCardContent}>
+                                  <View style={styles.yearCardLeft}>
                                     <View style={styles.yearIconContainer}>
-                                      <Ionicons name="calendar" size={28} color={colors.primary} />
+                                      <Ionicons name="calendar" size={24} color={colors.primary} />
                                     </View>
                                     <View style={styles.yearInfo}>
-                                      <Text style={styles.yearTitle}>MHT CET PYQ {year}</Text>
+                                      <Text style={styles.yearTitle}>MHT CET PYQ</Text>
+                                      <Text style={styles.yearYear}>{year}</Text>
                                       <Text style={styles.yearSubtitle}>
                                         Random questions from {year}
                                       </Text>
                                     </View>
+                                  </View>
+                                  <View style={styles.yearCardRight}>
                                     {generatingYearTest === year ? (
                                       <ActivityIndicator size="small" color={colors.primary} />
                                     ) : (
-                                      <Ionicons name="arrow-forward" size={24} color={colors.primary} />
+                                      <Ionicons name="chevron-forward" size={20} color={colors.authTextMuted} />
                                     )}
                                   </View>
-                                </ModernCard>
+                                </View>
                               </TouchableOpacity>
                             </Animated.View>
                           ))}
@@ -616,17 +557,13 @@ export default function TestsScreen() {
                             <TouchableOpacity
                               onPress={() => handleStartSubjectTest(subject.name)}
                               disabled={generatingSubjectTest === subject.name}
-                              activeOpacity={0.85}
+                              activeOpacity={0.7}
+                              style={styles.subjectCard}
                             >
-                              <LinearGradient
-                                colors={[subject.color, `${subject.color}CC`] as [string, string, ...string[]]}
-                                style={styles.subjectCard}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                              >
-                                <View style={styles.subjectCardContent}>
+                              <View style={styles.subjectCardContent}>
+                                <View style={styles.subjectCardLeft}>
                                   <View style={styles.subjectIconContainer}>
-                                    <Ionicons name={subject.icon as any} size={32} color="#FFFFFF" />
+                                    <Ionicons name={subject.icon as any} size={24} color={colors.primary} />
                                   </View>
                                   <View style={styles.subjectInfo}>
                                     <Text style={styles.subjectTitle}>{subject.name}</Text>
@@ -634,13 +571,15 @@ export default function TestsScreen() {
                                       Random questions from {subject.name}
                                     </Text>
                                   </View>
+                                </View>
+                                <View style={styles.subjectCardRight}>
                                   {generatingSubjectTest === subject.name ? (
-                                    <ActivityIndicator size="small" color="#FFFFFF" />
+                                    <ActivityIndicator size="small" color={colors.primary} />
                                   ) : (
-                                    <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
+                                    <Ionicons name="chevron-forward" size={20} color={colors.authTextMuted} />
                                   )}
                                 </View>
-                              </LinearGradient>
+                              </View>
                             </TouchableOpacity>
                           </Animated.View>
                         ))}
@@ -648,9 +587,7 @@ export default function TestsScreen() {
                     )}
                   </View>
                 )}
-              </ModernCard>
-                </Animated.View>
-              </>
+              </View>
             )}
           </Animated.View>
         </ScrollView>
@@ -671,8 +608,23 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.xxxl,
+    paddingTop: spacing.lg,
     paddingBottom: 100,
+  },
+  header: {
+    paddingHorizontal: spacing.xxl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.lg,
+  },
+  headerTitle: {
+    ...typography.h1,
+    color: colors.authText,
+    fontWeight: '700',
+    marginBottom: spacing.xs,
+  },
+  headerSubtitle: {
+    ...typography.body,
+    color: colors.authTextSecondary,
   },
   loadingContainer: {
     flex: 1,
@@ -713,181 +665,110 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
   },
-  headerGradient: {
-    borderRadius: radius.xl + 6,
-    padding: spacing.xxl,
-    marginBottom: spacing.xxl,
-    ...shadow.xl,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: radius.xl + 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.lg,
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
-  header: {
-    marginBottom: spacing.xxl,
-  },
-  title: {
-    ...typography.h1,
-    color: '#FFFFFF',
-    fontWeight: '800',
-    marginBottom: spacing.xs,
-    fontSize: 26,
-  },
-  subtitle: {
-    ...typography.subtitle,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 15,
-  },
-  backHeader: {
-    marginBottom: spacing.lg,
-    paddingTop: spacing.sm,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  backButtonText: {
-    ...typography.subtitle,
-    color: '#111827',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  mainSectionCard: {
-    marginBottom: spacing.xl,
-    borderRadius: radius.xl + 4,
-    ...shadow.xl,
+  contentCard: {
+    backgroundColor: colors.authSurface,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    ...shadow.md,
   },
   modeContainer: {
     flexDirection: 'row',
     backgroundColor: '#F9FAFB',
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     padding: spacing.xs + 2,
     marginBottom: spacing.xl,
     gap: spacing.xs,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    ...shadow.sm,
   },
   modeTab: {
     flex: 1,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     overflow: 'hidden',
   },
   modeTabGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.md + 2,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
   },
   modeTabInactive: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.md + 2,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     backgroundColor: 'transparent',
   },
   modeTabActive: {
-    ...shadow.md,
+    ...shadow.sm,
   },
   modeText: {
     ...typography.subtitle,
-    color: '#6B7280',
+    color: colors.authTextMuted,
     fontWeight: '600',
-    fontSize: 15,
+    fontSize: 14,
   },
   modeTextActive: {
     color: '#FFFFFF',
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: 14,
   },
   randomTestSection: {
     paddingTop: spacing.md,
   },
-  randomTestHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-    gap: spacing.sm,
-  },
-  randomTestSectionTitle: {
-    ...typography.h2,
-    color: '#111827',
-    fontWeight: '700',
-    fontSize: 20,
-  },
-  randomTestSectionSubtitle: {
+  sectionSubtitle: {
     ...typography.body,
-    color: '#6B7280',
-    marginBottom: spacing.xl,
+    color: colors.authTextSecondary,
+    marginBottom: spacing.lg,
     fontSize: 14,
   },
   randomTestOptions: {
-    gap: spacing.lg,
+    gap: spacing.md,
   },
-  randomTestOptionWrapper: {
-    width: '100%',
+  randomTestCard: {
+    backgroundColor: colors.authSurface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.authBorder,
+    ...shadow.sm,
   },
-  randomTestOptionCard: {
-    borderRadius: radius.xl + 4,
-    padding: spacing.xxl,
-    ...shadow.lg,
-    minHeight: 120,
-  },
-  randomTestOptionCardLoading: {
-    opacity: 0.8,
-  },
-  randomTestOptionContent: {
+  randomTestCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  randomTestOptionNumberContainer: {
+  randomTestCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
   },
-  randomTestOptionCount: {
-    ...typography.h1,
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 48,
-    marginBottom: spacing.xs,
-    lineHeight: 56,
-  },
-  randomTestOptionLabel: {
-    ...typography.body,
-    color: 'rgba(255, 255, 255, 0.95)',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  randomTestOptionArrowContainer: {
-    marginLeft: spacing.lg,
-  },
-  randomTestOptionLoadingContainer: {
-    alignItems: 'center',
+  randomTestIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: colors.primarySoft,
     justifyContent: 'center',
-    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    marginRight: spacing.md,
   },
-  randomTestOptionLoadingText: {
+  randomTestInfo: {
+    flex: 1,
+  },
+  randomTestTitle: {
+    ...typography.h3,
+    color: colors.authText,
+    fontWeight: '700',
+    fontSize: 17,
+    marginBottom: spacing.xs,
+  },
+  randomTestSubtitle: {
     ...typography.body,
-    color: '#FFFFFF',
-    marginTop: spacing.md,
-    fontWeight: '600',
+    color: colors.authTextSecondary,
+    fontSize: 13,
   },
   selectPracticeSection: {
     paddingTop: spacing.md,
@@ -895,17 +776,16 @@ const styles = StyleSheet.create({
   filterContainer: {
     flexDirection: 'row',
     backgroundColor: '#F9FAFB',
-    borderRadius: radius.xl + 2,
+    borderRadius: radius.lg,
     padding: spacing.xs + 2,
     marginBottom: spacing.xl,
     gap: spacing.xs,
-    ...shadow.md,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
   filterTab: {
     flex: 1,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     overflow: 'hidden',
   },
   filterTabGradient: {
@@ -914,16 +794,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   filterTabActive: {
-    ...shadow.md,
+    ...shadow.sm,
   },
   filterText: {
     ...typography.subtitle,
-    color: '#6B7280',
+    color: colors.authTextMuted,
     fontWeight: '600',
+    fontSize: 14,
   },
   filterTextActive: {
     color: '#FFFFFF',
     fontWeight: '700',
+    fontSize: 14,
   },
   testList: {
     gap: spacing.lg,
@@ -1008,117 +890,154 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   yearCard: {
+    backgroundColor: colors.authSurface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
     marginBottom: spacing.sm,
-    borderRadius: radius.xl + 2,
+    borderWidth: 1,
+    borderColor: colors.authBorder,
+    ...shadow.sm,
   },
   yearCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    justifyContent: 'space-between',
+  },
+  yearCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   yearIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.lg,
-    backgroundColor: '#EEF2FF',
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: spacing.md,
   },
   yearInfo: {
     flex: 1,
   },
   yearTitle: {
     ...typography.h3,
-    color: '#111827',
+    color: colors.authText,
     fontWeight: '700',
+    fontSize: 17,
+    marginBottom: spacing.xs,
+  },
+  yearYear: {
+    ...typography.h3,
+    color: colors.authText,
+    fontWeight: '700',
+    fontSize: 17,
     marginBottom: spacing.xs,
   },
   yearSubtitle: {
     ...typography.body,
-    color: '#6B7280',
+    color: colors.authTextSecondary,
+    fontSize: 13,
+  },
+  yearCardRight: {
+    marginLeft: spacing.md,
+    justifyContent: 'center',
   },
   subjectList: {
     gap: spacing.md,
   },
   subjectCard: {
-    borderRadius: radius.xl + 4,
-    padding: spacing.lg + 4,
+    backgroundColor: colors.authSurface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
     marginBottom: spacing.sm,
-    ...shadow.xl,
+    borderWidth: 1,
+    borderColor: colors.authBorder,
+    ...shadow.sm,
   },
   subjectCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    justifyContent: 'space-between',
+  },
+  subjectCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   subjectIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: radius.lg,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: spacing.md,
   },
   subjectInfo: {
     flex: 1,
   },
   subjectTitle: {
-    ...typography.h2,
-    color: '#FFFFFF',
+    ...typography.h3,
+    color: colors.authText,
     fontWeight: '700',
+    fontSize: 17,
     marginBottom: spacing.xs,
   },
   subjectSubtitle: {
     ...typography.body,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: colors.authTextSecondary,
+    fontSize: 13,
+  },
+  subjectCardRight: {
+    marginLeft: spacing.md,
+    justifyContent: 'center',
   },
   initialCardsContainer: {
-    gap: spacing.lg,
-    marginTop: spacing.xl,
+    gap: spacing.md,
+    marginTop: spacing.lg,
   },
-  testCard: {
-    borderRadius: radius.xl + 4,
-    overflow: 'hidden',
-    ...shadow.lg,
+  initialCard: {
+    backgroundColor: colors.authSurface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.authBorder,
+    ...shadow.sm,
   },
-  testCardGradient: {
-    padding: spacing.xl,
-    minHeight: 100,
-  },
-  testCardContent: {
+  initialCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  testCardLeft: {
+  initialCardLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  testCardIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: radius.xl,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+  initialCardIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: colors.primarySoft,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    marginRight: spacing.md,
   },
-  testCardText: {
+  initialCardText: {
     flex: 1,
   },
-  testCardTitle: {
-    ...typography.h2,
-    color: '#FFFFFF',
+  initialCardTitle: {
+    ...typography.h3,
+    color: colors.authText,
     fontWeight: '700',
+    fontSize: 17,
     marginBottom: spacing.xs,
-    fontSize: 20,
   },
-  testCardSubtitle: {
+  initialCardSubtitle: {
     ...typography.body,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 14,
+    color: colors.authTextSecondary,
+    fontSize: 13,
   },
 });

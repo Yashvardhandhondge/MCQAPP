@@ -65,8 +65,21 @@ export default function LineChart({
     },
   };
 
-  // Calculate chart width to fit within container
-  const chartWidth = screenWidth - spacing.xxl * 2 - spacing.md * 4;
+  // Calculate chart width to fit within container, accounting for Y-axis labels
+  // Add extra space for longer suffixes
+  const suffixLength = yAxisSuffix.length;
+  const yAxisPadding = suffixLength > 3 ? 55 : 45; // More padding for longer suffixes
+  const chartWidth = screenWidth - spacing.xxl * 2 - spacing.md * 4 - yAxisPadding;
+
+  // Use shorter suffix for display if it's too long to prevent truncation
+  // Map common long suffixes to shorter versions
+  const suffixMap: Record<string, string> = {
+    ' questions': ' Q',
+    ' question': ' Q',
+    ' attempts': ' A',
+    ' attempt': ' A',
+  };
+  const displaySuffix = suffixMap[yAxisSuffix] || (suffixLength > 8 ? yAxisSuffix.substring(0, 8) : yAxisSuffix);
 
   return (
     <View style={styles.container}>
@@ -77,7 +90,7 @@ export default function LineChart({
             data={chartData}
             width={chartWidth}
             height={height}
-            yAxisSuffix={yAxisSuffix}
+            yAxisSuffix={displaySuffix}
             chartConfig={chartConfig}
             bezier
             style={styles.chart}
@@ -86,12 +99,17 @@ export default function LineChart({
             withVerticalLabels={true}
             withHorizontalLabels={true}
             segments={isPercentage ? 5 : 4}
-            yLabelsOffset={10}
+            yLabelsOffset={15}
             xLabelsOffset={-5}
             yAxisLabel=""
             xAxisLabel=""
+            fromZero={!isPercentage}
           />
         </View>
+        {/* Show full label below chart if suffix was shortened */}
+        {(suffixMap[yAxisSuffix] || suffixLength > 8) && (
+          <Text style={styles.suffixLabel}>Y-axis: {yAxisSuffix.trim()}</Text>
+        )}
       </View>
     </View>
   );
@@ -99,18 +117,19 @@ export default function LineChart({
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: spacing.md,
+    marginVertical: spacing.sm,
   },
   title: {
     ...typography.h3,
     color: colors.authText,
     fontWeight: '700',
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm + 2,
+    paddingHorizontal: spacing.sm,
+    fontSize: 15,
   },
   chartWrapper: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
     alignItems: 'center',
   },
   chartContainer: {
@@ -122,6 +141,13 @@ const styles = StyleSheet.create({
   chart: {
     borderRadius: 16,
     marginLeft: -spacing.sm,
+  },
+  suffixLabel: {
+    ...typography.caption,
+    color: colors.authTextMuted || '#6B7280',
+    fontSize: 11,
+    marginTop: spacing.xs,
+    textAlign: 'center',
   },
 });
 

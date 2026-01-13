@@ -197,100 +197,87 @@ export default function MockTestSelectionScreen({ navigation }: MockTestSelectio
               </Text>
             </View>
           ) : (
-            <View style={styles.mockTestList}>
-              {mockTests.map((mockTest, index) => (
-                <Animated.View
-                  key={mockTest.mockTestNumber}
-                  style={{
-                    opacity: fadeAnim,
-                    transform: [
-                      {
-                        translateY: slideAnim.interpolate({
-                          inputRange: [0, 30],
-                          outputRange: [0, 30 + index * 10],
-                        }),
-                      },
-                    ],
-                  }}
-                >
-                  <TouchableOpacity
-                    onPress={() => handleStartMockTest(mockTest.mockTestNumber)}
-                    disabled={startingTest === mockTest.mockTestNumber}
-                    activeOpacity={0.85}
-                  >
-                    <LinearGradient
-                      colors={
-                        mockTestResults.has(mockTest.mockTestNumber)
-                          ? (['#10B981', '#059669'] as [string, string]) // Green gradient for completed
-                          : (colors.gradientPrimary as [string, string, ...string[]]) // Purple for not completed
-                      }
-                      style={styles.mockTestCard}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
+            <View style={styles.contentCard}>
+              <View style={styles.mockTestList}>
+                {mockTests.map((mockTest, index) => {
+                  const hasResult = mockTestResults.has(mockTest.mockTestNumber);
+                  const result = hasResult ? mockTestResults.get(mockTest.mockTestNumber) : null;
+                  
+                  return (
+                    <Animated.View
+                      key={mockTest.mockTestNumber}
+                      style={{
+                        opacity: fadeAnim,
+                        transform: [
+                          {
+                            translateY: slideAnim.interpolate({
+                              inputRange: [0, 30],
+                              outputRange: [0, 30 + index * 10],
+                            }),
+                          },
+                        ],
+                      }}
                     >
-                      <View style={styles.mockTestContent}>
-                        <View style={styles.mockTestLeft}>
-                          <View style={styles.mockTestIconContainer}>
-                            {mockTestResults.has(mockTest.mockTestNumber) ? (
-                              <Ionicons name="trophy" size={24} color="#FFFFFF" />
-                            ) : (
-                              <Ionicons name="document-text" size={24} color="#FFFFFF" />
-                            )}
-                          </View>
-                          <View style={styles.mockTestInfo}>
-                            <View style={styles.titleRow}>
-                              <Text style={styles.mockTestTitle}>{mockTest.name}</Text>
-                              {mockTestResults.has(mockTest.mockTestNumber) && (
-                                <View style={styles.completedDot} />
+                      <TouchableOpacity
+                        onPress={() => handleStartMockTest(mockTest.mockTestNumber)}
+                        disabled={startingTest === mockTest.mockTestNumber}
+                        activeOpacity={0.7}
+                        style={styles.mockTestCard}
+                      >
+                        <View style={styles.cardContent}>
+                          <View style={styles.cardLeft}>
+                            <View style={styles.iconContainer}>
+                              <Ionicons 
+                                name="calendar" 
+                                size={24} 
+                                color={colors.primary} 
+                              />
+                            </View>
+                            <View style={styles.cardInfo}>
+                              <View style={styles.titleRow}>
+                                <Text style={styles.mockTestTitle}>{mockTest.name}</Text>
+                                {hasResult && (
+                                  <View style={styles.completedBadge}>
+                                    <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                                  </View>
+                                )}
+                              </View>
+                              {hasResult ? (
+                                <View style={styles.resultInfo}>
+                                  <View style={styles.resultRow}>
+                                    <Ionicons name="star" size={14} color={colors.warning} />
+                                    <Text style={styles.resultText}>
+                                      {Math.round(result?.marks || 0)} marks out of 200
+                                    </Text>
+                                  </View>
+                                  <Text style={styles.resultSubtext}>
+                                    Completed
+                                  </Text>
+                                </View>
+                              ) : (
+                                <Text style={styles.cardDescription}>
+                                  {mockTest.questionCount} questions • {mockTest.physicsCount + mockTest.chemistryCount} P&C • {mockTest.mathsCount} Maths
+                                </Text>
                               )}
                             </View>
-                            {mockTestResults.has(mockTest.mockTestNumber) ? (
-                              <View style={styles.scoreRow}>
-                                <Ionicons name="star" size={14} color="#FFD700" />
-                                <Text style={styles.scoreText}>
-                                  {Math.round(mockTestResults.get(mockTest.mockTestNumber)?.marks || 0)} marks
-                                </Text>
-                              </View>
+                          </View>
+                          <View style={styles.cardRight}>
+                            {startingTest === mockTest.mockTestNumber ? (
+                              <ActivityIndicator size="small" color={colors.primary} />
                             ) : (
-                              <View style={styles.mockTestStats}>
-                                <View style={styles.statItem}>
-                                  <Ionicons name="flask" size={12} color="rgba(255, 255, 255, 0.9)" />
-                                  <Text style={styles.statText}>
-                                    {mockTest.physicsCount + mockTest.chemistryCount} P&C
-                                  </Text>
-                                </View>
-                                <View style={styles.statItem}>
-                                  <Ionicons name="calculator" size={12} color="rgba(255, 255, 255, 0.9)" />
-                                  <Text style={styles.statText}>
-                                    {mockTest.mathsCount} Maths
-                                  </Text>
-                                </View>
-                                <View style={styles.statItem}>
-                                  <Ionicons name="document-text" size={12} color="rgba(255, 255, 255, 0.9)" />
-                                  <Text style={styles.statText}>
-                                    {mockTest.questionCount} Q
-                                  </Text>
-                                </View>
-                              </View>
+                              <Ionicons 
+                                name={hasResult ? "refresh" : "chevron-forward"} 
+                                size={20} 
+                                color={colors.authTextMuted} 
+                              />
                             )}
                           </View>
                         </View>
-                        <View style={styles.mockTestRight}>
-                          {startingTest === mockTest.mockTestNumber ? (
-                            <ActivityIndicator size="small" color="#FFFFFF" />
-                          ) : (
-                            <Ionicons 
-                              name={mockTestResults.has(mockTest.mockTestNumber) ? "refresh" : "arrow-forward"} 
-                              size={20} 
-                              color="#FFFFFF" 
-                            />
-                          )}
-                        </View>
-                      </View>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </Animated.View>
-              ))}
+                      </TouchableOpacity>
+                    </Animated.View>
+                  );
+                })}
+              </View>
             </View>
           )}
         </ScrollView>
@@ -311,8 +298,14 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.xl,
+    paddingTop: spacing.lg,
     paddingBottom: 100,
+  },
+  contentCard: {
+    backgroundColor: colors.authSurface,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    ...shadow.md,
   },
   loadingContainer: {
     flex: 1,
@@ -322,7 +315,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...typography.body,
-    color: '#6B7280',
+    color: colors.authTextSecondary,
     fontSize: 14,
   },
   errorContainer: {
@@ -362,94 +355,93 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...typography.body,
-    color: '#6B7280',
+    color: colors.authTextSecondary,
     fontWeight: '600',
   },
   emptySubtext: {
     ...typography.caption,
-    color: '#6B7280',
+    color: colors.authTextMuted,
   },
   mockTestList: {
     gap: spacing.md,
   },
   mockTestCard: {
+    backgroundColor: colors.authSurface,
     borderRadius: radius.lg,
     padding: spacing.lg,
-    marginBottom: spacing.md,
-    ...shadow.md,
-    minHeight: 90,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.authBorder,
+    ...shadow.sm,
   },
-  mockTestContent: {
+  cardContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  mockTestLeft: {
+  cardLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  mockTestIconContainer: {
+  iconContainer: {
     width: 48,
     height: 48,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: colors.primarySoft,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,
   },
-  mockTestInfo: {
+  cardInfo: {
     flex: 1,
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
     marginBottom: spacing.xs,
   },
   mockTestTitle: {
     ...typography.h3,
-    color: '#FFFFFF',
+    color: colors.authText,
     fontWeight: '700',
-    fontSize: 18,
+    fontSize: 17,
   },
-  completedDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FFFFFF',
+  completedBadge: {
+    marginLeft: spacing.xs,
   },
-  mockTestStats: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  statText: {
-    ...typography.caption,
-    color: 'rgba(255, 255, 255, 0.9)',
+  cardDescription: {
+    ...typography.body,
+    color: colors.authTextSecondary,
     fontSize: 13,
-    fontWeight: '600',
-  },
-  mockTestRight: {
-    marginLeft: spacing.md,
-    justifyContent: 'center',
-  },
-  scoreRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
     marginTop: spacing.xs,
   },
-  scoreText: {
+  resultInfo: {
+    marginTop: spacing.xs,
+  },
+  resultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  resultText: {
     ...typography.body,
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: colors.authText,
     fontSize: 14,
+    fontWeight: '600',
+  },
+  resultSubtext: {
+    ...typography.caption,
+    color: colors.success,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  cardRight: {
+    marginLeft: spacing.md,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

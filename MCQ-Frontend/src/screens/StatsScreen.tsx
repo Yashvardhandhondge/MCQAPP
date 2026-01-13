@@ -1427,7 +1427,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
   loadingContainer: {
     flex: 1,
@@ -1490,7 +1490,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
   },
   sectionCard: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md + 4,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -1502,7 +1502,7 @@ const styles = StyleSheet.create({
   sectionHeaderContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
     gap: spacing.md,
   },
   sectionIconContainer: {
@@ -1518,7 +1518,7 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontWeight: '700',
     flex: 1,
-    fontSize: 18,
+    fontSize: 17,
   },
   metricRow: {
     flexDirection: 'row',
@@ -2292,12 +2292,15 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   periodButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical: spacing.sm + 2,
     borderRadius: radius.md,
     backgroundColor: '#F9FAFB',
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    minHeight: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   periodButtonActive: {
     backgroundColor: colors.primary,
@@ -2307,16 +2310,17 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: '#6B7280',
     fontWeight: '500',
-    fontSize: 12,
+    fontSize: 13,
   },
   periodButtonTextActive: {
     color: '#FFFFFF',
     fontWeight: '600',
   },
   chartLoading: {
-    height: 220,
+    minHeight: 220,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: spacing.lg,
   },
   lockedMetricCard: {
     flex: 1,
