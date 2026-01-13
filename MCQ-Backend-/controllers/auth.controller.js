@@ -182,18 +182,36 @@ const sendOTP = async (req, res, next) => {
       return next(createError(400, 'Invalid phone number format. Must be in Indian format: +91 followed by 10 digits starting with 6-9'));
     }
 
-    // Check if user exists before sending OTP (login requires existing account)
-    const existingUser = await User.findOne({ phoneNumber });
-    if (!existingUser) {
-      return next(createError(404, 'No account found with this phone number. Please sign up first.'));
+    // Dummy number for Play Store review: +918010140175
+    const DUMMY_PHONE_NUMBER = '+918010140175';
+    const DUMMY_OTP = '123456';
+    const isDummyNumber = phoneNumber === DUMMY_PHONE_NUMBER;
+
+    // For dummy number, skip user existence check (allow for Play Store review)
+    // For real numbers, check if user exists before sending OTP (login requires existing account)
+    if (!isDummyNumber) {
+      const existingUser = await User.findOne({ phoneNumber });
+      if (!existingUser) {
+        return next(createError(404, 'No account found with this phone number. Please sign up first.'));
+      }
     }
 
     // Delete any existing OTPs for this phone number
     await Otp.deleteMany({ phoneNumber });
 
-    // Generate new OTP
-    const plainOtp = generateOTP();
-    const hashedOtp = await hashOTP(plainOtp);
+    let plainOtp, hashedOtp;
+
+    if (isDummyNumber) {
+      // For dummy number, use fixed OTP
+      plainOtp = DUMMY_OTP;
+      hashedOtp = await hashOTP(DUMMY_OTP);
+      console.log(`[OTP] Using dummy OTP for Play Store review number: ${phoneNumber}`);
+    } else {
+      // Generate new OTP for real numbers
+      plainOtp = generateOTP();
+      hashedOtp = await hashOTP(plainOtp);
+    }
+
     const expiresAt = getOTPExpiry();
 
     // Store OTP in database
@@ -206,7 +224,17 @@ const sendOTP = async (req, res, next) => {
 
     console.log(`[OTP] Generated OTP for ${phoneNumber}, expires at ${expiresAt}`);
 
-    // Send OTP via SMS
+    // Skip SMS for dummy number (Play Store review)
+    if (isDummyNumber) {
+      console.log(`[OTP] Skipping SMS for dummy number (Play Store review): ${phoneNumber}`);
+      return res.status(200).json({
+        success: true,
+        message: 'OTP sent successfully to your phone number',
+        expiresIn: 300, // 5 minutes in seconds
+      });
+    }
+
+    // Send OTP via SMS for real numbers
     const smsResult = await sendOTPSMS(phoneNumber, plainOtp);
 
     if (!smsResult.success) {
@@ -258,6 +286,44 @@ const verifyOTP = async (req, res, next) => {
       return next(createError(400, 'OTP must be 6 digits'));
     }
 
+    // Dummy number for Play Store review: +918010140175
+    const DUMMY_PHONE_NUMBER = '+918010140175';
+    const DUMMY_OTP = '123456';
+    const isDummyNumber = phoneNumber === DUMMY_PHONE_NUMBER;
+
+    // For dummy number, bypass OTP verification if correct OTP is provided
+    if (isDummyNumber && otp === DUMMY_OTP) {
+      console.log(`[OTP] Dummy number OTP verification bypassed for Play Store review: ${phoneNumber}`);
+      
+      // Find existing user or create one if doesn't exist (for Play Store review)
+      let user = await User.findOne({ phoneNumber });
+      
+      if (!user) {
+        // Create a dummy user for Play Store review
+        user = await User.create({
+          fullName: 'Play Store Reviewer',
+          email: `reviewer_${Date.now()}@playstore.com`,
+          phoneNumber: DUMMY_PHONE_NUMBER,
+        });
+        console.log(`[OTP] Created dummy user for Play Store review: ${user._id}`);
+      }
+
+      // Delete any existing OTP records for this number
+      await Otp.deleteMany({ phoneNumber });
+
+      // Build auth payload and return
+      const response = buildAuthPayload(user);
+
+      console.log(`[OTP] Dummy OTP verification successful for ${phoneNumber}`);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Logged in successfully',
+        ...response,
+      });
+    }
+
+    // For real numbers, proceed with normal OTP verification
     // Find the most recent OTP for this phone number
     const otpRecord = await Otp.findOne({ phoneNumber }).sort({ createdAt: -1 });
 
