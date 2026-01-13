@@ -73,7 +73,7 @@ export default function Footer() {
   const links = {
     Product: ['Features', 'Pricing', 'Reviews'],
     Subjects: ['Physics PYQ', 'Chemistry PYQ', 'Mathematics PYQ', 'Biology PYQ'],
-    Contact: ['Email: yasharadhyeapp@gmail.com', 'Phone: +91 XXXXX XXXXX'],
+    Contact: ['Email: yasharadhyeapp@gmail.com', 'Phone: +91 7020781343'],
   };
 
   return (
