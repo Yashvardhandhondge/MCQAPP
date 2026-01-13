@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import Logo from './Logo';
 import { Youtube, Instagram, MessageCircle } from 'lucide-react';
 
@@ -71,7 +72,7 @@ export default function Footer() {
   };
 
   const links = {
-    Product: ['Features', 'Pricing', 'Reviews'],
+    Product: ['Features', 'Pricing', 'Reviews', 'Privacy Policy'],
     Subjects: ['Physics PYQ', 'Chemistry PYQ', 'Mathematics PYQ', 'Biology PYQ'],
     Contact: ['Email: yasharadhyeapp@gmail.com', 'Phone: +91 7020781343'],
   };
@@ -121,32 +122,48 @@ export default function Footer() {
           {Object.entries(links).map(([title, items]) => (
             <div key={title} style={footerStyles.column}>
               <h4 style={footerStyles.columnTitle}>{title}</h4>
-              {items.map((item, i) => (
-                <a
-                  key={i}
-                  href="#"
-                  style={footerStyles.link}
-                  onMouseEnter={(e) => {
-                    e.target.style.color = '#000000';
-                    e.target.style.textDecoration = 'underline';
-                    e.target.style.textDecorationColor = '#8B7355';
-                    e.target.style.textUnderlineOffset = '6px';
-                    e.target.style.transition = 'all 0.25s ease-in-out';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.color = '#6B7280';
-                    e.target.style.textDecoration = 'none';
-                  }}
-                >
-                  {item}
-                </a>
-              ))}
+              {items.map((item, i) => {
+                const isPrivacyPolicy = item === 'Privacy Policy';
+                const LinkComponent = isPrivacyPolicy ? Link : 'a';
+                const linkProps = isPrivacyPolicy ? { to: '/privacy-policy' } : { href: '#' };
+                
+                return (
+                  <LinkComponent
+                    key={i}
+                    {...linkProps}
+                    style={footerStyles.link}
+                    onMouseEnter={(e) => {
+                      e.target.style.color = '#000000';
+                      e.target.style.textDecoration = 'underline';
+                      e.target.style.textDecorationColor = '#8B7355';
+                      e.target.style.textUnderlineOffset = '6px';
+                      e.target.style.transition = 'all 0.25s ease-in-out';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.color = '#6B7280';
+                      e.target.style.textDecoration = 'none';
+                    }}
+                  >
+                    {item}
+                  </LinkComponent>
+                );
+              })}
             </div>
           ))}
         </div>
 
         <div style={footerStyles.divider}>
-          <p>© {new Date().getFullYear()} MHT CET PYQ. All rights reserved.</p>
+          <p>
+            © {new Date().getFullYear()} MHT CET PYQ. All rights reserved. |{' '}
+            <Link 
+              to="/privacy-policy" 
+              style={{ color: '#6B7280', textDecoration: 'underline' }}
+              onMouseEnter={(e) => e.target.style.color = '#000000'}
+              onMouseLeave={(e) => e.target.style.color = '#6B7280'}
+            >
+              Privacy Policy
+            </Link>
+          </p>
         </div>
       </div>
     </footer>
