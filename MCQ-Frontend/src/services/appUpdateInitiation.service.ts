@@ -1,6 +1,14 @@
-import axios from 'axios';
-import { axiosInstance } from './http';
+/* ============================================
+ * UPDATE FUNCTIONALITY TEMPORARILY DISABLED
+ * Update facility API calls commented out for launch.
+ * Will be re-enabled after launch.
+ * ============================================ */
 
+// import axios from 'axios';
+// import { axiosInstance } from './http';
+
+// React Native Code - Update initiation service interfaces and API calls commented out
+/* COMMENTED OUT UPDATE FUNCTIONALITY - START
 export interface InitiateUpdatePayload {
   requiredVersion: string;
   requiredVersionCode: number;
@@ -32,6 +40,7 @@ export interface UpdateStatusPayload {
 
 /**
  * Record app update initiation in database
+ * React Native Code - API call to initiate app update
  */
 export async function initiateAppUpdate(payload: InitiateUpdatePayload): Promise<InitiateUpdateResponse> {
   try {
@@ -47,6 +56,7 @@ export async function initiateAppUpdate(payload: InitiateUpdatePayload): Promise
 
 /**
  * Update download status
+ * React Native Code - API call to update download status
  */
 export async function updateDownloadStatus(
   initiationId: string,
@@ -63,3 +73,4 @@ export async function updateDownloadStatus(
     throw new Error('Failed to update download status');
   }
 }
+COMMENTED OUT UPDATE FUNCTIONALITY - END */

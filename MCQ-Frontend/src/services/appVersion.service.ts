@@ -61,7 +61,9 @@ export function isVersionOutdated(
 
 /**
  * Get app version requirement from backend
+ * React Native Code - API call to get app version (commented out for launch)
  */
+/* COMMENTED OUT UPDATE FUNCTIONALITY - START
 export async function getAppVersion(): Promise<AppVersionResponse> {
   try {
     const response = await axios.get<AppVersionResponse>(`${API_BASE_URL}/api/mcq/app-version`, {
@@ -75,3 +77,4 @@ export async function getAppVersion(): Promise<AppVersionResponse> {
     throw new Error('Failed to fetch app version');
   }
 }
+COMMENTED OUT UPDATE FUNCTIONALITY - END */

@@ -6,8 +6,14 @@ import Constants from 'expo-constants';
 import { AppState, AppStateStatus, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const UPDATE_INITIATED_KEY = '@update_initiated';
-const UPDATE_VERSION_KEY = '@update_version';
+/* ============================================
+ * UPDATE FUNCTIONALITY TEMPORARILY DISABLED
+ * Update facility commented out for launch.
+ * Will be re-enabled after launch.
+ * ============================================ */
+
+// const UPDATE_INITIATED_KEY = '@update_initiated';
+// const UPDATE_VERSION_KEY = '@update_version';
 
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import type { AppStackParamList, AuthStackParamList } from './src/navigation/types';
@@ -36,8 +42,9 @@ import MockTestLeaderboardScreen from './src/screens/MockTestLeaderboardScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
 import NotificationDetailScreen from './src/screens/NotificationDetailScreen';
 import BottomTabBar from './src/components/ui/BottomTabBar';
-import UpdateRequiredModal from './src/components/UpdateRequiredModal';
-import { getAppVersion, isVersionOutdated } from './src/services/appVersion.service';
+// React Native Code - Update Required Modal and version check service commented out
+// import UpdateRequiredModal from './src/components/UpdateRequiredModal';
+// import { getAppVersion, isVersionOutdated } from './src/services/appVersion.service';
 import { initializeOneSignal, setNotificationOpenedHandler, registerDeviceWithBackend, setOneSignalUserId, removeOneSignalUserId } from './src/services/oneSignal.service';
 import { colors, typography } from './src/theme';
 
@@ -306,6 +313,8 @@ function RootNavigator() {
 }
 
 function AppWithVersionCheck() {
+  // React Native Code - Update functionality state variables commented out
+  /* COMMENTED OUT UPDATE FUNCTIONALITY - START
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateMessage, setUpdateMessage] = useState('A new version of the app is available. Please update to continue.');
   const [playStoreUrl, setPlayStoreUrl] = useState('');
@@ -314,9 +323,12 @@ function AppWithVersionCheck() {
   const [requiredVersionCode, setRequiredVersionCode] = useState<number | undefined>(undefined);
   const [currentVersion, setCurrentVersion] = useState('');
   const [currentVersionCode, setCurrentVersionCode] = useState<number | undefined>(undefined);
+  */
   const appState = useRef(AppState.currentState);
   const navigationRef = useRef<NavigationContainerRef<AppStackParamList>>(null);
 
+  // React Native Code - checkAppVersion function with API calls commented out
+  /* COMMENTED OUT - Version check functionality
   const checkAppVersion = async () => {
     try {
       // Get current app version from expo-constants
@@ -389,6 +401,7 @@ function AppWithVersionCheck() {
       // Don't block app usage if version check fails, but keep modal if already shown
     }
   };
+  COMMENTED OUT - Version check functionality - END */
 
   useEffect(() => {
     // Initialize OneSignal when app starts
@@ -410,6 +423,8 @@ function AppWithVersionCheck() {
       console.error('Failed to initialize OneSignal:', error);
     }
 
+    // React Native Code - Version check calls commented out
+    /* COMMENTED OUT - Version check on app start
     // Check version after a short delay to ensure app is initialized
     const timer = setTimeout(() => {
       checkAppVersion();
@@ -434,6 +449,7 @@ function AppWithVersionCheck() {
       clearTimeout(timer);
       subscription.remove();
     };
+    */
   }, []);
 
   return (
@@ -443,6 +459,7 @@ function AppWithVersionCheck() {
           <RootNavigator />
         </AuthProvider>
       </NavigationContainer>
+      {/* React Native Code - UpdateRequiredModal component commented out
       <UpdateRequiredModal
         visible={showUpdateModal}
         updateMessage={updateMessage}
@@ -457,6 +474,7 @@ function AppWithVersionCheck() {
           setShowUpdateModal(false);
         }}
       />
+      */}
     </>
   );
 }

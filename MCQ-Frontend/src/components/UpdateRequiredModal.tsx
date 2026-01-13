@@ -1,51 +1,59 @@
-import React, { useState } from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Platform,
-  Linking,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
-import Constants from 'expo-constants';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, typography } from '../theme';
-import { initiateAppUpdate, updateDownloadStatus } from '../services/appUpdateInitiation.service';
+/* ============================================
+ * UPDATE FUNCTIONALITY TEMPORARILY DISABLED
+ * This update facility is commented out for launch.
+ * Will be re-enabled after launch.
+ * ============================================ */
 
-const UPDATE_INITIATED_KEY = '@update_initiated';
-const UPDATE_VERSION_KEY = '@update_version';
+// import React, { useState } from 'react';
+// import {
+//   Modal,
+//   View,
+//   Text,
+//   StyleSheet,
+//   TouchableOpacity,
+//   Platform,
+//   Linking,
+//   ActivityIndicator,
+//   Alert,
+// } from 'react-native';
+// import Constants from 'expo-constants';
+// import AsyncStorage from '@react-native-async-storage/async-storage';
+// import { colors, typography } from '../theme';
+// import { initiateAppUpdate, updateDownloadStatus } from '../services/appUpdateInitiation.service';
 
-// Try to import expo-updates if available (optional dependency)
-let Updates: any = null;
-try {
-  Updates = require('expo-updates');
-} catch (e) {
-  console.log('expo-updates not available');
-}
+// const UPDATE_INITIATED_KEY = '@update_initiated';
+// const UPDATE_VERSION_KEY = '@update_version';
 
-// Try to import expo-file-system for file downloads
-let FileSystem: any = null;
-try {
-  FileSystem = require('expo-file-system');
-} catch (e) {
-  console.log('expo-file-system not available');
-}
+// // Try to import expo-updates if available (optional dependency)
+// let Updates: any = null;
+// try {
+//   Updates = require('expo-updates');
+// } catch (e) {
+//   console.log('expo-updates not available');
+// }
 
-interface UpdateRequiredModalProps {
-  visible: boolean;
-  updateMessage: string;
-  playStoreUrl?: string;
-  updateUrl?: string;
-  requiredVersion?: string;
-  requiredVersionCode?: number;
-  currentVersion?: string;
-  currentVersionCode?: number;
-  onUpdate: () => void;
-}
+// // Try to import expo-file-system for file downloads
+// let FileSystem: any = null;
+// try {
+//   FileSystem = require('expo-file-system');
+// } catch (e) {
+//   console.log('expo-file-system not available');
+// }
 
+// interface UpdateRequiredModalProps {
+//   visible: boolean;
+//   updateMessage: string;
+//   playStoreUrl?: string;
+//   updateUrl?: string;
+//   requiredVersion?: string;
+//   requiredVersionCode?: number;
+//   currentVersion?: string;
+//   currentVersionCode?: number;
+//   onUpdate: () => void;
+// }
+
+// React Native Code - Update Required Modal Component (Commented for launch)
+// This component handles the "Update Now" functionality and all update-related API calls
 export default function UpdateRequiredModal({
   visible,
   updateMessage,
@@ -56,7 +64,11 @@ export default function UpdateRequiredModal({
   currentVersion,
   currentVersionCode,
   onUpdate,
-}: UpdateRequiredModalProps) {
+}: any) {
+  // Update functionality commented out - will be re-enabled after launch
+  return null;
+  
+  /* COMMENTED OUT UPDATE FUNCTIONALITY - START
   const [updating, setUpdating] = useState(false);
   const [localVisible, setLocalVisible] = useState(visible);
   const [downloadProgress, setDownloadProgress] = useState(0);
@@ -66,6 +78,7 @@ export default function UpdateRequiredModal({
     setLocalVisible(visible);
   }, [visible]);
 
+  // React Native Code - handleUpdate function with all API calls commented out
   const handleUpdate = async () => {
     setUpdating(true);
     
@@ -415,6 +428,7 @@ export default function UpdateRequiredModal({
       </View>
     </Modal>
   );
+  COMMENTED OUT UPDATE FUNCTIONALITY - END */
 }
 
 const styles = StyleSheet.create({

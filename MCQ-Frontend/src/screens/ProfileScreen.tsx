@@ -11,9 +11,10 @@ import { useAuth } from '../context/AuthContext';
 import type { AppStackParamList } from '../navigation/types';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getAppVersion, isVersionOutdated } from '../services/appVersion.service';
+// React Native Code - Update functionality imports commented out
+// import { getAppVersion, isVersionOutdated } from '../services/appVersion.service';
 import { registerDeviceWithBackend, getPlayerId } from '../services/oneSignal.service';
-import UpdateRequiredModal from '../components/UpdateRequiredModal';
+// import UpdateRequiredModal from '../components/UpdateRequiredModal';
 
 const GROUP_INFO: Record<string, { label: string; description: string; gradient: string[]; icon: string }> = {
   PCM: {
@@ -65,7 +66,8 @@ export default function ProfileScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
 
-  // Version state
+  // React Native Code - Version state variables commented out
+  /* COMMENTED OUT UPDATE FUNCTIONALITY - START
   const [currentVersion, setCurrentVersion] = useState('');
   const [requiredVersion, setRequiredVersion] = useState('');
   const [requiredVersionCode, setRequiredVersionCode] = useState<number | undefined>(undefined);
@@ -76,6 +78,7 @@ export default function ProfileScreen() {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [isVersionCheckLoading, setIsVersionCheckLoading] = useState(false);
   const [isUpdateAvailable, setIsUpdateAvailable] = useState(false);
+  */
   const [notificationStatus, setNotificationStatus] = useState<'checking' | 'registered' | 'not-registered' | 'error'>('checking');
   const [isRegistering, setIsRegistering] = useState(false);
   const [playerId, setPlayerId] = useState<string | null>(null);
@@ -97,12 +100,17 @@ export default function ProfileScreen() {
       }),
     ]).start();
 
+    // React Native Code - Version check calls commented out
+    /* COMMENTED OUT - Version check on mount
     // Check app version on mount
     checkAppVersion();
+    */
     
     // Check notification device registration status
     checkNotificationStatus();
 
+    // React Native Code - App state listener for version check commented out
+    /* COMMENTED OUT - Version check on app state change
     // Listen for app state changes to recheck version when app comes to foreground
     // This is important because after Play Store update, user returns to app
     const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
@@ -121,6 +129,7 @@ export default function ProfileScreen() {
     return () => {
       subscription.remove();
     };
+    */
   }, []);
 
   const checkNotificationStatus = async () => {
@@ -186,6 +195,8 @@ export default function ProfileScreen() {
     }
   };
 
+  // React Native Code - checkAppVersion function with API calls commented out
+  /* COMMENTED OUT - Version check functionality
   const checkAppVersion = async () => {
     try {
       setIsVersionCheckLoading(true);
@@ -262,6 +273,7 @@ export default function ProfileScreen() {
       checkAppVersion();
     }, 1000);
   };
+  COMMENTED OUT - Version check functionality - END */
 
   const handleLogout = useCallback(() => {
     Alert.alert(
@@ -460,7 +472,8 @@ export default function ProfileScreen() {
 
                 
 
-                {/* App Version row */}
+                {/* React Native Code - App Version row with update functionality commented out */}
+                {/* COMMENTED OUT - App Version card with update button
                 <View style={styles.infoCard}>
                   <View style={styles.infoCardHeader}>
                     <LinearGradient
@@ -513,6 +526,7 @@ export default function ProfileScreen() {
                     </View>
                   </View>
                 </View>
+                */}
 
                 {/* Social media row */}
                 <View style={styles.infoCard}>
@@ -567,7 +581,8 @@ export default function ProfileScreen() {
         </ScrollView>
       </View>
       
-      {/* Update Modal */}
+      {/* React Native Code - UpdateRequiredModal component commented out */}
+      {/* COMMENTED OUT - Update Modal
       <UpdateRequiredModal
         visible={showUpdateModal}
         updateMessage={updateMessage}
@@ -579,6 +594,7 @@ export default function ProfileScreen() {
         currentVersionCode={currentVersionCode}
         onUpdate={handleUpdateComplete}
       />
+      */}
     </SafeAreaView>
   );
 }
