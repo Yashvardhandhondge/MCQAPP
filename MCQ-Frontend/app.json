@@ -29,7 +29,6 @@
       "favicon": "./assets/images/image.png"
     },
     "plugins": [
-      "expo-router",
       [
         "expo-splash-screen",
         {
@@ -45,9 +44,14 @@
       [
         "onesignal-expo-plugin",
         {
-          "mode": "development"
+          "mode": "development",
+          "smallIcons": ["./assets/ic_stat_onesignal_default.png"],
+          "largeIcons": ["./assets/ic_onesignal_large_icon_default.png"],
+          "smallIconAccentColor": "#1a3a5c"
         }
-      ]
+      ],
+      "./plugins/withOneSignalNotificationIcons",
+      "expo-router"
     ],
     "experiments": {
       "typedRoutes": true,
