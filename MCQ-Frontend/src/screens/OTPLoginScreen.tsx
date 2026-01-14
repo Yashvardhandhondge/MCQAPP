@@ -21,13 +21,14 @@ import { useAuth } from '../context/AuthContext';
 import type { AuthStackParamList } from '../navigation/types';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import { formatPhoneNumber, validatePhoneNumber } from '../utils/phoneValidation';
+import AutoSignupModal from '../components/ui/AutoSignupModal';
 
 const OTP_EXPIRY_SECONDS = 300; // 5 minutes
 const RESEND_COOLDOWN_SECONDS = 30;
 
 export default function OTPLoginScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
-  const { sendOTP, loginWithOTP, loading } = useAuth();
+  const { sendOTP, loginWithOTP, register, loading } = useAuth();
 
   const [step, setStep] = useState<1 | 2>(1); // 1: Phone input, 2: OTP verification
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -35,6 +36,7 @@ export default function OTPLoginScreen() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState<string | null>(null);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
+  const [showAutoSignupModal, setShowAutoSignupModal] = useState(false);
   const [otpExpiry, setOtpExpiry] = useState(OTP_EXPIRY_SECONDS);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [sendingOTP, setSendingOTP] = useState(false);
@@ -98,6 +100,7 @@ export default function OTPLoginScreen() {
   const handlePhoneChange = useCallback((text: string) => {
     setError(null);
     setShowSignupPrompt(false);
+    setShowAutoSignupModal(false);
     // Remove all non-digit characters and +91 prefix if present
     let digits = text.replace(/\D/g, '');
     
@@ -117,6 +120,8 @@ export default function OTPLoginScreen() {
 
   const handleSendOTP = useCallback(async () => {
     setError(null);
+    setShowSignupPrompt(false);
+    setShowAutoSignupModal(false);
     setSendingOTP(true);
 
     const finalPhone = formattedPhone || formatPhoneNumber(phoneNumber);
@@ -136,7 +141,19 @@ export default function OTPLoginScreen() {
       setStep(2);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to send OTP';
-      setError(message);
+      
+      // Check if error indicates user needs to sign up
+      const isSignupRequired = message.toLowerCase().includes('sign up') || 
+                               message.toLowerCase().includes('signup') ||
+                               message.toLowerCase().includes('no account found');
+      
+      if (isSignupRequired) {
+        // Show auto-signup modal instead of error
+        setShowAutoSignupModal(true);
+        setError(null);
+      } else {
+        setError(message);
+      }
     } finally {
       setSendingOTP(false);
     }
@@ -174,6 +191,7 @@ export default function OTPLoginScreen() {
   const handleVerifyOTP = useCallback(async (otpValue?: string) => {
     setError(null);
     setShowSignupPrompt(false);
+    setShowAutoSignupModal(false);
     const finalOtp = otpValue || otp.join('');
 
     if (finalOtp.length !== 6) {
@@ -198,7 +216,8 @@ export default function OTPLoginScreen() {
                                message.toLowerCase().includes('no account found');
       
       if (isSignupRequired) {
-        setShowSignupPrompt(true);
+        // Show auto-signup modal instead of signup prompt
+        setShowAutoSignupModal(true);
         setError(null);
       } else {
         setError(message);
@@ -363,6 +382,7 @@ export default function OTPLoginScreen() {
                       setOtp(['', '', '', '', '', '']);
                       setError(null);
                       setShowSignupPrompt(false);
+                      setShowAutoSignupModal(false);
                       setOtpExpiry(OTP_EXPIRY_SECONDS);
                     }}
                     style={styles.backButton}
@@ -512,6 +532,26 @@ export default function OTPLoginScreen() {
           </ScrollView>
         </SafeAreaView>
       </LinearGradient>
+
+      {/* Auto Signup Modal */}
+      <AutoSignupModal
+        visible={showAutoSignupModal}
+        phoneNumber={formattedPhone}
+        onClose={() => {
+          setShowAutoSignupModal(false);
+          setError(null);
+        }}
+        onComplete={() => {
+          // After successful registration and OTP sent, proceed to OTP verification step
+          setShowAutoSignupModal(false);
+          setOtpExpiry(OTP_EXPIRY_SECONDS);
+          setResendCooldown(RESEND_COOLDOWN_SECONDS);
+          setStep(2);
+          setError(null);
+        }}
+        onRegister={register}
+        onSendOTP={sendOTP}
+      />
     </KeyboardAvoidingView>
   );
 }
