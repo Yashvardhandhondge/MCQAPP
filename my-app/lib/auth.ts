@@ -1,4 +1,6 @@
-const API_URL = 'http://localhost:8000';
+// const API_URL = 'http://localhost:8000';
+const API_URL='https://goldfish-app-vwvh7.ondigitalocean.app';
+
 
 export interface User {
   _id: string;
@@ -54,7 +56,7 @@ export async function fetchWithAuth(
   };
 
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
   }
 
   const response = await fetch(`${API_URL}${url}`, {
