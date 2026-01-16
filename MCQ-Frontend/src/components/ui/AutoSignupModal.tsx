@@ -177,11 +177,11 @@ export default function AutoSignupModal({
               </View>
 
               {/* Title */}
-              <Text style={styles.title}>New User Detected</Text>
+              <Text style={styles.title}>Complete Your Profile</Text>
 
               {/* Message */}
               <Text style={styles.message}>
-                We noticed you're new here! Please provide your details to create an account and continue.
+                Please provide your details to create an account and continue.
               </Text>
 
               {/* Form Fields */}
