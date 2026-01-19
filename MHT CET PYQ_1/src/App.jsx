@@ -5,6 +5,7 @@ import Hero from './components/Hero';
 import Features from './components/Features';
 import Explore from './components/Explore';
 import Pricing from './components/Pricing';
+import FAQ from './components/FAQ';
 import Reviews from './components/Reviews';
 import CallToAction from './components/CallToAction';
 import Footer from './components/Footer';
@@ -17,6 +18,7 @@ function HomePage() {
       <Features />
       <Explore />
       <Pricing />
+      <FAQ />
       <Reviews />
       <CallToAction />
     </main>
