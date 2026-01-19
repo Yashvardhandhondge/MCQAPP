@@ -182,10 +182,15 @@ const sendOTP = async (req, res, next) => {
       return next(createError(400, 'Invalid phone number format. Must be in Indian format: +91 followed by 10 digits starting with 6-9'));
     }
 
-    // Dummy number for Play Store review: +918010140175
-    const DUMMY_PHONE_NUMBER = '+918010140175';
+    // Dummy numbers for Play Store review / internal testing
+    // All of these will use the fixed OTP "123456" and will not send real SMS
     const DUMMY_OTP = '123456';
-    const isDummyNumber = phoneNumber === DUMMY_PHONE_NUMBER;
+    const DUMMY_PHONE_NUMBERS = [
+      '+918010140175', // Original Play Store review number
+      '+919579050152', // Test number 1
+      '+917020781343', // Test number 2
+    ];
+    const isDummyNumber = DUMMY_PHONE_NUMBERS.includes(phoneNumber);
 
     // For dummy number, skip user existence check (allow for Play Store review)
     // For real numbers, check if user exists before sending OTP (login requires existing account)
@@ -202,10 +207,10 @@ const sendOTP = async (req, res, next) => {
     let plainOtp, hashedOtp;
 
     if (isDummyNumber) {
-      // For dummy number, use fixed OTP
+      // For dummy numbers, use fixed OTP
       plainOtp = DUMMY_OTP;
       hashedOtp = await hashOTP(DUMMY_OTP);
-      console.log(`[OTP] Using dummy OTP for Play Store review number: ${phoneNumber}`);
+      console.log(`[OTP] Using dummy OTP for testing number: ${phoneNumber}`);
     } else {
       // Generate new OTP for real numbers
       plainOtp = generateOTP();
@@ -286,10 +291,14 @@ const verifyOTP = async (req, res, next) => {
       return next(createError(400, 'OTP must be 6 digits'));
     }
 
-    // Dummy number for Play Store review: +918010140175
-    const DUMMY_PHONE_NUMBER = '+918010140175';
+    // Dummy numbers for Play Store review / internal testing
     const DUMMY_OTP = '123456';
-    const isDummyNumber = phoneNumber === DUMMY_PHONE_NUMBER;
+    const DUMMY_PHONE_NUMBERS = [
+      '+918010140175', // Original Play Store review number
+      '+919579050152', // Test number 1
+      '+917020781343', // Test number 2
+    ];
+    const isDummyNumber = DUMMY_PHONE_NUMBERS.includes(phoneNumber);
 
     // For dummy number, bypass OTP verification if correct OTP is provided
     if (isDummyNumber && otp === DUMMY_OTP) {
@@ -301,11 +310,11 @@ const verifyOTP = async (req, res, next) => {
       if (!user) {
         // Create a dummy user for Play Store review
         user = await User.create({
-          fullName: 'Play Store Reviewer',
-          email: `reviewer_${Date.now()}@playstore.com`,
-          phoneNumber: DUMMY_PHONE_NUMBER,
+          fullName: 'Test User',
+          email: `test_${Date.now()}@example.com`,
+          phoneNumber,
         });
-        console.log(`[OTP] Created dummy user for Play Store review: ${user._id}`);
+        console.log(`[OTP] Created dummy test user for number: ${phoneNumber}, id: ${user._id}`);
       }
 
       // Delete any existing OTP records for this number
