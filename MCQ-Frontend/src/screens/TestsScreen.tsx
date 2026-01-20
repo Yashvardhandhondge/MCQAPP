@@ -1,6 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -8,17 +8,14 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Animated,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { AppStackParamList } from '../navigation/types';
 import { useAuth } from '../context/AuthContext';
 import { colors, radius, spacing, typography, shadow } from '../theme';
-import ModernCard from '../components/ui/ModernCard';
-import GradientButton from '../components/ui/GradientButton';
 import BackHeader from '../components/ui/BackHeader';
 import { getDistinctYears, generateRandomTest } from '../services/mcq.service';
 
@@ -26,118 +23,71 @@ type FilterType = 'year' | 'subject';
 type TestMode = 'select' | 'random';
 
 const ALL_SUBJECTS = [
-  { name: 'Chemistry', icon: 'flask', color: '#8B5CF6' },
-  { name: 'Physics', icon: 'nuclear', color: '#3B82F6' },
-  { name: 'Maths', icon: 'calculator', color: '#10B981' },
-  { name: 'Biology', icon: 'leaf', color: '#F59E0B' },
+  { name: 'Chemistry', icon: 'flask' as const, color: '#8B5CF6' },
+  { name: 'Physics', icon: 'nuclear' as const, color: '#3B82F6' },
+  { name: 'Maths', icon: 'calculator' as const, color: '#10B981' },
+  { name: 'Biology', icon: 'leaf' as const, color: '#F59E0B' },
 ];
 
-// Subject groups mapping
 const GROUP_SUBJECTS: Record<string, string[]> = {
   PCM: ['Chemistry', 'Physics', 'Maths'],
   PCB: ['Chemistry', 'Physics', 'Biology'],
   PCMB: ['Chemistry', 'Physics', 'Maths', 'Biology'],
 };
 
-const RANDOM_TEST_OPTIONS = [
-  { count: 10, label: '10 Questions' },
-  { count: 50, label: '50 Questions' },
-  { count: 100, label: '100 Questions' },
+const RANDOM_OPTIONS = [
+  { count: 10, label: '10 Questions', desc: 'Quick practice' },
+  { count: 50, label: '50 Questions', desc: 'Medium session' },
+  { count: 100, label: '100 Questions', desc: 'Full practice' },
 ];
 
 export default function TestsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const isPremium = user?.subscription === 'premium';
-  
-  // Filter subjects based on user's group
+
   const SUBJECTS = useMemo(() => {
-    if (!user?.group) {
-      return ALL_SUBJECTS;
-    }
-    const allowedSubjects = GROUP_SUBJECTS[user.group] || [];
-    return ALL_SUBJECTS.filter(subj => allowedSubjects.includes(subj.name));
+    if (!user?.group) return ALL_SUBJECTS;
+    const allowed = GROUP_SUBJECTS[user.group] || [];
+    return ALL_SUBJECTS.filter((s) => allowed.includes(s.name));
   }, [user?.group]);
-  
-  const [showTestOptions, setShowTestOptions] = useState(false);
+
+  const [showOptions, setShowOptions] = useState(false);
   const [testMode, setTestMode] = useState<TestMode>('select');
   const [filter, setFilter] = useState<FilterType>('year');
   const [years, setYears] = useState<string[]>([]);
   const [loadingYears, setLoadingYears] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generatingRandom, setGeneratingRandom] = useState<number | null>(null);
-  const [generatingYearTest, setGeneratingYearTest] = useState<string | null>(null);
-  const [generatingSubjectTest, setGeneratingSubjectTest] = useState<string | null>(null);
+  const [generatingYear, setGeneratingYear] = useState<string | null>(null);
+  const [generatingSubject, setGeneratingSubject] = useState<string | null>(null);
 
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 50,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  // Fetch years when filter changes to 'year'
   useEffect(() => {
     if (filter === 'year') {
-      let isMounted = true;
-
-      async function fetchYears() {
-        setLoadingYears(true);
-        setError(null);
-        try {
-          const response = await getDistinctYears();
-          if (isMounted) {
-            setYears(response.data);
-          }
-        } catch (requestError) {
-          if (isMounted) {
-            const message =
-              requestError instanceof Error ? requestError.message : 'Failed to load years';
-            setError(message);
-            setYears([]);
-          }
-        } finally {
-          if (isMounted) {
-            setLoadingYears(false);
-          }
-        }
-      }
-
-      fetchYears();
-
-      return () => {
-        isMounted = false;
-      };
+      let mounted = true;
+      setLoadingYears(true);
+      setError(null);
+      getDistinctYears()
+        .then((r) => mounted && setYears(Array.isArray(r?.data) ? r.data : []))
+        .catch((e) =>
+          mounted && setError(e instanceof Error ? e.message : 'Failed to load years')
+        )
+        .finally(() => mounted && setLoadingYears(false));
+      return () => { mounted = false; };
     }
   }, [filter]);
 
   const checkTestLimit = async (): Promise<boolean> => {
     if (isPremium) return true;
     const { getTestCount, canTakeTest } = await import('../utils/testTracking');
-    const testCount = await getTestCount();
-    if (!canTakeTest(false, testCount)) {
+    if (!canTakeTest(false, await getTestCount())) {
       Alert.alert(
         'Test Limit Reached',
-        'You have reached the limit of 3 free tests. Upgrade to premium for unlimited tests.',
+        'You’ve used 3 free tests. Upgrade for unlimited.',
         [
           { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Upgrade Now',
-            onPress: () => navigation.navigate('PremiumPurchase'),
-          },
+          { text: 'Upgrade', onPress: () => navigation.navigate('PremiumPurchase') },
         ]
       );
       return false;
@@ -145,899 +95,455 @@ export default function TestsScreen() {
     return true;
   };
 
-  const handleGenerateRandomTest = async (questionCount: number) => {
+  const runRandom = async (n: number) => {
     if (!(await checkTestLimit())) return;
-    
-    setGeneratingRandom(questionCount);
+    setGeneratingRandom(n);
     setError(null);
     try {
-      const response = await generateRandomTest(questionCount);
+      const { data } = await generateRandomTest(n);
       if (!isPremium) {
         const { incrementTestCount } = await import('../utils/testTracking');
         await incrementTestCount();
       }
-      navigation.navigate('CBT', {
-        testId: response.data.sessionId,
-        questions: response.data.questions,
-      });
-    } catch (err) {
-      console.error('Failed to generate random test:', err);
-      setError(err instanceof Error ? err.message : 'Failed to generate random test');
+      navigation.navigate('CBT', { testId: data.sessionId, questions: data.questions });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to start test');
     } finally {
       setGeneratingRandom(null);
     }
   };
 
-  const handleStartYearTest = async (year: string) => {
+  const runYear = async (year: string) => {
     if (!(await checkTestLimit())) return;
-    
-    setGeneratingYearTest(year);
+    setGeneratingYear(year);
     setError(null);
     try {
-      const response = await generateRandomTest(25, year);
+      const { data } = await generateRandomTest(25, year);
       if (!isPremium) {
         const { incrementTestCount } = await import('../utils/testTracking');
         await incrementTestCount();
       }
-      navigation.navigate('CBT', {
-        testId: response.data.sessionId,
-        questions: response.data.questions,
-      });
-    } catch (err) {
-      console.error('Failed to start year test:', err);
-      setError(err instanceof Error ? err.message : 'Failed to start test');
+      navigation.navigate('CBT', { testId: data.sessionId, questions: data.questions });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to start test');
     } finally {
-      setGeneratingYearTest(null);
+      setGeneratingYear(null);
     }
   };
 
-  const handleStartSubjectTest = async (subject: string) => {
+  const runSubject = async (name: string) => {
     if (!(await checkTestLimit())) return;
-    
-    setGeneratingSubjectTest(subject);
+    setGeneratingSubject(name);
     setError(null);
     try {
-      const response = await generateRandomTest(25, undefined, subject);
+      const { data } = await generateRandomTest(25, undefined, name);
       if (!isPremium) {
         const { incrementTestCount } = await import('../utils/testTracking');
         await incrementTestCount();
       }
-      navigation.navigate('CBT', {
-        testId: response.data.sessionId,
-        questions: response.data.questions,
-      });
-    } catch (err) {
-      console.error('Failed to start subject test:', err);
-      setError(err instanceof Error ? err.message : 'Failed to start test');
+      navigation.navigate('CBT', { testId: data.sessionId, questions: data.questions });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to start test');
     } finally {
-      setGeneratingSubjectTest(null);
+      setGeneratingSubject(null);
     }
   };
 
-  if (error && years.length === 0 && loadingYears && filter === 'year') {
+  const retryYears = () => {
+    setError(null);
+    setLoadingYears(true);
+    getDistinctYears()
+      .then((r) => {
+        setError(null);
+        setYears(Array.isArray(r?.data) ? r.data : []);
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load years'))
+      .finally(() => setLoadingYears(false));
+  };
+
+  // —— Error (years) ——
+  if (error && years.length === 0 && !loadingYears && filter === 'year' && showOptions) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.backgroundGradient}>
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle" size={64} color={colors.danger} />
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity
-              onPress={() => {
-                setError(null);
-                setLoadingYears(true);
-              }}
-              style={styles.retryButton}
-            >
-              <LinearGradient colors={colors.gradientPrimary as [string, string, ...string[]]} style={styles.retryGradient}>
-                <Text style={styles.retryText}>Retry</Text>
+      <View style={s.screen}>
+        <LinearGradient colors={['#F5F3FF', '#EDE9FE'] as [string, string]} style={s.gradient}>
+          <View style={{ height: insets.top }} />
+          <BackHeader
+            title="PYQ Tests"
+            subtitle="Previous Year Questions"
+            onBack={() => { setShowOptions(false); setError(null); }}
+          />
+          <View style={s.errorWrap}>
+            <View style={s.errorIconWrap}>
+              <Ionicons name="cloud-offline" size={32} color={colors.danger} />
+            </View>
+            <Text style={s.errorTitle}>Couldn’t load years</Text>
+            <Text style={s.errorMsg}>{error}</Text>
+            <TouchableOpacity onPress={retryYears} activeOpacity={0.8} style={s.retryWrap}>
+              <LinearGradient
+                colors={colors.gradientPrimary as [string, string]}
+                style={s.retryBtn}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Ionicons name="refresh" size={18} color="#FFF" />
+                <Text style={s.retryTxt}>Retry</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
-        </View>
-      </SafeAreaView>
+        </LinearGradient>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.backgroundGradient}>
-        {showTestOptions ? (
-          <BackHeader 
-            title="PYQ Tests" 
-            subtitle="Previous Year Question Papers"
-            onBack={() => setShowTestOptions(false)} 
-          />
+    <View style={s.screen}>
+      <LinearGradient colors={['#F5F3FF', '#EDE9FE'] as [string, string]} style={s.gradient}>
+        {/* Header */}
+        {showOptions ? (
+          <>
+            <View style={{ height: insets.top }} />
+            <BackHeader
+              title="PYQ Tests"
+              subtitle="Previous Year Questions"
+              onBack={() => setShowOptions(false)}
+            />
+          </>
         ) : (
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>PYQ Tests</Text>
-            <Text style={styles.headerSubtitle}>Previous Year Question Papers</Text>
-          </View>
+          <>
+            <View style={{ height: insets.top }} />
+            <View style={s.header}>
+              <Text style={s.heroTitle}>PYQ Tests</Text>
+              <Text style={s.heroSub}>Previous year questions · MHT CET</Text>
+            </View>
+          </>
         )}
+
         <ScrollView
-          contentContainerStyle={styles.container}
+          style={s.scroll}
+          contentContainerStyle={[s.scrollContent, { paddingBottom: 24 + insets.bottom + 80 }]}
           showsVerticalScrollIndicator={false}
+          bounces={true}
         >
-          <Animated.View
-            style={{
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            }}
-          >
+          {/* —— Landing: 2 main actions —— */}
+          {!showOptions && (
+            <View style={s.landing}>
+              <TouchableOpacity
+                onPress={() => setShowOptions(true)}
+                activeOpacity={0.7}
+                style={s.actionCard}
+              >
+                <View style={s.actionIconWrap}>
+                  <LinearGradient
+                    colors={colors.gradientPrimary as [string, string]}
+                    style={s.actionIconGrad}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <Ionicons name="document-text" size={26} color="#FFF" />
+                  </LinearGradient>
+                </View>
+                <View style={s.actionBody}>
+                  <Text style={s.actionTitle}>PYQ Practice</Text>
+                  <Text style={s.actionSub}>By year, subject or random</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={22} color={colors.authTextMuted} />
+              </TouchableOpacity>
 
-            {/* Initial Simple UI - Show only if test options are not shown */}
-            {!showTestOptions && (
-              <View style={styles.initialCardsContainer}>
-                {/* Start Random Test Card */}
+              <TouchableOpacity
+                onPress={() => navigation.navigate('MockTestSelection')}
+                activeOpacity={0.7}
+                style={s.actionCard}
+              >
+                <View style={[s.actionIconWrap, { backgroundColor: colors.accentSoft }]}>
+                  <Ionicons name="trophy" size={26} color={colors.accent} />
+                </View>
+                <View style={s.actionBody}>
+                  <Text style={s.actionTitle}>Mock Test</Text>
+                  <Text style={s.actionSub}>Full-length MHT CET papers</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={22} color={colors.authTextMuted} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* —— Options: Random | Select, then list —— */}
+          {showOptions && (
+            <View style={s.optionsCard}>
+              {/* Mode: Random | Select */}
+              <View style={s.pillRow}>
                 <TouchableOpacity
-                  onPress={() => setShowTestOptions(true)}
+                  style={[s.pill, testMode === 'random' && s.pillActive]}
+                  onPress={() => setTestMode('random')}
                   activeOpacity={0.7}
-                  style={styles.initialCard}
                 >
-                  <View style={styles.initialCardContent}>
-                    <View style={styles.initialCardLeft}>
-                      <View style={styles.initialCardIconContainer}>
-                        <Ionicons name="shuffle" size={24} color={colors.primary} />
-                      </View>
-                      <View style={styles.initialCardText}>
-                        <Text style={styles.initialCardTitle}>Start Random Test</Text>
-                        <Text style={styles.initialCardSubtitle}>
-                          Practice with random questions
-                        </Text>
-                      </View>
+                  {testMode === 'random' ? (
+                    <LinearGradient
+                      colors={colors.gradientPrimary as [string, string]}
+                      style={s.pillInner}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                    >
+                      <Ionicons name="shuffle" size={16} color="#FFF" />
+                      <Text style={s.pillTxtActive}>Random</Text>
+                    </LinearGradient>
+                  ) : (
+                    <View style={s.pillInnerPlain}>
+                      <Ionicons name="shuffle-outline" size={16} color={colors.authTextMuted} />
+                      <Text style={s.pillTxt}>Random</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color={colors.authTextMuted} />
-                  </View>
+                  )}
                 </TouchableOpacity>
-
-                {/* Give Mock Test Card */}
                 <TouchableOpacity
-                  onPress={() => navigation.navigate('MockTestSelection')}
+                  style={[s.pill, testMode === 'select' && s.pillActive]}
+                  onPress={() => setTestMode('select')}
                   activeOpacity={0.7}
-                  style={styles.initialCard}
                 >
-                  <View style={styles.initialCardContent}>
-                    <View style={styles.initialCardLeft}>
-                      <View style={styles.initialCardIconContainer}>
-                        <Ionicons name="document-text" size={24} color={colors.primary} />
-                      </View>
-                      <View style={styles.initialCardText}>
-                        <Text style={styles.initialCardTitle}>Give Mock Test</Text>
-                        <Text style={styles.initialCardSubtitle}>
-                          Full-length MHT CET mock tests
-                        </Text>
-                      </View>
+                  {testMode === 'select' ? (
+                    <LinearGradient
+                      colors={colors.gradientPrimary as [string, string]}
+                      style={s.pillInner}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                    >
+                      <Ionicons name="list" size={16} color="#FFF" />
+                      <Text style={s.pillTxtActive}>Select</Text>
+                    </LinearGradient>
+                  ) : (
+                    <View style={s.pillInnerPlain}>
+                      <Ionicons name="list-outline" size={16} color={colors.authTextMuted} />
+                      <Text style={s.pillTxt}>Select</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color={colors.authTextMuted} />
-                  </View>
+                  )}
                 </TouchableOpacity>
               </View>
-            )}
 
-            {/* Full Test Options UI - Show only if test options are shown */}
-            {showTestOptions && (
-              <View style={styles.contentCard}>
-                {/* Mode Selection Tabs */}
-                <View style={styles.modeContainer}>
-                  <TouchableOpacity
-                    style={[styles.modeTab, testMode === 'select' && styles.modeTabActive]}
-                    onPress={() => setTestMode('select')}
-                    activeOpacity={0.7}
-                  >
-                    {testMode === 'select' ? (
-                      <LinearGradient
-                        colors={colors.gradientPrimary as [string, string, ...string[]]}
-                        style={styles.modeTabGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
+              {testMode === 'random' && (
+                <View style={s.listBlock}>
+                  <Text style={s.listBlockTitle}>Choose length</Text>
+                  <Text style={s.listBlockSub}>Quick practice or full session</Text>
+                  <View style={s.list}>
+                    {RANDOM_OPTIONS.map((o) => (
+                      <TouchableOpacity
+                        key={o.count}
+                        onPress={() => runRandom(o.count)}
+                        disabled={generatingRandom === o.count}
+                        activeOpacity={0.7}
+                        style={s.row}
                       >
-                        <Ionicons 
-                          name="list" 
-                          size={18} 
-                          color="#FFFFFF" 
-                          style={{ marginRight: spacing.xs }}
-                        />
-                        <Text style={styles.modeTextActive}>
-                          Select Practice
-                        </Text>
-                      </LinearGradient>
-                    ) : (
-                      <View style={styles.modeTabInactive}>
-                        <Ionicons 
-                          name="list" 
-                          size={18} 
-                          color={colors.authTextMuted} 
-                          style={{ marginRight: spacing.xs }}
-                        />
-                        <Text style={styles.modeText}>
-                          Select Practice
-                        </Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.modeTab, testMode === 'random' && styles.modeTabActive]}
-                    onPress={() => setTestMode('random')}
-                    activeOpacity={0.7}
-                  >
-                    {testMode === 'random' ? (
-                      <LinearGradient
-                        colors={colors.gradientPrimary as [string, string, ...string[]]}
-                        style={styles.modeTabGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                      >
-                        <Ionicons 
-                          name="shuffle" 
-                          size={18} 
-                          color="#FFFFFF" 
-                          style={{ marginRight: spacing.xs }}
-                        />
-                        <Text style={styles.modeTextActive}>
-                          Random Test
-                        </Text>
-                      </LinearGradient>
-                    ) : (
-                      <View style={styles.modeTabInactive}>
-                        <Ionicons 
-                          name="shuffle" 
-                          size={18} 
-                          color={colors.authTextMuted} 
-                          style={{ marginRight: spacing.xs }}
-                        />
-                        <Text style={styles.modeText}>
-                          Random Test
-                        </Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
+                        <View style={s.rowIcon}>
+                          <Ionicons name="book-outline" size={20} color={colors.primary} />
+                        </View>
+                        <View style={s.rowText}>
+                          <Text style={s.rowTitle}>{o.label}</Text>
+                          <Text style={s.rowSub}>{o.desc}</Text>
+                        </View>
+                        {generatingRandom === o.count ? (
+                          <ActivityIndicator size="small" color={colors.primary} />
+                        ) : (
+                          <Ionicons name="chevron-forward" size={20} color={colors.authTextMuted} />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
+              )}
 
-                {/* Content based on selected mode */}
-                {testMode === 'random' ? (
-                  <View style={styles.randomTestSection}>
-                    <Text style={styles.sectionSubtitle}>
-                      Get 10, 50, or 100 random questions from all subjects
-                    </Text>
-                    <View style={styles.randomTestOptions}>
-                      {RANDOM_TEST_OPTIONS.map((option) => (
-                        <TouchableOpacity
-                          key={option.count}
-                          onPress={() => handleGenerateRandomTest(option.count)}
-                          disabled={generatingRandom === option.count}
-                          activeOpacity={0.7}
-                          style={styles.randomTestCard}
+              {testMode === 'select' && (
+                <>
+                  {/* Filter: By Year | By Subject */}
+                  <View style={s.pillRow}>
+                    <TouchableOpacity
+                      style={[s.pillSmall, filter === 'year' && s.pillSmallActive]}
+                      onPress={() => setFilter('year')}
+                      activeOpacity={0.7}
+                    >
+                      {filter === 'year' ? (
+                        <LinearGradient
+                          colors={colors.gradientPrimary as [string, string]}
+                          style={s.pillSmallInner}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
                         >
-                          <View style={styles.randomTestCardContent}>
-                            <View style={styles.randomTestCardLeft}>
-                              <View style={styles.randomTestIconContainer}>
-                                <Ionicons name="shuffle" size={24} color={colors.primary} />
-                              </View>
-                              <View style={styles.randomTestInfo}>
-                                <Text style={styles.randomTestTitle}>{option.count} Questions</Text>
-                                <Text style={styles.randomTestSubtitle}>Random practice test</Text>
-                              </View>
+                          <Text style={s.pillSmallTxtActive}>By Year</Text>
+                        </LinearGradient>
+                      ) : (
+                        <Text style={s.pillSmallTxt}>By Year</Text>
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[s.pillSmall, filter === 'subject' && s.pillSmallActive]}
+                      onPress={() => setFilter('subject')}
+                      activeOpacity={0.7}
+                    >
+                      {filter === 'subject' ? (
+                        <LinearGradient
+                          colors={colors.gradientPrimary as [string, string]}
+                          style={s.pillSmallInner}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                        >
+                          <Text style={s.pillSmallTxtActive}>By Subject</Text>
+                        </LinearGradient>
+                      ) : (
+                        <Text style={s.pillSmallTxt}>By Subject</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={s.listBlock}>
+                    {filter === 'year' && loadingYears && (
+                      <View style={s.loadWrap}>
+                        <ActivityIndicator size="large" color={colors.primary} />
+                        <Text style={s.loadTxt}>Loading years…</Text>
+                      </View>
+                    )}
+
+                    {filter === 'year' && !loadingYears && years.length === 0 && (
+                      <View style={s.emptyWrap}>
+                        <Ionicons name="calendar-outline" size={40} color={colors.authTextMuted} />
+                        <Text style={s.emptyTitle}>No years found</Text>
+                        <Text style={s.emptySub}>Try the Random option</Text>
+                      </View>
+                    )}
+
+                    {filter === 'year' && !loadingYears && years.length > 0 && (
+                      <View style={s.list}>
+                        {years.map((y) => (
+                          <TouchableOpacity
+                            key={y}
+                            onPress={() => runYear(y)}
+                            disabled={generatingYear === y}
+                            activeOpacity={0.7}
+                            style={s.row}
+                          >
+                            <View style={s.rowIcon}>
+                              <Ionicons name="calendar" size={20} color={colors.primary} />
                             </View>
-                            {generatingRandom === option.count ? (
+                            <View style={s.rowText}>
+                              <Text style={s.rowTitle}>MHT CET {y}</Text>
+                              <Text style={s.rowSub}>25 questions from {y}</Text>
+                            </View>
+                            {generatingYear === y ? (
                               <ActivityIndicator size="small" color={colors.primary} />
                             ) : (
                               <Ionicons name="chevron-forward" size={20} color={colors.authTextMuted} />
                             )}
-                          </View>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                ) : (
-                  <View style={styles.selectPracticeSection}>
-                    {/* Filter Tabs */}
-                    <View style={styles.filterContainer}>
-                      <TouchableOpacity
-                        style={[styles.filterTab, filter === 'year' && styles.filterTabActive]}
-                        onPress={() => setFilter('year')}
-                        activeOpacity={0.7}
-                      >
-                        <LinearGradient
-                          colors={filter === 'year' ? (colors.gradientPrimary as [string, string, ...string[]]) : (['transparent', 'transparent'] as [string, string, ...string[]])}
-                          style={styles.filterTabGradient}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                        >
-                          <Text
-                            style={[
-                              styles.filterText,
-                              filter === 'year' && styles.filterTextActive,
-                            ]}
-                          >
-                            By Year
-                          </Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.filterTab, filter === 'subject' && styles.filterTabActive]}
-                        onPress={() => setFilter('subject')}
-                        activeOpacity={0.7}
-                      >
-                        <LinearGradient
-                          colors={filter === 'subject' ? (colors.gradientPrimary as [string, string, ...string[]]) : (['transparent', 'transparent'] as [string, string, ...string[]])}
-                          style={styles.filterTabGradient}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                        >
-                          <Text
-                            style={[
-                              styles.filterText,
-                              filter === 'subject' && styles.filterTextActive,
-                            ]}
-                          >
-                            By Subject
-                          </Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    </View>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
 
-                    {/* Year Cards or Subject Cards */}
-                    {filter === 'year' ? (
-                      loadingYears ? (
-                        <View style={styles.loadingContainer}>
-                          <ActivityIndicator size="large" color={colors.primary} />
-                          <Text style={styles.loadingText}>Loading years...</Text>
-                        </View>
-                      ) : years.length === 0 ? (
-                        <View style={styles.emptyContainer}>
-                          <Ionicons name="calendar-outline" size={64} color={colors.authTextMuted} />
-                          <Text style={styles.emptyText}>No years available</Text>
-                          <Text style={styles.emptySubtext}>Try the Random Test option</Text>
-                        </View>
-                      ) : (
-                        <View style={styles.yearList}>
-                          {years.map((year, index) => (
-                            <Animated.View
-                              key={year}
-                              style={{
-                                opacity: fadeAnim,
-                                transform: [
-                                  {
-                                    translateY: slideAnim.interpolate({
-                                      inputRange: [0, 30],
-                                      outputRange: [0, 30 + index * 10],
-                                    }),
-                                  },
-                                ],
-                              }}
-                            >
-                              <TouchableOpacity
-                                onPress={() => handleStartYearTest(year)}
-                                disabled={generatingYearTest === year}
-                                activeOpacity={0.7}
-                                style={styles.yearCard}
-                              >
-                                <View style={styles.yearCardContent}>
-                                  <View style={styles.yearCardLeft}>
-                                    <View style={styles.yearIconContainer}>
-                                      <Ionicons name="calendar" size={24} color={colors.primary} />
-                                    </View>
-                                    <View style={styles.yearInfo}>
-                                      <Text style={styles.yearTitle}>MHT CET PYQ</Text>
-                                      <Text style={styles.yearYear}>{year}</Text>
-                                      <Text style={styles.yearSubtitle}>
-                                        Random questions from {year}
-                                      </Text>
-                                    </View>
-                                  </View>
-                                  <View style={styles.yearCardRight}>
-                                    {generatingYearTest === year ? (
-                                      <ActivityIndicator size="small" color={colors.primary} />
-                                    ) : (
-                                      <Ionicons name="chevron-forward" size={20} color={colors.authTextMuted} />
-                                    )}
-                                  </View>
-                                </View>
-                              </TouchableOpacity>
-                            </Animated.View>
-                          ))}
-                        </View>
-                      )
-                    ) : (
-                      <View style={styles.subjectList}>
-                        {SUBJECTS.map((subject, index) => (
-                          <Animated.View
-                            key={subject.name}
-                            style={{
-                              opacity: fadeAnim,
-                              transform: [
-                                {
-                                  translateY: slideAnim.interpolate({
-                                    inputRange: [0, 30],
-                                    outputRange: [0, 30 + index * 10],
-                                  }),
-                                },
-                              ],
-                            }}
+                    {filter === 'subject' && (
+                      <View style={s.list}>
+                        {SUBJECTS.map((sub) => (
+                          <TouchableOpacity
+                            key={sub.name}
+                            onPress={() => runSubject(sub.name)}
+                            disabled={generatingSubject === sub.name}
+                            activeOpacity={0.7}
+                            style={s.row}
                           >
-                            <TouchableOpacity
-                              onPress={() => handleStartSubjectTest(subject.name)}
-                              disabled={generatingSubjectTest === subject.name}
-                              activeOpacity={0.7}
-                              style={styles.subjectCard}
-                            >
-                              <View style={styles.subjectCardContent}>
-                                <View style={styles.subjectCardLeft}>
-                                  <View style={styles.subjectIconContainer}>
-                                    <Ionicons name={subject.icon as any} size={24} color={colors.primary} />
-                                  </View>
-                                  <View style={styles.subjectInfo}>
-                                    <Text style={styles.subjectTitle}>{subject.name}</Text>
-                                    <Text style={styles.subjectSubtitle}>
-                                      Random questions from {subject.name}
-                                    </Text>
-                                  </View>
-                                </View>
-                                <View style={styles.subjectCardRight}>
-                                  {generatingSubjectTest === subject.name ? (
-                                    <ActivityIndicator size="small" color={colors.primary} />
-                                  ) : (
-                                    <Ionicons name="chevron-forward" size={20} color={colors.authTextMuted} />
-                                  )}
-                                </View>
-                              </View>
-                            </TouchableOpacity>
-                          </Animated.View>
+                            <View style={[s.rowIcon, { backgroundColor: `${sub.color}18` }]}>
+                              <Ionicons name={sub.icon} size={20} color={sub.color} />
+                            </View>
+                            <View style={s.rowText}>
+                              <Text style={s.rowTitle}>{sub.name}</Text>
+                              <Text style={s.rowSub}>25 questions from {sub.name}</Text>
+                            </View>
+                            {generatingSubject === sub.name ? (
+                              <ActivityIndicator size="small" color={colors.primary} />
+                            ) : (
+                              <Ionicons name="chevron-forward" size={20} color={colors.authTextMuted} />
+                            )}
+                          </TouchableOpacity>
                         ))}
                       </View>
                     )}
                   </View>
-                )}
-              </View>
-            )}
-          </Animated.View>
+                </>
+              )}
+            </View>
+          )}
         </ScrollView>
-      </View>
-    </SafeAreaView>
+      </LinearGradient>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F3E8FF',
-  },
-  backgroundGradient: {
-    flex: 1,
-    backgroundColor: '#F3E8FF',
-  },
-  container: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.lg,
-    paddingBottom: 100,
-  },
-  header: {
-    paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
-  },
-  headerTitle: {
-    ...typography.h1,
-    color: colors.authText,
-    fontWeight: '700',
-    marginBottom: spacing.xs,
-  },
-  headerSubtitle: {
-    ...typography.body,
-    color: colors.authTextSecondary,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
+const s = StyleSheet.create({
+  screen: { flex: 1 },
+  gradient: { flex: 1 },
+  header: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.xl },
+  heroTitle: { ...typography.h1, color: colors.authText, fontWeight: '800', marginBottom: 4 },
+  heroSub: { ...typography.body, color: colors.authTextSecondary, fontSize: 14 },
+
+  scroll: { flex: 1 },
+  scrollContent: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, flexGrow: 1 },
+
+  landing: { gap: spacing.md },
+  actionCard: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-  },
-  loadingText: {
-    ...typography.body,
-    color: '#6B7280',
-    fontSize: 14,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-    gap: spacing.lg,
-  },
-  errorText: {
-    ...typography.body,
-    color: colors.danger,
-    textAlign: 'center',
-    fontSize: 14,
-  },
-  retryButton: {
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    marginTop: spacing.md,
-    ...shadow.md,
-  },
-  retryGradient: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-  },
-  retryText: {
-    ...typography.subtitle,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  contentCard: {
-    backgroundColor: colors.authSurface,
+    backgroundColor: '#FFF',
     borderRadius: radius.xl,
     padding: spacing.lg,
-    ...shadow.md,
-  },
-  modeContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#F9FAFB',
-    borderRadius: radius.lg,
-    padding: spacing.xs + 2,
-    marginBottom: spacing.xl,
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  modeTab: {
-    flex: 1,
-    borderRadius: radius.md,
-    overflow: 'hidden',
-  },
-  modeTabGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-  },
-  modeTabInactive: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    backgroundColor: 'transparent',
-  },
-  modeTabActive: {
     ...shadow.sm,
+    elevation: 2,
   },
-  modeText: {
-    ...typography.subtitle,
-    color: colors.authTextMuted,
-    fontWeight: '600',
-    fontSize: 14,
+  actionIconWrap: { width: 52, height: 52, borderRadius: 26, overflow: 'hidden' },
+  actionIconGrad: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
+  actionBody: { flex: 1, marginLeft: spacing.lg },
+  actionTitle: { ...typography.title, color: colors.authText, fontWeight: '700', marginBottom: 2 },
+  actionSub: { ...typography.small, color: colors.authTextSecondary },
+
+  optionsCard: {
+    backgroundColor: '#FFF',
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    ...shadow.sm,
+    elevation: 2,
   },
-  modeTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  randomTestSection: {
-    paddingTop: spacing.md,
-  },
-  sectionSubtitle: {
-    ...typography.body,
-    color: colors.authTextSecondary,
-    marginBottom: spacing.lg,
-    fontSize: 14,
-  },
-  randomTestOptions: {
-    gap: spacing.md,
-  },
-  randomTestCard: {
-    backgroundColor: colors.authSurface,
+  pillRow: { flexDirection: 'row', backgroundColor: '#F3F4F6', borderRadius: 12, padding: 4, marginBottom: spacing.xl },
+  pill: { flex: 1, borderRadius: 10, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  pillActive: {},
+  pillInner: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12 },
+  pillInnerPlain: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12 },
+  pillTxt: { ...typography.subtitle, color: colors.authTextMuted, fontWeight: '600', fontSize: 14 },
+  pillTxtActive: { color: '#FFF', fontWeight: '700', fontSize: 14 },
+
+  pillSmall: { flex: 1, borderRadius: 10, overflow: 'hidden', marginBottom: spacing.lg },
+  pillSmallActive: {},
+  pillSmallInner: { paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
+  pillSmallTxt: { ...typography.subtitle, color: colors.authTextMuted, fontWeight: '600', fontSize: 14, textAlign: 'center', paddingVertical: 10 },
+  pillSmallTxtActive: { color: '#FFF', fontWeight: '700', fontSize: 14 },
+
+  listBlock: { marginTop: 0 },
+  listBlockTitle: { ...typography.subtitle, color: colors.authText, fontWeight: '600', marginBottom: 2 },
+  listBlockSub: { ...typography.small, color: colors.authTextSecondary, marginBottom: spacing.lg },
+  list: { gap: spacing.sm },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FAFAFA',
     borderRadius: radius.lg,
     padding: spacing.lg,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.authBorder,
-    ...shadow.sm,
   },
-  randomTestCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  randomTestCardLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  randomTestIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: colors.primarySoft,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  randomTestInfo: {
-    flex: 1,
-  },
-  randomTestTitle: {
-    ...typography.h3,
-    color: colors.authText,
-    fontWeight: '700',
-    fontSize: 17,
-    marginBottom: spacing.xs,
-  },
-  randomTestSubtitle: {
-    ...typography.body,
-    color: colors.authTextSecondary,
-    fontSize: 13,
-  },
-  selectPracticeSection: {
-    paddingTop: spacing.md,
-  },
-  filterContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#F9FAFB',
-    borderRadius: radius.lg,
-    padding: spacing.xs + 2,
-    marginBottom: spacing.xl,
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  filterTab: {
-    flex: 1,
-    borderRadius: radius.md,
-    overflow: 'hidden',
-  },
-  filterTabGradient: {
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filterTabActive: {
-    ...shadow.sm,
-  },
-  filterText: {
-    ...typography.subtitle,
-    color: colors.authTextMuted,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  filterTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  testList: {
-    gap: spacing.lg,
-  },
-  testCard: {
-    marginBottom: spacing.md,
-  },
-  testHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: spacing.lg,
-  },
-  testIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: colors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  testInfo: {
-    flex: 1,
-  },
-  testName: {
-    ...typography.h3,
-    color: '#111827',
-    fontWeight: '700',
-    marginBottom: spacing.sm,
-  },
-  testMeta: {
-    flexDirection: 'row',
-    gap: spacing.lg,
-    flexWrap: 'wrap',
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  testDuration: {
-    ...typography.caption,
-    color: '#6B7280',
-  },
-  testQuestions: {
-    ...typography.caption,
-    color: '#6B7280',
-  },
-  testStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  statusText: {
-    ...typography.body,
-    fontWeight: '600',
-  },
-  testAction: {
-    marginTop: spacing.sm,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: spacing.xxxl,
-    gap: spacing.md,
-  },
-  emptyText: {
-    ...typography.body,
-    color: '#6B7280',
-    fontWeight: '600',
-  },
-  emptySubtext: {
-    ...typography.caption,
-    color: '#6B7280',
-  },
-  yearList: {
-    gap: spacing.md,
-  },
-  yearCard: {
-    backgroundColor: colors.authSurface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.authBorder,
-    ...shadow.sm,
-  },
-  yearCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  yearCardLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  yearIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: colors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  yearInfo: {
-    flex: 1,
-  },
-  yearTitle: {
-    ...typography.h3,
-    color: colors.authText,
-    fontWeight: '700',
-    fontSize: 17,
-    marginBottom: spacing.xs,
-  },
-  yearYear: {
-    ...typography.h3,
-    color: colors.authText,
-    fontWeight: '700',
-    fontSize: 17,
-    marginBottom: spacing.xs,
-  },
-  yearSubtitle: {
-    ...typography.body,
-    color: colors.authTextSecondary,
-    fontSize: 13,
-  },
-  yearCardRight: {
-    marginLeft: spacing.md,
-    justifyContent: 'center',
-  },
-  subjectList: {
-    gap: spacing.md,
-  },
-  subjectCard: {
-    backgroundColor: colors.authSurface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.authBorder,
-    ...shadow.sm,
-  },
-  subjectCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  subjectCardLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  subjectIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: colors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  subjectInfo: {
-    flex: 1,
-  },
-  subjectTitle: {
-    ...typography.h3,
-    color: colors.authText,
-    fontWeight: '700',
-    fontSize: 17,
-    marginBottom: spacing.xs,
-  },
-  subjectSubtitle: {
-    ...typography.body,
-    color: colors.authTextSecondary,
-    fontSize: 13,
-  },
-  subjectCardRight: {
-    marginLeft: spacing.md,
-    justifyContent: 'center',
-  },
-  initialCardsContainer: {
-    gap: spacing.md,
-    marginTop: spacing.lg,
-  },
-  initialCard: {
-    backgroundColor: colors.authSurface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.authBorder,
-    ...shadow.sm,
-  },
-  initialCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  initialCardLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  initialCardIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: colors.primarySoft,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  initialCardText: {
-    flex: 1,
-  },
-  initialCardTitle: {
-    ...typography.h3,
-    color: colors.authText,
-    fontWeight: '700',
-    fontSize: 17,
-    marginBottom: spacing.xs,
-  },
-  initialCardSubtitle: {
-    ...typography.body,
-    color: colors.authTextSecondary,
-    fontSize: 13,
-  },
+  rowIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md },
+  rowText: { flex: 1 },
+  rowTitle: { ...typography.subtitle, color: colors.authText, fontWeight: '600', marginBottom: 2 },
+  rowSub: { ...typography.small, color: colors.authTextSecondary },
+
+  loadWrap: { paddingVertical: spacing.xxxl, alignItems: 'center', gap: spacing.md },
+  loadTxt: { ...typography.body, color: colors.authTextSecondary },
+  emptyWrap: { paddingVertical: spacing.xxxl, alignItems: 'center', gap: spacing.sm },
+  emptyTitle: { ...typography.subtitle, color: colors.authText, fontWeight: '600' },
+  emptySub: { ...typography.small, color: colors.authTextMuted },
+
+  errorWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xxl },
+  errorIconWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: `${colors.danger}14`, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg },
+  errorTitle: { ...typography.h3, color: colors.authText, fontWeight: '700', marginBottom: spacing.xs },
+  errorMsg: { ...typography.body, color: colors.authTextSecondary, textAlign: 'center', marginBottom: spacing.xl },
+  retryWrap: { borderRadius: radius.lg, overflow: 'hidden', ...shadow.sm },
+  retryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: spacing.md, paddingHorizontal: spacing.xxl },
+  retryTxt: { color: '#FFF', fontWeight: '700', fontSize: 15 },
 });
