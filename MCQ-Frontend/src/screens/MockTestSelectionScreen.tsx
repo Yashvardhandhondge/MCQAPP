@@ -2,7 +2,6 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useState, useRef } from 'react';
 import {
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,12 +9,14 @@ import {
   View,
   Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { AppStackParamList } from '../navigation/types';
 import { getAvailableMockTests, startMockTestSession, getMockTestResults } from '../services/mcq.service';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import BackHeader from '../components/ui/BackHeader';
+import { safeGoBack } from '../utils/navigation';
 
 export type MockTestSelectionScreenProps = NativeStackScreenProps<AppStackParamList, 'MockTestSelection'>;
 
@@ -142,7 +143,7 @@ export default function MockTestSelectionScreen({ navigation }: MockTestSelectio
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.backgroundGradient}>
-          <BackHeader title="Mock Tests" onBack={() => navigation.goBack()} />
+          <BackHeader title="Mock Tests" navigation={navigation} />
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Loading mock tests...</Text>
@@ -156,7 +157,7 @@ export default function MockTestSelectionScreen({ navigation }: MockTestSelectio
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.backgroundGradient}>
-          <BackHeader title="Mock Tests" onBack={() => navigation.goBack()} />
+          <BackHeader title="Mock Tests" navigation={navigation} />
           <View style={styles.errorContainer}>
             <Ionicons name="alert-circle" size={64} color={colors.danger} />
             <Text style={styles.errorText}>{error}</Text>
@@ -183,7 +184,7 @@ export default function MockTestSelectionScreen({ navigation }: MockTestSelectio
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.backgroundGradient}>
-        <BackHeader title="Mock Tests" onBack={() => navigation.goBack()} />
+        <BackHeader title="Mock Tests" onBack={() => safeGoBack(navigation)} />
         <ScrollView
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}

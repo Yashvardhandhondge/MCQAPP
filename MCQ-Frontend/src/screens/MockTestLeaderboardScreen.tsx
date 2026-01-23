@@ -20,6 +20,7 @@ import { colors, radius, spacing, typography, shadow } from '../theme';
 import { getMockTestLeaderboard } from '../services/mcq.service';
 import type { LeaderboardEntry } from '../types/mcq';
 import BackHeader from '../components/ui/BackHeader';
+import { safeGoBack } from '../utils/navigation';
 
 export type MockTestLeaderboardScreenProps = NativeStackScreenProps<AppStackParamList, 'MockTestLeaderboard'>;
 
@@ -104,7 +105,7 @@ export default function MockTestLeaderboardScreen({ route }: MockTestLeaderboard
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.backgroundGradient}>
-          <BackHeader title={`MockTest${mockTestNumber} Leaderboard`} onBack={() => navigation.goBack()} />
+          <BackHeader title={`MockTest${mockTestNumber} Leaderboard`} navigation={navigation} />
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Loading leaderboard...</Text>
@@ -118,7 +119,7 @@ export default function MockTestLeaderboardScreen({ route }: MockTestLeaderboard
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.backgroundGradient}>
-          <BackHeader title={`MockTest${mockTestNumber} Leaderboard`} onBack={() => navigation.goBack()} />
+          <BackHeader title={`MockTest${mockTestNumber} Leaderboard`} navigation={navigation} />
           <View style={styles.errorContainer}>
             <Ionicons name="alert-circle" size={64} color={colors.danger} />
             <Text style={styles.errorText}>{error}</Text>
@@ -142,7 +143,7 @@ export default function MockTestLeaderboardScreen({ route }: MockTestLeaderboard
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.backgroundGradient}>
-        <BackHeader title={`MockTest${mockTestNumber} Leaderboard`} onBack={() => navigation.goBack()} />
+        <BackHeader title={`MockTest${mockTestNumber} Leaderboard`} onBack={() => safeGoBack(navigation)} />
         <ScrollView
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}

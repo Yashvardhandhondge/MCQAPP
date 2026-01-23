@@ -2,7 +2,6 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useState, useRef } from 'react';
 import {
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +9,7 @@ import {
   View,
   Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { AppStackParamList } from '../navigation/types';
@@ -20,6 +20,7 @@ import ModernCard from '../components/ui/ModernCard';
 import BackHeader from '../components/ui/BackHeader';
 import MathText from '../components/ui/MathText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { safeGoBack } from '../utils/navigation';
 
 export type TestResultsScreenProps = NativeStackScreenProps<AppStackParamList, 'TestResults'>;
 
@@ -172,7 +173,7 @@ export default function TestResultsScreen({ route, navigation }: TestResultsScre
               ? `MockTest ${report.mockTestNumber}`
               : `${report.subject || 'Test'} ${report.chapter ? `• ${report.chapter}` : ''}`
           }
-          onBack={() => navigation.goBack()}
+          navigation={navigation}
         />
         <ScrollView
           contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + spacing.xl }]}

@@ -2,7 +2,6 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useState, useRef } from 'react';
 import {
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +9,7 @@ import {
   View,
   Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { AppStackParamList } from '../navigation/types';
@@ -18,6 +18,7 @@ import { getYearsWithAnalytics } from '../services/mcq.service';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import BackHeader from '../components/ui/BackHeader';
 import PremiumLockModal from '../components/ui/PremiumLockModal';
+import { safeGoBack } from '../utils/navigation';
 import type { YearAnalytics } from '../types/mcq';
 
 export type PracticeByYearScreenProps = NativeStackScreenProps<AppStackParamList, 'PracticeByYear'>;
@@ -218,7 +219,7 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
         <BackHeader
           title={chapter}
           subtitle={`Practice by Year - ${subject}`}
-          onBack={() => navigation.goBack()}
+          navigation={navigation}
         />
         <ScrollView
           contentContainerStyle={styles.container}

@@ -2,16 +2,28 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import type { NavigationProp } from '@react-navigation/native';
+import type { AppStackParamList } from '../../navigation/types';
 import { colors, radius, spacing, typography, shadow } from '../../theme';
+import { safeGoBack } from '../../utils/navigation';
 
 interface BackHeaderProps {
   title: string;
   subtitle?: string | React.ReactNode;
-  onBack: () => void;
+  onBack?: () => void;
+  navigation?: NavigationProp<AppStackParamList> | { goBack: () => void; canGoBack?: () => boolean; navigate?: (screen: string) => void };
   showGradient?: boolean;
 }
 
-export default function BackHeader({ title, subtitle, onBack, showGradient = false }: BackHeaderProps) {
+export default function BackHeader({ title, subtitle, onBack, navigation, showGradient = false }: BackHeaderProps) {
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else if (navigation) {
+      safeGoBack(navigation);
+    }
+  };
+
   return (
     <View style={styles.container}>
       {showGradient && (
@@ -20,26 +32,30 @@ export default function BackHeader({ title, subtitle, onBack, showGradient = fal
           style={styles.gradientBackground}
         />
       )}
-      <TouchableOpacity
-        onPress={onBack}
-        style={styles.backButton}
-        activeOpacity={0.7}
-      >
-        <View style={styles.backIconContainer}>
-          <Ionicons name="arrow-back" size={20} color={colors.primary} />
+      <View style={styles.headerRow}>
+        <TouchableOpacity
+          onPress={handleBack}
+          style={styles.backButton}
+          activeOpacity={0.7}
+        >
+          <View style={styles.backIconContainer}>
+            <Ionicons name="arrow-back" size={20} color={colors.primary} />
+          </View>
+        </TouchableOpacity>
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>{title}</Text>
         </View>
-        <Text style={styles.backText}>Back</Text>
-      </TouchableOpacity>
-      <View style={styles.titleContainer}>
-        <Text style={styles.title}>{title}</Text>
-        {subtitle && (
-          typeof subtitle === 'string' ? (
+        <View style={styles.backButtonPlaceholder} />
+      </View>
+      {subtitle && (
+        <View style={styles.subtitleContainer}>
+          {typeof subtitle === 'string' ? (
             <Text style={styles.subtitle}>{subtitle}</Text>
           ) : (
             subtitle
-          )
-        )}
-      </View>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -60,11 +76,15 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  backButton: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.md,
-    alignSelf: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  backButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 32,
   },
   backIconContainer: {
     width: 32,
@@ -73,25 +93,27 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primarySoft,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.sm,
-  },
-  backText: {
-    ...typography.subtitle,
-    color: colors.primary,
-    fontWeight: '600',
   },
   titleContainer: {
-    marginTop: spacing.xs,
+    flex: 1,
+    alignItems: 'center',
+  },
+  backButtonPlaceholder: {
+    width: 32,
   },
   title: {
     ...typography.h1,
     color: colors.authText,
     fontWeight: '700',
-    marginBottom: spacing.xs,
+  },
+  subtitleContainer: {
+    marginTop: spacing.xs,
+    alignItems: 'center',
   },
   subtitle: {
     ...typography.body,
     color: colors.authTextSecondary,
+    textAlign: 'center',
   },
 });
 

@@ -1,7 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useState, useRef } from 'react';
 import {
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,6 +11,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,6 +35,7 @@ import ModernCard from '../components/ui/ModernCard';
 import BackHeader from '../components/ui/BackHeader';
 import GradientButton from '../components/ui/GradientButton';
 import ReportQuestionModal from '../components/ui/ReportQuestionModal';
+import { safeGoBack } from '../utils/navigation';
 import MathText from '../components/ui/MathText';
 import PremiumLockModal from '../components/ui/PremiumLockModal';
 
@@ -606,7 +607,7 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
         <BackHeader
           title={headerTitle}
           subtitle={headerSubtitle}
-          onBack={() => navigation.goBack()}
+          navigation={navigation}
         />
         {/* Toggle Button for Showing Attempts */}
         <View style={styles.toggleContainer}>
