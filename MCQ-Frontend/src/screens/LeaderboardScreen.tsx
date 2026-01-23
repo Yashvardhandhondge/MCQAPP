@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   View,
   Animated,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,11 +18,11 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../navigation/types';
 import { useAuth } from '../context/AuthContext';
 import { colors, radius, spacing, typography, shadow } from '../theme';
-import { getLeaderboard } from '../services/mcq.service';
+import { getLeaderboard, getMockTestLeaderboard, getAvailableMockTests } from '../services/mcq.service';
 import type { LeaderboardEntry } from '../types/mcq';
 import ModernCard from '../components/ui/ModernCard';
 
-type Timeframe = 'all-time';
+type Timeframe = 'all-time' | 'mocktest';
 
 export default function LeaderboardScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
@@ -30,6 +32,11 @@ export default function LeaderboardScreen() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [availableMockTests, setAvailableMockTests] = useState<Array<{ mockTestNumber: number; name: string }>>([]);
+  const [selectedMockTestNumber, setSelectedMockTestNumber] = useState<number | null>(null);
+  const [loadingMockTests, setLoadingMockTests] = useState(false);
+  const [showMockTestModal, setShowMockTestModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -51,6 +58,46 @@ export default function LeaderboardScreen() {
     ]).start();
   }, []);
 
+  // Fetch available mock tests when switching to mocktest tab
+  useEffect(() => {
+    if (timeframe === 'mocktest') {
+      let isMounted = true;
+
+      async function fetchMockTests() {
+        setLoadingMockTests(true);
+        try {
+          const response = await getAvailableMockTests();
+          if (isMounted) {
+            const mockTests = response.data.map((test: any) => ({
+              mockTestNumber: test.mockTestNumber,
+              name: test.name,
+            }));
+            setAvailableMockTests(mockTests);
+            // Auto-select first mock test if available and none selected
+            if (mockTests.length > 0 && selectedMockTestNumber === null) {
+              setSelectedMockTestNumber(mockTests[0].mockTestNumber);
+            }
+          }
+        } catch (requestError) {
+          if (isMounted) {
+            console.error('Failed to load mock tests:', requestError);
+            setAvailableMockTests([]);
+          }
+        } finally {
+          if (isMounted) {
+            setLoadingMockTests(false);
+          }
+        }
+      }
+
+      fetchMockTests();
+
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [timeframe]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -58,9 +105,20 @@ export default function LeaderboardScreen() {
       setLoading(true);
       setError(null);
       try {
-        const response = await getLeaderboard(timeframe);
-        if (isMounted) {
-          setLeaderboard(response.data);
+        if (timeframe === 'mocktest') {
+          if (selectedMockTestNumber === null) {
+            setLoading(false);
+            return;
+          }
+          const response = await getMockTestLeaderboard(selectedMockTestNumber);
+          if (isMounted) {
+            setLeaderboard(response.data);
+          }
+        } else {
+          const response = await getLeaderboard(timeframe);
+          if (isMounted) {
+            setLeaderboard(response.data);
+          }
         }
       } catch (requestError) {
         if (isMounted) {
@@ -81,7 +139,7 @@ export default function LeaderboardScreen() {
     return () => {
       isMounted = false;
     };
-  }, [timeframe]);
+  }, [timeframe, selectedMockTestNumber]);
 
   const getRankGradient = (rank: number, isCurrentUser: boolean): [string, string, ...string[]] | null => {
     if (isCurrentUser) {
@@ -183,7 +241,10 @@ export default function LeaderboardScreen() {
             <View style={styles.tabContainer}>
               <TouchableOpacity
                 style={[styles.tab, timeframe === 'all-time' && styles.tabActive]}
-                onPress={() => setTimeframe('all-time')}
+                onPress={() => {
+                  setTimeframe('all-time');
+                  setSelectedMockTestNumber(null);
+                }}
                 activeOpacity={0.8}
               >
                 {timeframe === 'all-time' ? (
@@ -202,15 +263,177 @@ export default function LeaderboardScreen() {
                 )}
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.tab]}
-                onPress={() => navigation.navigate('MockTestLeaderboardSelection')}
+                style={[styles.tab, timeframe === 'mocktest' && styles.tabActive]}
+                onPress={() => setTimeframe('mocktest')}
                 activeOpacity={0.8}
               >
-                <View style={styles.tabGradient}>
-                  <Text style={styles.tabText}>MockTest</Text>
-                </View>
+                {timeframe === 'mocktest' ? (
+                  <LinearGradient
+                    colors={colors.gradientPrimary as [string, string, ...string[]]}
+                    style={styles.tabGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
+                    <Text style={styles.tabTextActive}>MockTest</Text>
+                  </LinearGradient>
+                ) : (
+                  <View style={styles.tabGradient}>
+                    <Text style={styles.tabText}>MockTest</Text>
+                  </View>
+                )}
               </TouchableOpacity>
             </View>
+
+            {/* Mock Test Selector - shown when mocktest tab is active */}
+            {timeframe === 'mocktest' && (
+              <View style={styles.mockTestSelectorContainer}>
+                {loadingMockTests ? (
+                  <View style={styles.mockTestSelectorLoading}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                    <Text style={styles.mockTestSelectorLoadingText}>Loading mock tests...</Text>
+                  </View>
+                ) : availableMockTests.length > 0 ? (
+                  <TouchableOpacity
+                    onPress={() => setShowMockTestModal(true)}
+                    activeOpacity={0.8}
+                    style={styles.mockTestSelectorButton}
+                  >
+                    <View style={styles.mockTestSelectorButtonContent}>
+                      <View style={styles.mockTestSelectorButtonLeft}>
+                        <Ionicons name="document-text" size={20} color={colors.primary} />
+                        <View style={styles.mockTestSelectorButtonTextContainer}>
+                          <Text style={styles.mockTestSelectorButtonLabel}>Mock Test</Text>
+                          <Text style={styles.mockTestSelectorButtonValue} numberOfLines={1}>
+                            {selectedMockTestNumber
+                              ? availableMockTests.find((t) => t.mockTestNumber === selectedMockTestNumber)?.name || 'Select Mock Test'
+                              : 'Select Mock Test'}
+                          </Text>
+                        </View>
+                      </View>
+                      <Ionicons name="chevron-down" size={20} color="#6B7280" />
+                    </View>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.mockTestSelectorEmpty}>
+                    <Ionicons name="document-outline" size={48} color="#9CA3AF" />
+                    <Text style={styles.mockTestSelectorEmptyText}>No mock tests available</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Mock Test Selection Modal */}
+            <Modal
+              visible={showMockTestModal}
+              transparent
+              animationType="fade"
+              onRequestClose={() => {
+                setShowMockTestModal(false);
+                setSearchQuery('');
+              }}
+            >
+              <View style={styles.modalOverlay}>
+                <TouchableOpacity
+                  style={styles.modalBackdrop}
+                  activeOpacity={1}
+                  onPress={() => {
+                    setShowMockTestModal(false);
+                    setSearchQuery('');
+                  }}
+                />
+                <View style={styles.modalContainer}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Select Mock Test</Text>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setShowMockTestModal(false);
+                        setSearchQuery('');
+                      }}
+                      style={styles.modalCloseButton}
+                    >
+                      <Ionicons name="close" size={24} color="#6B7280" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Search Input */}
+                  <View style={styles.searchContainer}>
+                    <Ionicons name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder="Search mock tests..."
+                      placeholderTextColor="#9CA3AF"
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                    />
+                    {searchQuery.length > 0 && (
+                      <TouchableOpacity
+                        onPress={() => setSearchQuery('')}
+                        style={styles.searchClearButton}
+                      >
+                        <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  {/* Mock Test List */}
+                  <ScrollView
+                    style={styles.modalScrollView}
+                    contentContainerStyle={styles.modalScrollContent}
+                    showsVerticalScrollIndicator={true}
+                  >
+                    {availableMockTests
+                      .filter((mockTest) =>
+                        mockTest.name.toLowerCase().includes(searchQuery.toLowerCase())
+                      )
+                      .map((mockTest) => (
+                        <TouchableOpacity
+                          key={mockTest.mockTestNumber}
+                          onPress={() => {
+                            setSelectedMockTestNumber(mockTest.mockTestNumber);
+                            setShowMockTestModal(false);
+                            setSearchQuery('');
+                          }}
+                          activeOpacity={0.7}
+                          style={[
+                            styles.modalMockTestItem,
+                            selectedMockTestNumber === mockTest.mockTestNumber && styles.modalMockTestItemActive,
+                          ]}
+                        >
+                          <View style={styles.modalMockTestItemContent}>
+                            <View style={styles.modalMockTestItemLeft}>
+                              <Ionicons
+                                name="document-text"
+                                size={20}
+                                color={selectedMockTestNumber === mockTest.mockTestNumber ? colors.primary : '#6B7280'}
+                              />
+                              <Text
+                                style={[
+                                  styles.modalMockTestItemText,
+                                  selectedMockTestNumber === mockTest.mockTestNumber && styles.modalMockTestItemTextActive,
+                                ]}
+                              >
+                                {mockTest.name}
+                              </Text>
+                            </View>
+                            {selectedMockTestNumber === mockTest.mockTestNumber && (
+                              <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    {availableMockTests.filter((mockTest) =>
+                      mockTest.name.toLowerCase().includes(searchQuery.toLowerCase())
+                    ).length === 0 && (
+                      <View style={styles.modalEmptyState}>
+                        <Ionicons name="search-outline" size={48} color="#9CA3AF" />
+                        <Text style={styles.modalEmptyText}>No mock tests found</Text>
+                        <Text style={styles.modalEmptySubtext}>Try a different search term</Text>
+                      </View>
+                    )}
+                  </ScrollView>
+                </View>
+              </View>
+            </Modal>
 
             {/* Leaderboard List */}
             {(() => {
@@ -731,5 +954,193 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#D1D5DB',
+  },
+  mockTestSelectorContainer: {
+    marginBottom: spacing.lg,
+  },
+  mockTestSelectorLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.lg,
+    gap: spacing.sm,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    ...shadow.sm,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  mockTestSelectorLoadingText: {
+    ...typography.body,
+    color: '#6B7280',
+    fontSize: 14,
+  },
+  mockTestSelectorButton: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    ...shadow.sm,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  mockTestSelectorButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  mockTestSelectorButtonLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.md,
+  },
+  mockTestSelectorButtonTextContainer: {
+    flex: 1,
+  },
+  mockTestSelectorButtonLabel: {
+    ...typography.caption,
+    color: '#6B7280',
+    fontSize: 12,
+    marginBottom: spacing.xs / 2,
+  },
+  mockTestSelectorButtonValue: {
+    ...typography.subtitle,
+    color: '#111827',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  mockTestSelectorEmpty: {
+    paddingVertical: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    ...shadow.sm,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  mockTestSelectorEmptyText: {
+    ...typography.body,
+    color: '#6B7280',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    maxHeight: '80%',
+    ...shadow.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    ...typography.h3,
+    color: '#111827',
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  modalCloseButton: {
+    padding: spacing.xs,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: radius.md,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  searchIcon: {
+    marginRight: spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    ...typography.body,
+    color: '#111827',
+    fontSize: 15,
+    paddingVertical: spacing.md,
+  },
+  searchClearButton: {
+    padding: spacing.xs,
+    marginLeft: spacing.xs,
+  },
+  modalScrollView: {
+    maxHeight: 400,
+  },
+  modalScrollContent: {
+    padding: spacing.lg,
+    paddingTop: spacing.md,
+  },
+  modalMockTestItem: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  modalMockTestItemActive: {
+    backgroundColor: '#EEF2FF',
+    borderColor: colors.primary,
+    borderWidth: 2,
+  },
+  modalMockTestItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modalMockTestItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.md,
+  },
+  modalMockTestItemText: {
+    ...typography.body,
+    color: '#6B7280',
+    fontSize: 15,
+    flex: 1,
+  },
+  modalMockTestItemTextActive: {
+    color: '#111827',
+    fontWeight: '600',
+  },
+  modalEmptyState: {
+    alignItems: 'center',
+    paddingVertical: spacing.xxxl,
+    gap: spacing.sm,
+  },
+  modalEmptyText: {
+    ...typography.subtitle,
+    color: '#6B7280',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  modalEmptySubtext: {
+    ...typography.caption,
+    color: '#9CA3AF',
+    fontSize: 14,
   },
 });
