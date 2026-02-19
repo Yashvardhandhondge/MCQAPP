@@ -189,6 +189,7 @@ const sendOTP = async (req, res, next) => {
       '+918010140175', // Original Play Store review number
       '+919579050152', // Test number 1
       '+917020781343', // Test number 2
+      // Add more dummy numbers here as needed for testing
     ];
     const isDummyNumber = DUMMY_PHONE_NUMBERS.includes(phoneNumber);
 
