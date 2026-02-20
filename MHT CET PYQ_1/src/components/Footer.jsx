@@ -71,8 +71,16 @@ export default function Footer() {
     },
   };
 
+  const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.mcqfrontend.app';
+
   const links = {
-    Product: ['Features', 'Pricing', 'Reviews', 'Privacy Policy'],
+    Product: [
+      { label: 'Features', href: '#features' },
+      { label: 'Pricing', href: '#pricing' },
+      { label: 'Reviews', href: '#reviews' },
+      { label: 'Get the App', href: PLAY_STORE_URL, external: true },
+      { label: 'Privacy Policy', to: '/privacy-policy', isRouterLink: true },
+    ],
     Subjects: ['Physics PYQ', 'Chemistry PYQ', 'Mathematics PYQ', 'Biology PYQ'],
     Contact: ['Email: yasharadhyeapp@gmail.com', 'Phone: +91 7020781343'],
   };
@@ -119,18 +127,14 @@ export default function Footer() {
             </div>
           </div>
 
-          {Object.entries(links).map(([title, items]) => (
-            <div key={title} style={footerStyles.column}>
-              <h4 style={footerStyles.columnTitle}>{title}</h4>
-              {items.map((item, i) => {
-                const isPrivacyPolicy = item === 'Privacy Policy';
-                const LinkComponent = isPrivacyPolicy ? Link : 'a';
-                const linkProps = isPrivacyPolicy ? { to: '/privacy-policy' } : { href: '#' };
-                
+          <div style={footerStyles.column}>
+            <h4 style={footerStyles.columnTitle}>Product</h4>
+            {links.Product.map((item, i) => {
+              if (typeof item === 'object' && item.isRouterLink) {
                 return (
-                  <LinkComponent
+                  <Link
                     key={i}
-                    {...linkProps}
+                    to={item.to}
                     style={footerStyles.link}
                     onMouseEnter={(e) => {
                       e.target.style.color = '#000000';
@@ -144,10 +148,43 @@ export default function Footer() {
                       e.target.style.textDecoration = 'none';
                     }}
                   >
-                    {item}
-                  </LinkComponent>
+                    {item.label}
+                  </Link>
                 );
-              })}
+              }
+              if (typeof item === 'object' && (item.href || item.external)) {
+                return (
+                  <a
+                    key={i}
+                    href={item.href}
+                    target={item.external ? '_blank' : undefined}
+                    rel={item.external ? 'noopener noreferrer' : undefined}
+                    style={footerStyles.link}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#000000';
+                      e.currentTarget.style.textDecoration = 'underline';
+                      e.currentTarget.style.textDecorationColor = '#8B7355';
+                      e.currentTarget.style.textUnderlineOffset = '6px';
+                      e.currentTarget.style.transition = 'all 0.25s ease-in-out';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#6B7280';
+                      e.currentTarget.style.textDecoration = 'none';
+                    }}
+                  >
+                    {item.label}
+                  </a>
+                );
+              }
+              return null;
+            })}
+          </div>
+          {['Subjects', 'Contact'].map((title) => (
+            <div key={title} style={footerStyles.column}>
+              <h4 style={footerStyles.columnTitle}>{title}</h4>
+              {links[title].map((item, i) => (
+                <span key={i} style={footerStyles.link}>{item}</span>
+              ))}
             </div>
           ))}
         </div>

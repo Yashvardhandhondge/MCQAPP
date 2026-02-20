@@ -384,8 +384,11 @@ export default function Hero() {
           Access 4000+ previous year questions, AI-powered solutions, and advanced analytics to crack your exam.
         </p>
         <div style={heroStyles.buttonGroup}>
-          <button
-            style={heroStyles.primaryBtn}
+          <a
+            href="https://play.google.com/store/apps/details?id=com.mcqfrontend.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ ...heroStyles.primaryBtn, textDecoration: 'none', color: '#FDFBF7' }}
             onMouseEnter={(e) => {
               e.target.style.backgroundColor = '#1A1A1A';
               e.target.style.transform = 'translateY(-4px) scale(1.03)';
@@ -398,8 +401,8 @@ export default function Hero() {
               e.target.style.boxShadow = 'none';
             }}
           >
-            Download App
-          </button>
+            Download on Google Play
+          </a>
           <button
             style={heroStyles.secondaryBtn}
             onClick={() => setIsModalOpen(true)}
