@@ -1,22 +1,24 @@
 import React from 'react';
 
 export default function Pricing() {
+  const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.mcqfrontend.app';
+
   const plans = [
     {
       name: 'PCM',
-      price: '₹399',
+      price: '₹99',
       features: ['4000+ Questions', 'AI Solutions', 'Analytics', 'Leaderboard'],
       isPopular: false,
     },
     {
       name: 'PCB',
-      price: '₹399',
+      price: '₹99',
       features: ['4000+ Questions', 'AI Solutions', 'Analytics', 'Leaderboard'],
       isPopular: false,
     },
     {
       name: 'PCMB',
-      price: '₹499',
+      price: '₹99',
       features: ['All Questions', 'AI Solutions', 'Advanced Analytics', 'CBT Simulator', 'Leaderboard'],
       isPopular: true,
     },
@@ -117,7 +119,10 @@ export default function Pricing() {
   return (
     <section style={sectionStyles.section} id="pricing">
       <h2 style={sectionStyles.heading}>Choose your Stream Plan</h2>
-      <p style={sectionStyles.subtitle}>Affordable pricing for comprehensive MHT CET preparation</p>
+      <p style={sectionStyles.subtitle}>One subscription — choose PCM, PCB, or PCMB. Switch anytime in the app. Lifetime access.</p>
+      <p style={{ ...sectionStyles.subtitle, marginTop: '-24px', marginBottom: '32px', fontSize: '16px', fontWeight: '600', color: '#111111' }}>
+        Just ₹99 for any stream. Get the app, pay once, study forever.
+      </p>
       <div style={sectionStyles.grid}>
         {plans.map((plan, i) => (
           <div
@@ -147,10 +152,16 @@ export default function Pricing() {
                 <div key={idx} style={sectionStyles.feature}>✓ {f}</div>
               ))}
             </div>
-            <button
+            <a
+              href={PLAY_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               style={{
                 ...sectionStyles.button,
                 ...(plan.isPopular ? {} : sectionStyles.buttonSecondary),
+                textDecoration: 'none',
+                textAlign: 'center',
+                display: 'block',
               }}
               onMouseEnter={(e) => {
                 e.target.style.backgroundColor = plan.isPopular ? '#1A1A1A' : '#F5F2EB';
@@ -164,8 +175,8 @@ export default function Pricing() {
                 e.target.style.boxShadow = 'none';
               }}
             >
-              Get Started
-            </button>
+              Get App on Google Play
+            </a>
           </div>
         ))}
       </div>

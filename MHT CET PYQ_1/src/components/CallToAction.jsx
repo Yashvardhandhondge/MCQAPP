@@ -1,5 +1,7 @@
 import React from 'react';
 
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.mcqfrontend.app';
+
 export default function CallToAction() {
   const ctaStyles = {
     section: {
@@ -57,11 +59,14 @@ export default function CallToAction() {
   return (
     <section style={ctaStyles.section}>
       <h2 style={ctaStyles.heading}>Ready to Ace MHT CET 2026?</h2>
-      <p style={ctaStyles.subtitle}>Join 1000+ students preparing for MHT CET. Start your free practice today and unlock premium features to boost your preparation.</p>
+      <p style={ctaStyles.subtitle}>Join 1000+ students. One subscription (₹99) — choose PCM, PCB, or PCMB and switch anytime. Lifetime access. Get the app and start today.</p>
       
       <div style={ctaStyles.buttonContainer}>
-        <button
-          style={ctaStyles.secondaryButton}
+        <a
+          href={PLAY_STORE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ ...ctaStyles.secondaryButton, textDecoration: 'none', color: '#FDFBF7' }}
           onMouseEnter={(e) => {
             e.target.style.backgroundColor = 'rgba(253, 251, 247, 0.15)';
             e.target.style.transform = 'translateY(-3px) scale(1.03)';
@@ -74,8 +79,8 @@ export default function CallToAction() {
             e.target.style.boxShadow = 'none';
           }}
         >
-          Download App
-        </button>
+          Download on Google Play
+        </a>
         
         {/* <button
           style={ctaStyles.button}

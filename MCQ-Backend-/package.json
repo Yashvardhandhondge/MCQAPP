@@ -26,6 +26,7 @@
     "mongoose": "^8.20.0",
     "morgan": "^1.10.1",
     "onesignal-node": "^3.4.0",
+    "razorpay": "^2.9.6",
     "validator": "^13.15.23"
   },
   "devDependencies": {

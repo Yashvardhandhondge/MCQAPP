@@ -132,9 +132,11 @@ export default function Navbar() {
       </div>
 
       <div style={navbarStyles.buttonGroup}>
-        
-        <button
-          style={navbarStyles.getStartedBtn}
+        <a
+          href="https://play.google.com/store/apps/details?id=com.mcqfrontend.app"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ ...navbarStyles.getStartedBtn, textDecoration: 'none', color: '#FDFBF7' }}
           onMouseEnter={(e) => {
             e.target.style.backgroundColor = '#1A1A1A';
             e.target.style.transform = 'translateY(-3px) scale(1.02)';
@@ -147,8 +149,8 @@ export default function Navbar() {
             e.target.style.boxShadow = 'none';
           }}
         >
-          Get Started
-        </button>
+          Get App
+        </a>
       </div>
     </nav>
   );

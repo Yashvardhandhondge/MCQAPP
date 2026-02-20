@@ -19,6 +19,8 @@ interface AuthContextValue {
   loginWithOTP: (phoneNumber: string, otp: string) => Promise<void>;
   updateUserGroup: (group: 'PCM' | 'PCB' | 'PCMB') => Promise<void>;
   upgradeSubscription: (group?: 'PCM' | 'PCB' | 'PCMB') => Promise<void>;
+  /** Update user in state and storage (e.g. after payment verification). Keeps existing token. */
+  applyUserUpdate: (user: User) => Promise<void>;
   // Local-only profile updates (e.g. name, avatar) without hitting backend
   updateProfile: (updates: Partial<Pick<User, 'fullName' | 'avatarUrl'>>) => void;
   logout: () => void;
@@ -246,6 +248,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applyAuthResponse, handleAuthError],
   );
 
+  const applyUserUpdate = useCallback(async (updatedUser: User) => {
+    setUser(updatedUser);
+    try {
+      await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
+      try {
+        const { resetTestCount } = await import('../utils/testTracking');
+        await resetTestCount();
+      } catch (err) {
+        console.warn('Failed to reset test count:', err);
+      }
+    } catch (error) {
+      console.error('❌ [AUTH CONTEXT] Failed to persist user update', error);
+    }
+  }, []);
+
   const updateProfile = useCallback(async (updates: Partial<Pick<User, 'fullName' | 'avatarUrl'>>) => {
     setUser((prev) => {
       const updated = prev ? { ...prev, ...updates } : prev;
@@ -299,10 +316,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loginWithOTP,
       updateUserGroup,
       upgradeSubscription,
+      applyUserUpdate,
       updateProfile,
       logout,
     }),
-    [loading, initializing, logout, register, sendOTP, loginWithOTP, updateUserGroup, upgradeSubscription, updateProfile, token, user],
+    [loading, initializing, logout, register, sendOTP, loginWithOTP, updateUserGroup, upgradeSubscription, applyUserUpdate, updateProfile, token, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

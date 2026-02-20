@@ -5,12 +5,16 @@ export default function FAQ() {
 
   const faqs = [
     {
+      question: 'How much does premium cost and what do I get?',
+      answer: 'Premium is just ₹99 one-time. One subscription lets you pick PCM, PCB, or PCMB — and you can switch your stream anytime in the app. You get lifetime access: pay once, study forever, with 4000+ PYQs, AI solutions, analytics, and leaderboard.',
+    },
+    {
       question: 'What subjects are covered in the MHT CET preparation plans?',
       answer: 'We offer three comprehensive plans: PCM (Physics, Chemistry, Mathematics), PCB (Physics, Chemistry, Biology), and PCMB (all four subjects). Each plan includes 4000+ previous year questions with AI-powered step-by-step solutions, detailed analytics, and a competitive leaderboard to track your progress.',
     },
     {
-      question: 'Can I switch between plans after purchasing?',
-      answer: 'Yes, you can upgrade your plan at any time. Simply contact our support team, and we\'ll help you transition to a higher plan. The difference in pricing will be calculated on a pro-rated basis based on your remaining subscription period.',
+      question: 'Can I switch between PCM, PCB, and PCMB after purchasing?',
+      answer: 'Yes. One subscription (₹99) gives you access to the stream you choose. You can switch between PCM, PCB, and PCMB anytime from within the app. It’s lifetime access — pay once and study forever.',
     },
     {
       question: 'Are the questions updated with the latest MHT CET exam pattern?',

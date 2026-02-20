@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 // React Native Code - Update functionality imports commented out
 // import { getAppVersion, isVersionOutdated } from '../services/appVersion.service';
 import { registerDeviceWithBackend, getPlayerId } from '../services/oneSignal.service';
+import { getMyPaymentHistory, type PaymentHistoryItem } from '../services/payment.service';
 // import UpdateRequiredModal from '../components/UpdateRequiredModal';
 
 const GROUP_INFO: Record<string, { label: string; description: string; gradient: string[]; icon: string }> = {
@@ -82,6 +83,8 @@ export default function ProfileScreen() {
   const [notificationStatus, setNotificationStatus] = useState<'checking' | 'registered' | 'not-registered' | 'error'>('checking');
   const [isRegistering, setIsRegistering] = useState(false);
   const [playerId, setPlayerId] = useState<string | null>(null);
+  const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryItem[]>([]);
+  const [paymentHistoryLoading, setPaymentHistoryLoading] = useState(false);
   const appState = useRef(AppState.currentState);
 
   useEffect(() => {
@@ -108,6 +111,8 @@ export default function ProfileScreen() {
     
     // Check notification device registration status
     checkNotificationStatus();
+    // Load payment history
+    loadPaymentHistory();
 
     // React Native Code - App state listener for version check commented out
     /* COMMENTED OUT - Version check on app state change
@@ -308,6 +313,18 @@ export default function ProfileScreen() {
     navigation.navigate('GroupSelection', { editMode: true });
   }, [navigation]);
 
+  const loadPaymentHistory = useCallback(async () => {
+    try {
+      setPaymentHistoryLoading(true);
+      const data = await getMyPaymentHistory({ limit: 20 });
+      setPaymentHistory(data.history || []);
+    } catch (e) {
+      setPaymentHistory([]);
+    } finally {
+      setPaymentHistoryLoading(false);
+    }
+  }, []);
+
   const groupInfo = user?.group ? GROUP_INFO[user.group] : null;
 
   const selectedStreamLabel = groupInfo?.label ?? 'Select your stream';
@@ -438,6 +455,46 @@ export default function ProfileScreen() {
                         >
                           <Text style={styles.premiumButtonText}>Upgrade Now</Text>
                         </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                </View>
+
+                {/* Payment history row */}
+                <View style={styles.infoCard}>
+                  <View style={styles.infoCardHeader}>
+                    <LinearGradient
+                      colors={colors.gradientGold as [string, string, ...string[]]}
+                      style={styles.infoIconContainer}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons name="card" size={20} color="#FFFFFF" />
+                    </LinearGradient>
+                    <View style={styles.infoCardContent}>
+                      <Text style={styles.infoCardLabel}>Payment history</Text>
+                      {paymentHistoryLoading ? (
+                        <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 4 }} />
+                      ) : paymentHistory.length === 0 ? (
+                        <Text style={styles.infoCardSubtext}>No payments yet</Text>
+                      ) : (
+                        <View style={styles.paymentHistoryList}>
+                          {paymentHistory.slice(0, 5).map((item) => (
+                            <View key={item._id} style={styles.paymentHistoryItem}>
+                              <Text style={styles.paymentHistoryDate}>
+                                {new Date(item.createdAt).toLocaleDateString()}
+                              </Text>
+                              <Text style={styles.paymentHistoryAmount}>
+                                ₹{item.amount != null ? (item.amount / 100).toFixed(0) : '—'} • {item.planId || 'Premium'}
+                              </Text>
+                            </View>
+                          ))}
+                          {paymentHistory.length > 5 && (
+                            <Text style={styles.paymentHistoryMore}>
+                              +{paymentHistory.length - 5} more
+                            </Text>
+                          )}
+                        </View>
                       )}
                     </View>
                   </View>
@@ -754,6 +811,32 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: '#6B7280',
     fontSize: 13,
+  },
+  paymentHistoryList: {
+    marginTop: spacing.xs,
+    gap: spacing.xs,
+  },
+  paymentHistoryItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  paymentHistoryDate: {
+    ...typography.caption,
+    color: '#6B7280',
+    fontSize: 12,
+  },
+  paymentHistoryAmount: {
+    ...typography.caption,
+    color: colors.authText,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  paymentHistoryMore: {
+    ...typography.caption,
+    color: colors.primary,
+    fontSize: 12,
+    marginTop: spacing.xs,
   },
   premiumButton: {
     marginTop: spacing.sm,

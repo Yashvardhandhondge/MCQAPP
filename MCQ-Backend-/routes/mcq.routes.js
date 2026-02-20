@@ -66,7 +66,7 @@ const {
   resolveReport,
 } = require('../controllers/questionReport.controller');
 const { adminAuthGuard } = require('../middleware/admin.middleware');
-const { getUserStats, getAllUsers } = require('../controllers/admin.controller');
+const { getUserStats, getAllUsers, exportAllUsersAsCsv, getPaymentLogs, updateUserSubscription } = require('../controllers/admin.controller');
 const { getPremiumContent, updatePremiumContent } = require('../controllers/premiumContent.controller');
 const { getUserAchievements } = require('../controllers/achievement.controller');
 const { getAppVersion, setAppVersion, disableUpdateRequirement } = require('../controllers/appVersion.controller');
@@ -527,6 +527,13 @@ router.put('/admin/reports/:reportId/resolve', ...adminAuthGuard, resolveReport)
 router.get('/admin/stats/users', ...adminAuthGuard, getUserStats);
 
 /**
+ * @route   GET /api/mcq/admin/users/export
+ * @desc    Export all users as CSV (Admin only). Respects subscription/group/role query filters.
+ * @access  Private (requires admin role)
+ */
+router.get('/admin/users/export', ...adminAuthGuard, exportAllUsersAsCsv);
+
+/**
  * @route   GET /api/mcq/admin/users
  * @desc    Get all users with pagination (Admin only)
  * @query   {number} page - Page number (default: 1)
@@ -537,6 +544,23 @@ router.get('/admin/stats/users', ...adminAuthGuard, getUserStats);
  * @access  Private (requires admin role)
  */
 router.get('/admin/users', ...adminAuthGuard, getAllUsers);
+
+/**
+ * @route   GET /api/mcq/admin/payment-logs
+ * @desc    Get payment/order event logs from webhooks (Admin only)
+ * @query   {number} page - Page number
+ * @query   {number} limit - Items per page
+ * @query   {string} event - Filter by event type
+ * @query   {string} userId - Filter by user ID
+ */
+router.get('/admin/payment-logs', ...adminAuthGuard, getPaymentLogs);
+
+/**
+ * @route   PUT /api/mcq/admin/users/:userId/subscription
+ * @desc    Set user subscription to free or premium (Admin only)
+ * @body    {string} subscription - 'free' or 'premium'
+ */
+router.put('/admin/users/:userId/subscription', ...adminAuthGuard, updateUserSubscription);
 
 /**
  * @route   PUT /api/mcq/admin/premium-content

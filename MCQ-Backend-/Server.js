@@ -10,6 +10,8 @@ const mongoose = require('mongoose');
 const { connectDB } = require('./config/db');
 const authRoutes = require('./routes/auth.routes');
 const mcqRoutes = require('./routes/mcq.routes');
+const paymentRoutes = require('./routes/payment.routes');
+const { webhook: paymentWebhook } = require('./controllers/payment.controller');
 const { notFound, errorHandler } = require('./middleware/error.middleware');
 
 const app = express();
@@ -24,6 +26,10 @@ app.use(
   })
 );
 app.use(helmet());
+
+// Razorpay webhook must receive raw body for signature verification (mount before json parser)
+app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), paymentWebhook);
+
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -83,6 +89,7 @@ app.use('/api/mcq', (req, res, next) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/mcq', mcqRoutes);
+app.use('/api/payment', paymentRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
