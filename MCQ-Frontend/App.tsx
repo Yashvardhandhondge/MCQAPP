@@ -74,6 +74,7 @@ const appStackScreenOptions = {
   },
   headerShadowVisible: false,
   headerBackTitleVisible: false,
+  
 };
 
 function AuthStackNavigator() {
@@ -100,8 +101,11 @@ function TabNavigator() {
       screenOptions={{
         headerShown: false,
         animation: 'fade',
-        animationDuration: 200,
+        sceneStyle: {  paddingBottom: 0, marginBottom: 0 },
+        tabBarStyle: { paddingTop: 0, marginTop: 0, height: 56 },
+        tabBarItemStyle: { paddingVertical: 0 },
       }}
+      
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
       <Tab.Screen name="Chapters" component={ChaptersScreen} />
@@ -141,9 +145,11 @@ function AppStackNavigator() {
         name="MainTabs"
         component={TabNavigator}
         options={{
+          
           headerShown: false,
           animation: 'fade',
           animationDuration: 400,
+          
         }}
       />
       

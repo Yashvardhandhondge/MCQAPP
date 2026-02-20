@@ -32,6 +32,12 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
   const { user } = useAuth();
   const isPremium = user?.subscription === 'premium';
 
+  const customYearLabelMap: Record<string, string> = {
+    'classical thinking': 'Advanced Practice Set',
+    'concept fusion': 'Integrated Concepts Set',
+    'critical thinking': 'Reasoning Mastery Set',
+  };
+
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -61,7 +67,8 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
       try {
         const response = await getYearsWithAnalytics(subject, chapter);
         if (isMounted) {
-          setYears(response.data);
+          const sortedYears = [...response.data].sort((a, b) => Number(b.year) - Number(a.year));
+          setYears(sortedYears);
         }
       } catch (requestError) {
         if (isMounted) {
@@ -92,6 +99,19 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
       mode: 'year',
       year,
     });
+  };
+
+  const getDisplayLabel = (value: unknown) => {
+    if (typeof value !== 'string') {
+      return 'Unknown Set';
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+      return 'Unknown Set';
+    }
+
+    return customYearLabelMap[normalized] ?? value;
   };
 
   const renderContent = () => {
@@ -168,7 +188,7 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
                     <View style={styles.yearInfo}>
                       <View style={styles.yearHeaderRow}>
                         <Text style={styles.yearName}>
-                          {item.year}
+                          {getDisplayLabel(item.year)}
                         </Text>
                       </View>
                       <View style={styles.yearStats}>

@@ -58,6 +58,25 @@ interface QuestionState {
 
 export default function QuestionsScreen({ route, navigation }: QuestionsScreenProps) {
   const { subject, chapter, mode, year, randomQuestions } = route.params;
+  const customYearLabelMap: Record<string, string> = {
+    'classical thinking': 'Advanced Practice Set',
+    'concept fusion': 'Integrated Concepts Set',
+    'critical thinking': 'Reasoning Mastery Set',
+  };
+
+  const getDisplayLabel = (value: unknown) => {
+    if (typeof value !== 'string') {
+      return 'Unknown Set';
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+      return 'Unknown Set';
+    }
+
+    return customYearLabelMap[normalized] ?? value;
+  };
+
   const [questions, setQuestions] = useState<Question[]>([]);
   const [displayedCount, setDisplayedCount] = useState(QUESTIONS_PER_PAGE);
   const [loading, setLoading] = useState(true);
@@ -592,10 +611,11 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
     return null;
   };
 
-  const headerTitle = mode === 'year' && year ? `${chapter} – ${year}` : chapter;
+  const displayYear = year ? getDisplayLabel(year) : '';
+  const headerTitle = mode === 'year' && year ? `${chapter} – ${displayYear}` : chapter;
   const headerSubtitle =
     mode === 'year' && year
-      ? `${totalQuestions} questions from ${year}`
+      ? `${totalQuestions} questions from ${displayYear}`
       : `${totalQuestions} questions available`;
 
   return (
@@ -688,7 +708,7 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                         <View style={styles.questionMeta}>
                           <View style={styles.metaRow}>
                             <Ionicons name="calendar" size={14} color={colors.primary} />
-                            <Text style={styles.questionYear}>{question.year}</Text>
+                            <Text style={styles.questionYear}>{getDisplayLabel(question.year)}</Text>
                           </View>
                         </View>
                         <View style={styles.headerActions}>

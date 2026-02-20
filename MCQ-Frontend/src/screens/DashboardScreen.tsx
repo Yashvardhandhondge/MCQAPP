@@ -312,7 +312,7 @@ export default function DashboardScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView  style={styles.safeArea}>
       <View style={styles.backgroundGradient}>
         {/* Sticky Header - Enhanced */}
         <View style={styles.stickyHeader}>
@@ -1061,7 +1061,8 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F3E8FF',
+    backgroundColor: '#F3E8ff',
+    
   },
   backgroundGradient: {
     flex: 1,
@@ -1070,7 +1071,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
-    paddingBottom: 100,
   },
   stickyHeader: {
     borderBottomWidth: 1,
