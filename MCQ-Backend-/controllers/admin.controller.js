@@ -1,5 +1,7 @@
 const createError = require('http-errors');
+const mongoose = require('mongoose');
 const User = require('../Modals/UserModal');
+const PaymentEventLog = require('../models/PaymentEventLog');
 
 /**
  * Get user statistics (Admin only)
@@ -65,6 +67,69 @@ const getUserStats = async (req, res, next) => {
 };
 
 /**
+ * Escape a value for CSV (quote if contains comma, newline, or double quote)
+ */
+const escapeCsv = (val) => {
+  if (val === undefined || val === null) return '';
+  const s = String(val);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+};
+
+/**
+ * Export all users as CSV (Admin only)
+ * GET /api/mcq/admin/users/export
+ */
+const exportAllUsersAsCsv = async (req, res, next) => {
+  try {
+    const filter = {};
+    if (req.query.subscription) filter.subscription = req.query.subscription;
+    if (req.query.group) filter.group = req.query.group;
+    if (req.query.role) filter.role = req.query.role;
+
+    const users = await User.find(filter)
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const freeCount = users.filter((u) => u.subscription === 'free').length;
+    const premiumCount = users.filter((u) => u.subscription === 'premium').length;
+
+    const lines = [
+      'Summary (all users)',
+      `Total,${users.length}`,
+      `Free,${freeCount}`,
+      `Premium,${premiumCount}`,
+      '',
+      'No.,Name,Email,Mobile,Group,Subscription,Joined',
+      ...users.map((user, i) => {
+        const joined = user.createdAt
+          ? new Date(user.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: '2-digit', day: '2-digit' })
+          : '';
+        return [
+          i + 1,
+          escapeCsv(user.fullName),
+          escapeCsv(user.email),
+          escapeCsv(user.phoneNumber),
+          escapeCsv(user.group),
+          escapeCsv(user.subscription),
+          escapeCsv(joined),
+        ].join(',');
+      }),
+    ];
+    const csv = '\uFEFF' + lines.join('\r\n');
+    const filename = `users-export-${new Date().toISOString().slice(0, 10)}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exporting users CSV:', error);
+    return next(createError(500, 'Failed to export users'));
+  }
+};
+
+/**
  * Get all users with pagination (Admin only)
  * GET /api/mcq/admin/users
  */
@@ -113,9 +178,91 @@ const getAllUsers = async (req, res, next) => {
   }
 };
 
+/**
+ * Get payment/order event logs (Admin only)
+ * GET /api/mcq/admin/payment-logs
+ */
+const getPaymentLogs = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+    const skip = (page - 1) * limit;
+    const event = req.query.event;
+    const userId = req.query.userId;
+
+    const filter = {};
+    if (event) filter.event = event;
+    if (userId) filter.userId = new mongoose.Types.ObjectId(userId);
+
+    const logs = await PaymentEventLog.find(filter)
+      .populate('userId', 'fullName email phoneNumber')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const total = await PaymentEventLog.countDocuments(filter);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        logs,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit) || 1,
+          total,
+          hasNextPage: page < Math.ceil(total / limit),
+          hasPrevPage: page > 1,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Error getting payment logs:', error);
+    return next(createError(500, 'Failed to fetch payment logs'));
+  }
+};
+
+/**
+ * Update user subscription (Admin only)
+ * PUT /api/mcq/admin/users/:userId/subscription
+ * Body: { subscription: 'free' | 'premium' }
+ */
+const updateUserSubscription = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const { subscription } = req.body;
+
+    if (!['free', 'premium'].includes(subscription)) {
+      return next(createError(400, 'subscription must be "free" or "premium"'));
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { subscription },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!user) {
+      return next(createError(404, 'User not found'));
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `User subscription set to ${subscription}`,
+      data: { user },
+    });
+  } catch (error) {
+    console.error('Error updating user subscription:', error);
+    return next(createError(500, 'Failed to update subscription'));
+  }
+};
+
 module.exports = {
   getUserStats,
   getAllUsers,
+  exportAllUsersAsCsv,
+  getPaymentLogs,
+  updateUserSubscription,
 };
 
 

@@ -181,6 +181,18 @@ export default function AdminDashboardPage() {
           >
             Edit Premium Content
           </Link>
+          <Link
+            href="/admin/payment-logs"
+            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+          >
+            Payment Logs
+          </Link>
+          <Link
+            href="/admin/users"
+            className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+          >
+            Users
+          </Link>
           <button
             onClick={() => setShowUpdateModal(true)}
             className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"

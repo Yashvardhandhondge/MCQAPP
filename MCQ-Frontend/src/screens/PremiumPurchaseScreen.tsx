@@ -23,12 +23,21 @@ import { useAuth } from '../context/AuthContext';
 import type { AppStackParamList } from '../navigation/types';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import { getPremiumContent } from '../services/mcq.service';
+import { createOrder, verifyPayment } from '../services/payment.service';
+import RazorpayCheckoutWebView from '../components/RazorpayCheckoutWebView';
 
 export default function PremiumPurchaseScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
-  const { user, upgradeSubscription, loading } = useAuth();
+  const { user, applyUserUpdate, loading } = useAuth();
   const insets = useSafeAreaInsets();
   const [purchasing, setPurchasing] = useState(false);
+  const [checkoutVisible, setCheckoutVisible] = useState(false);
+  const [orderDetails, setOrderDetails] = useState<{
+    orderId: string;
+    amount: number;
+    currency: string;
+    keyId: string;
+  } | null>(null);
   const [content, setContent] = useState<{
     heroBadgeText: string;
     heroTitle: string;
@@ -125,7 +134,7 @@ export default function PremiumPurchaseScreen() {
               id: 'PCM',
               name: 'PCM',
               description: 'Physics, Chemistry, Mathematics',
-              price: 399,
+              price: 99,
               gradient: ['#6366F1', '#4F46E5'],
               icon: 'calculator',
               isPopular: false,
@@ -134,7 +143,7 @@ export default function PremiumPurchaseScreen() {
               id: 'PCB',
               name: 'PCB',
               description: 'Physics, Chemistry, Biology',
-              price: 399,
+              price: 99,
               gradient: ['#8B5CF6', '#7C3AED'],
               icon: 'flask',
               isPopular: false,
@@ -143,7 +152,7 @@ export default function PremiumPurchaseScreen() {
               id: 'PCMB',
               name: 'PCMB',
               description: 'Physics, Chemistry, Mathematics, Biology',
-              price: 499,
+              price: 99,
               gradient: ['#10B981', '#059669'],
               icon: 'school',
               isPopular: true,
@@ -184,32 +193,26 @@ export default function PremiumPurchaseScreen() {
 
     Alert.alert(
       'Upgrade to Premium',
-      `Are you sure you want to purchase ${planName} premium plan?${planId !== user?.group ? ` This will update your stream to ${planName}.` : ''}`,
+      `Purchase ${planName} premium for ₹99?${planId !== user?.group ? ` This will update your stream to ${planName}.` : ''}`,
       [
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Purchase Now',
+          text: 'Pay ₹99',
           onPress: async () => {
             setPurchasing(true);
             try {
-              await upgradeSubscription(planId as 'PCM' | 'PCB' | 'PCMB');
-              Alert.alert(
-                'Success!',
-                `You have successfully upgraded to premium${planId !== user?.group ? ` and your stream has been updated to ${planName}` : ''}!`,
-                [
-                  {
-                    text: 'OK',
-                    onPress: () => navigation.goBack(),
-                  },
-                ]
-              );
+              const order = await createOrder(planId as 'PCM' | 'PCB' | 'PCMB');
+              setOrderDetails({
+                orderId: order.orderId,
+                amount: order.amount,
+                currency: order.currency || 'INR',
+                keyId: order.keyId,
+              });
+              setCheckoutVisible(true);
             } catch (error) {
               Alert.alert(
                 'Error',
-                error instanceof Error ? error.message : 'Failed to upgrade subscription'
+                error instanceof Error ? error.message : 'Failed to start payment'
               );
             } finally {
               setPurchasing(false);
@@ -219,7 +222,49 @@ export default function PremiumPurchaseScreen() {
       ],
       { cancelable: true }
     );
-  }, [purchasing, loading, upgradeSubscription, navigation, user?.group, content]);
+  }, [purchasing, loading, content, user?.group]);
+
+  const handlePaymentSuccess = useCallback(
+    async (payload: {
+      razorpay_payment_id: string;
+      razorpay_order_id: string;
+      razorpay_signature: string;
+    }) => {
+      setCheckoutVisible(false);
+      setOrderDetails(null);
+      setPurchasing(true);
+      try {
+        const data = await verifyPayment({
+          razorpay_order_id: payload.razorpay_order_id,
+          razorpay_payment_id: payload.razorpay_payment_id,
+          razorpay_signature: payload.razorpay_signature,
+        });
+        if (data.user) {
+          await applyUserUpdate(data.user as Parameters<typeof applyUserUpdate>[0]);
+        }
+        const updatedGroup = (data.user as { group?: string })?.group;
+        const planName = content?.pricingPlans.find((p) => p.id === updatedGroup)?.name ?? updatedGroup ?? 'Premium';
+        Alert.alert(
+          'Success!',
+          `You have upgraded to ${planName} premium. Enjoy unlimited access!`,
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
+      } catch (error) {
+        Alert.alert(
+          'Verification failed',
+          error instanceof Error ? error.message : 'Payment verification failed. If amount was deducted, contact support.'
+        );
+      } finally {
+        setPurchasing(false);
+      }
+    },
+    [content, user?.group, applyUserUpdate, navigation]
+  );
+
+  const handleCheckoutDismiss = useCallback(() => {
+    setCheckoutVisible(false);
+    setOrderDetails(null);
+  }, []);
 
   if (contentLoading || !content) {
     return (
@@ -552,6 +597,23 @@ export default function PremiumPurchaseScreen() {
           </Animated.View>
         </ScrollView>
       </View>
+      {orderDetails && (
+        <RazorpayCheckoutWebView
+          visible={checkoutVisible}
+          orderId={orderDetails.orderId}
+          amount={orderDetails.amount}
+          currency={orderDetails.currency}
+          keyId={orderDetails.keyId}
+          userEmail={user?.email}
+          userPhone={user?.phoneNumber}
+          onSuccess={handlePaymentSuccess}
+          onDismiss={handleCheckoutDismiss}
+          onError={(msg) => {
+            Alert.alert('Payment error', msg);
+            handleCheckoutDismiss();
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }

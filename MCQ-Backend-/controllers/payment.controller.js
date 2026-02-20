@@ -1,6 +1,7 @@
 const createError = require('http-errors');
 const crypto = require('crypto');
 const User = require('../Modals/UserModal');
+const PaymentEventLog = require('../models/PaymentEventLog');
 const { connectDB } = require('../config/db');
 
 let Razorpay;
@@ -120,6 +121,17 @@ const verifyPayment = async (req, res, next) => {
       return next(createError(404, 'User not found'));
     }
 
+    await PaymentEventLog.create({
+      event: 'payment.captured',
+      source: 'verify',
+      userId: user._id,
+      orderId: razorpay_order_id,
+      paymentId: razorpay_payment_id,
+      amount: order.amount,
+      planId,
+      payloadSummary: { verified: true },
+    });
+
     const safeUser = user.toJSON ? user.toJSON() : user;
     return res.status(200).json({
       success: true,
@@ -169,13 +181,27 @@ const webhook = async (req, res, next) => {
       return res.status(400).send('Invalid JSON');
     }
 
-    const event = payload.event;
+    const event = payload.event || 'unknown';
+
     if (event !== 'payment.captured') {
+      await PaymentEventLog.create({
+        event,
+        source: 'webhook',
+        payloadSummary: {
+          entity: payload.payload?.payment?.entity?.id || payload.payload?.order?.entity?.id,
+          status: payload.payload?.payment?.entity?.status,
+        },
+      });
       return res.status(200).json({ received: true });
     }
 
     const paymentEntity = payload.payload?.payment?.entity;
     if (!paymentEntity || paymentEntity.status !== 'captured') {
+      await PaymentEventLog.create({
+        event: 'payment.captured',
+        source: 'webhook',
+        payloadSummary: { status: paymentEntity?.status },
+      });
       return res.status(200).json({ received: true });
     }
 
@@ -199,6 +225,17 @@ const webhook = async (req, res, next) => {
     const userId = notes.userId;
     const planId = notes.planId;
 
+    await PaymentEventLog.create({
+      event: 'payment.captured',
+      source: 'webhook',
+      userId: userId || undefined,
+      orderId,
+      paymentId: paymentEntity.id,
+      amount: paymentEntity.amount,
+      planId: planId || undefined,
+      payloadSummary: { status: paymentEntity.status },
+    });
+
     if (!userId || !planId || !VALID_PLANS.includes(planId)) {
       console.error('Webhook: invalid order notes', { orderId, notes });
       return res.status(200).json({ received: true });
@@ -217,8 +254,53 @@ const webhook = async (req, res, next) => {
   }
 };
 
+/**
+ * Get current user's payment history
+ * GET /api/payment/me/history
+ */
+const getMyPaymentHistory = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+    const skip = (page - 1) * limit;
+
+    const logs = await PaymentEventLog.find({
+      userId,
+      event: 'payment.captured',
+    })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const total = await PaymentEventLog.countDocuments({
+      userId,
+      event: 'payment.captured',
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        history: logs,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit) || 1,
+          total,
+          hasNextPage: page < Math.ceil(total / limit),
+          hasPrevPage: page > 1,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Get payment history error:', error);
+    return next(createError(500, 'Failed to fetch payment history'));
+  }
+};
+
 module.exports = {
   createOrder,
   verifyPayment,
   webhook,
+  getMyPaymentHistory,
 };
