@@ -1,5 +1,5 @@
-const API_URL = 'http://localhost:8000';
-// const API_URL='https://goldfish-app-vwvh7.ondigitalocean.app';
+// const API_URL = 'http://localhost:8000';
+const API_URL='https://goldfish-app-vwvh7.ondigitalocean.app';
 
 
 export interface User {
