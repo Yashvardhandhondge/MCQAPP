@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "MHT CET Saarthi PYQ",
+    "name": "MHT CET 2026: PYQ & Mock Tests",
     "slug": "mcqapp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/image.png",
+    "icon": "./assets/images/image1.png",
     "scheme": "mcqfrontend",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -17,22 +17,22 @@
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#1a3a5c",
-        "foregroundImage": "./assets/images/image.png",
-        "backgroundImage": "./assets/images/image.png",
-        "monochromeImage": "./assets/images/image.png"
+        "foregroundImage": "./assets/images/image1.png",
+        "backgroundImage": "./assets/images/image1.png",
+        "monochromeImage": "./assets/images/image1.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/image.png"
+      "favicon": "./assets/images/image1.png"
     },
     "plugins": [
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/image.png",
+          "image": "./assets/images/image1.png",
           "imageWidth": 300,
           "resizeMode": "contain",
           "backgroundColor": "#1a3a5c",
