@@ -74,22 +74,22 @@ export default function PremiumPurchaseScreen() {
   const faqData = [
     {
       question: 'What\'s included in the premium plan?',
-      answer: 'Premium gives you unlimited access to 20,000+ questions across all subjects, complete PYQ database from 2015 onwards, AI-powered detailed solutions for every question, comprehensive analytics to track your progress, 10-20 full-length mock tests per subject, leaderboard access to compete with peers, and saved questions feature for revision. It\'s everything you need to ace your competitive exams!',
+      answer: 'Premium gives you unlimited access to 20,000+ questions across all subjects, complete PYQ database from 2015 onwards, AI-powered detailed solutions for every question, comprehensive analytics to track your progress, 15+ full-length mock tests, leaderboard access to compete with peers, and saved questions feature for revision. All streams (PCM, PCB, PCMB) are covered in one plan!',
       icon: 'help-circle',
     },
     {
       question: 'How is this different from free content?',
-      answer: 'Free users get limited access with basic questions. Premium unlocks the complete question bank (20K+ vs limited), all previous year questions from 2015, AI-analyzed step-by-step solutions, advanced performance analytics with detailed insights, unlimited mock tests, and priority support. Think of it as getting a complete coaching institute\'s question bank at 80-90% less cost than physical books!',
+      answer: 'Free users get 25 questions per day and 3 free chapters per subject to explore. Premium unlocks the complete question bank (20K+), all previous year questions from 2015, AI-analyzed step-by-step solutions, advanced performance analytics, unlimited mock tests, and all chapter access. Think of it as getting a complete coaching institute\'s question bank at a fraction of the cost!',
       icon: 'star',
     },
     {
       question: 'Is this a one-time payment or subscription?',
-      answer: 'It\'s a one-time payment! Once you purchase premium, you get lifetime access to all premium features for your selected stream (PCM, PCB, or PCMB). No monthly fees, no recurring charges. Pay once and study forever. This makes it incredibly cost-effective compared to buying multiple books or paying for coaching classes.',
+      answer: 'It\'s a one-time payment of just ₹99! Once you purchase, you get lifetime access to all premium features — PCM, PCB, and PCMB all included. No monthly fees, no recurring charges. Pay once and study forever. This makes it incredibly cost-effective compared to buying physical books or paying for coaching.',
       icon: 'card',
     },
     {
-      question: 'Can I change my stream later?',
-      answer: 'Yes! If you need to switch streams (e.g., from PCM to PCB), you can upgrade to a different plan. The system will update your access accordingly. However, we recommend choosing the stream that matches your exam requirements from the start to get the most value. If you\'re unsure, PCMB gives you access to all subjects.',
+      question: 'Can I switch my stream after buying?',
+      answer: 'Yes! Since the ₹99 plan includes all three streams (PCM, PCB, PCMB), you can switch your active stream anytime from your Profile page. Go to Profile → Stream → Change. No extra charges. Whether you\'re in PCM, PCB, or PCMB, the same plan covers you completely.',
       icon: 'swap-horizontal',
     },
   ];
@@ -97,14 +97,6 @@ export default function PremiumPurchaseScreen() {
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
-
-  // Helper function to check if discount is active
-  const isDiscountActive = (plan: { discountPrice?: number | null; discountEndDate?: string | null }) => {
-    if (!plan.discountPrice || !plan.discountEndDate) return false;
-    const endDate = new Date(plan.discountEndDate);
-    const now = new Date();
-    return endDate > now;
-  };
 
   useEffect(() => {
     // Fetch premium content
@@ -188,12 +180,9 @@ export default function PremiumPurchaseScreen() {
   const handlePurchase = useCallback(async (planId: string) => {
     if (purchasing || loading || !content) return;
 
-    const plan = content.pricingPlans.find(p => p.id === planId);
-    const planName = plan?.name || planId;
-
     Alert.alert(
       'Upgrade to Premium',
-      `Purchase ${planName} premium for ₹99?${planId !== user?.group ? ` This will update your stream to ${planName}.` : ''}`,
+      'Get All Access for ₹99 — PCM, PCB & PCMB all included. One-time payment, lifetime access.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -222,7 +211,7 @@ export default function PremiumPurchaseScreen() {
       ],
       { cancelable: true }
     );
-  }, [purchasing, loading, content, user?.group]);
+  }, [purchasing, loading, content]);
 
   const handlePaymentSuccess = useCallback(
     async (payload: {
@@ -242,12 +231,10 @@ export default function PremiumPurchaseScreen() {
         if (data.user) {
           await applyUserUpdate(data.user as Parameters<typeof applyUserUpdate>[0]);
         }
-        const updatedGroup = (data.user as { group?: string })?.group;
-        const planName = content?.pricingPlans.find((p) => p.id === updatedGroup)?.name ?? updatedGroup ?? 'Premium';
         Alert.alert(
-          'Success!',
-          `You have upgraded to ${planName} premium. Enjoy unlimited access!`,
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
+          'You\'re Premium!',
+          'All Access unlocked — PCM, PCB & PCMB. Enjoy unlimited questions, mock tests, and more!',
+          [{ text: 'Let\'s Go!', onPress: () => navigation.goBack() }]
         );
       } catch (error) {
         Alert.alert(
@@ -258,7 +245,7 @@ export default function PremiumPurchaseScreen() {
         setPurchasing(false);
       }
     },
-    [content, user?.group, applyUserUpdate, navigation]
+    [applyUserUpdate, navigation]
   );
 
   const handleCheckoutDismiss = useCallback(() => {
@@ -268,7 +255,7 @@ export default function PremiumPurchaseScreen() {
 
   if (contentLoading || !content) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
         <View style={styles.backgroundGradient}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
@@ -279,13 +266,11 @@ export default function PremiumPurchaseScreen() {
     );
   }
 
-  const selectedPlan = user?.group ? content.pricingPlans.find(p => p.id === user.group) : content.pricingPlans[0];
-
   // Calculate tab bar height (56px tab bar + padding + safe area)
   const tabBarHeight = 56 + spacing.xs * 2 + insets.bottom;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
       <StatusBar barStyle="dark-content" />
       <View style={[styles.backgroundGradient, { paddingBottom: tabBarHeight }]}>
         <ScrollView
@@ -419,129 +404,95 @@ export default function PremiumPurchaseScreen() {
               </View>
             </View>
 
-            {/* Pricing Plans - Stream Selector */}
+            {/* Pricing - Single All Access Bundle */}
             <View style={styles.pricingSection}>
               <View style={styles.pricingTitleContainer}>
-                <Text style={styles.pricingTitle}>Select Your Stream</Text>
-                <Text style={styles.pricingSubtitle}>Choose the plan that matches your exam preparation</Text>
+                <Text style={styles.pricingTitle}>One Plan. Everything Included.</Text>
+                <Text style={styles.pricingSubtitle}>PCM + PCB + PCMB — all streams, all subjects, one price</Text>
               </View>
-              {content.pricingPlans.map((plan, index) => {
-                const isSelected = user?.group === plan.id;
-                return (
-                  <TouchableOpacity
-                    key={plan.id}
-                    style={[
-                      styles.planChip,
-                      isSelected && styles.planChipSelected,
-                    ]}
-                    activeOpacity={0.9}
-                    onPress={() => handlePurchase(plan.id)}
-                    disabled={purchasing || loading}
-                  >
-                    <View style={styles.planChipContent}>
-                      <View style={styles.planChipLeft}>
-                        <View
-                          style={[
-                            styles.planChipIcon,
-                            { borderColor: `${plan.gradient[0]}33` },
-                            isSelected && { backgroundColor: `${plan.gradient[0]}14` },
-                          ]}
-                        >
-                          <Ionicons
-                            name={plan.icon as any}
-                            size={22}
-                            color={plan.gradient[0]}
-                          />
-                        </View>
-                        <View style={styles.planChipTextContainer}>
-                          <View style={styles.planNameRow}>
-                            <Text
-                              style={[
-                                styles.planName,
-                                isSelected && styles.planNameSelected,
-                              ]}
-                            >
-                              {plan.name}
-                            </Text>
-                            {isSelected && (
-                              <View style={styles.selectedBadge}>
-                                <Ionicons name="checkmark-circle" size={18} color={colors.primaryDark} />
-                                <Text style={styles.selectedBadgeText}>Current</Text>
-                              </View>
-                            )}
-                            {plan.isPopular && !isSelected && (
-                              <View style={styles.popularBadge}>
-                                <Text style={styles.popularBadgeText}>Popular</Text>
-                              </View>
-                            )}
-                          </View>
-                          {/* <Text
-                            style={[
-                              styles.planDescription,
-                              isSelected && styles.planDescriptionSelected,
-                            ]}
-                            numberOfLines={1}
-                          >
-                            {plan.description}
-                          </Text> */}
-                        </View>
-                      </View>
 
-                      <View style={styles.planChipRight}>
-                        {isDiscountActive(plan) ? (
-                          <View style={styles.discountPriceContainer}>
-                            <View style={styles.priceRow}>
-                              <Text
-                                style={[
-                                  styles.planChipPriceOriginal,
-                                  isSelected && styles.planChipPriceOriginalSelected,
-                                ]}
-                              >
-                                ₹{plan.price}
-                              </Text>
-                              <Text
-                                style={[
-                                  styles.planChipPrice,
-                                  isSelected && styles.planChipPriceSelected,
-                                ]}
-                              >
-                                ₹{plan.discountPrice}
-                              </Text>
-                            </View>
-                            <Text
-                              style={[
-                                styles.planChipOneTime,
-                                isSelected && styles.planChipOneTimeSelected,
-                              ]}
-                            >
-                              one-time
-                            </Text>
-                          </View>
+              {/* All Access Bundle Card */}
+              <View style={styles.allAccessCard}>
+                <LinearGradient
+                  colors={['#667EEA', '#764BA2', '#F093FB'] as [string, string, string]}
+                  style={styles.allAccessGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  {/* Decorative circles */}
+                  <View style={styles.allAccessCircle1} />
+                  <View style={styles.allAccessCircle2} />
+
+                  <View style={styles.allAccessContent}>
+                    {/* Header row */}
+                    <View style={styles.allAccessHeaderRow}>
+                      <View style={styles.allAccessBadge}>
+                        <Ionicons name="diamond" size={14} color="#FFFFFF" />
+                        <Text style={styles.allAccessBadgeText}>ALL ACCESS BUNDLE</Text>
+                      </View>
+                      <Text style={styles.allAccessCrownEmoji}>👑</Text>
+                    </View>
+
+                    {/* Streams row */}
+                    <View style={styles.allAccessStreamsRow}>
+                      {['PCM', 'PCB', 'PCMB'].map((stream) => (
+                        <View key={stream} style={styles.allAccessStreamPill}>
+                          <Text style={styles.allAccessStreamPillText}>{stream}</Text>
+                        </View>
+                      ))}
+                      <Text style={styles.allAccessStreamsPlus}>included</Text>
+                    </View>
+
+                    <Text style={styles.allAccessDesc}>
+                      Physics · Chemistry · Mathematics · Biology{'\n'}Switch streams anytime from your Profile
+                    </Text>
+
+                    {/* Price + CTA row */}
+                    <View style={styles.allAccessPriceRow}>
+                      <View>
+                        <Text style={styles.allAccessPrice}>₹99</Text>
+                        <Text style={styles.allAccessOneTime}>one-time payment</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.allAccessBuyButton, (purchasing || loading) && { opacity: 0.6 }]}
+                        onPress={() => handlePurchase((user?.group as 'PCM' | 'PCB' | 'PCMB') || 'PCMB')}
+                        disabled={purchasing || loading}
+                        activeOpacity={0.85}
+                      >
+                        {purchasing ? (
+                          <ActivityIndicator size="small" color="#667EEA" />
                         ) : (
                           <>
-                            <Text
-                              style={[
-                                styles.planChipPrice,
-                                isSelected && styles.planChipPriceSelected,
-                              ]}
-                            >
-                              ₹{plan.price}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.planChipOneTime,
-                                isSelected && styles.planChipOneTimeSelected,
-                              ]}
-                            >
-                              one-time
-                            </Text>
+                            <Text style={styles.allAccessBuyText}>Get Premium</Text>
+                            <Ionicons name="arrow-forward" size={18} color="#667EEA" />
                           </>
                         )}
-                      </View>
+                      </TouchableOpacity>
                     </View>
-                  </TouchableOpacity>
-                );
-              })}
+                  </View>
+                </LinearGradient>
+              </View>
+
+              {/* What's unlocked list */}
+              <View style={styles.unlockedSection}>
+                <Text style={styles.unlockedTitle}>What gets unlocked</Text>
+                {[
+                  { icon: 'book', text: '20,000+ chapter-wise questions' },
+                  { icon: 'calendar', text: 'All PYQs from 2015 onwards' },
+                  { icon: 'document-text', text: '15+ full-length mock tests' },
+                  { icon: 'sparkles', text: 'AI-analyzed step-by-step solutions' },
+                  { icon: 'analytics', text: 'Advanced performance analytics' },
+                  { icon: 'trophy', text: 'Leaderboard & peer competition' },
+                ].map((item, idx) => (
+                  <View key={idx} style={styles.unlockedItem}>
+                    <View style={styles.unlockedIconBg}>
+                      <Ionicons name={item.icon as any} size={18} color={colors.primary} />
+                    </View>
+                    <Text style={styles.unlockedItemText}>{item.text}</Text>
+                    <Ionicons name="checkmark-circle" size={18} color="#10B981" />
+                  </View>
+                ))}
+              </View>
             </View>
 
             {/* FAQ Section */}
@@ -1134,6 +1085,181 @@ const styles = StyleSheet.create({
   },
   faqChevronExpanded: {
     transform: [{ rotate: '180deg' }],
+  },
+  // All Access Bundle styles
+  allAccessCard: {
+    borderRadius: radius.xl + 4,
+    overflow: 'hidden',
+    ...shadow.xl,
+    marginBottom: spacing.xl,
+  },
+  allAccessGradient: {
+    padding: spacing.xxl,
+    position: 'relative',
+    overflow: 'hidden',
+    minHeight: 220,
+  },
+  allAccessCircle1: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    top: -60,
+    right: -50,
+  },
+  allAccessCircle2: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    bottom: -40,
+    left: -30,
+  },
+  allAccessContent: {
+    position: 'relative',
+    zIndex: 5,
+  },
+  allAccessHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.lg,
+  },
+  allAccessBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  allAccessBadgeText: {
+    ...typography.caption,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 10,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  allAccessCrownEmoji: {
+    fontSize: 28,
+  },
+  allAccessStreamsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  allAccessStreamPill: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  allAccessStreamPillText: {
+    ...typography.subtitle,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  allAccessStreamsPlus: {
+    ...typography.caption,
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    fontWeight: '500',
+    fontStyle: 'italic',
+  },
+  allAccessDesc: {
+    ...typography.body,
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: spacing.xl,
+  },
+  allAccessPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  allAccessPrice: {
+    ...typography.h1,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 36,
+    letterSpacing: -1,
+    lineHeight: 40,
+  },
+  allAccessOneTime: {
+    ...typography.caption,
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  allAccessBuyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
+    paddingVertical: spacing.md + 2,
+    paddingHorizontal: spacing.xl,
+    ...shadow.md,
+    minWidth: 140,
+    justifyContent: 'center',
+  },
+  allAccessBuyText: {
+    ...typography.subtitle,
+    color: '#667EEA',
+    fontWeight: '800',
+    fontSize: 15,
+    letterSpacing: 0.2,
+  },
+  unlockedSection: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    ...shadow.sm,
+    gap: spacing.sm,
+  },
+  unlockedTitle: {
+    ...typography.h3,
+    color: '#111827',
+    fontWeight: '700',
+    fontSize: 16,
+    marginBottom: spacing.sm,
+  },
+  unlockedItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  unlockedIconBg: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.lg,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  unlockedItemText: {
+    ...typography.body,
+    color: '#374151',
+    fontSize: 14,
+    flex: 1,
+    lineHeight: 20,
+    fontWeight: '500',
   },
 });
 

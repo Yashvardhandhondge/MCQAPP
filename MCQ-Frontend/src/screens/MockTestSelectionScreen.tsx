@@ -141,7 +141,7 @@ export default function MockTestSelectionScreen({ navigation }: MockTestSelectio
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
         <View style={styles.backgroundGradient}>
           <BackHeader title="Mock Tests" navigation={navigation} />
           <View style={styles.loadingContainer}>
@@ -155,7 +155,7 @@ export default function MockTestSelectionScreen({ navigation }: MockTestSelectio
 
   if (error && mockTests.length === 0) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
         <View style={styles.backgroundGradient}>
           <BackHeader title="Mock Tests" navigation={navigation} />
           <View style={styles.errorContainer}>
@@ -182,7 +182,7 @@ export default function MockTestSelectionScreen({ navigation }: MockTestSelectio
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
       <View style={styles.backgroundGradient}>
         <BackHeader title="Mock Tests" onBack={() => safeGoBack(navigation)} />
         <ScrollView

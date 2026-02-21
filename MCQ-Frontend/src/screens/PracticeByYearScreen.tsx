@@ -234,7 +234,7 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
       <View style={styles.backgroundGradient}>
         <BackHeader
           title={chapter}

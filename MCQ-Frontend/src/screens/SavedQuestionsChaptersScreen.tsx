@@ -71,7 +71,7 @@ export default function SavedQuestionsChaptersScreen({ route, navigation }: Save
   const totalQuestions = chapters.reduce((sum, c) => sum + c.questionCount, 0);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
       <LinearGradient
         colors={colors.gradientAuthLight as [string, string, ...string[]]}
         style={styles.backgroundGradient}

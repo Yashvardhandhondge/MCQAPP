@@ -93,7 +93,7 @@ export default function MockTestLeaderboardSelectionScreen({ navigation }: MockT
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
         <View style={styles.backgroundGradient}>
           <BackHeader title="MockTest Leaderboard" navigation={navigation} />
           <View style={styles.loadingContainer}>
@@ -107,7 +107,7 @@ export default function MockTestLeaderboardSelectionScreen({ navigation }: MockT
 
   if (error && mockTests.length === 0) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
         <View style={styles.backgroundGradient}>
           <BackHeader title="MockTest Leaderboard" navigation={navigation} />
           <View style={styles.errorContainer}>
@@ -134,7 +134,7 @@ export default function MockTestLeaderboardSelectionScreen({ navigation }: MockT
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
       <View style={styles.backgroundGradient}>
         <BackHeader title="MockTest Leaderboard" onBack={() => safeGoBack(navigation)} />
         <ScrollView

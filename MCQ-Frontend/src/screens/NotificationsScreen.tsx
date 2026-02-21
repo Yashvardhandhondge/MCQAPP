@@ -110,7 +110,7 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.backgroundGradient}>
         {/* Sticky Header */}

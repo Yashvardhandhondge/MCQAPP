@@ -84,7 +84,7 @@ export default function SavedQuestionsScreen({ navigation }: SavedQuestionsScree
   const totalQuestions = subjects.reduce((sum, s) => sum + s.questionCount, 0);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
       <LinearGradient
         colors={colors.gradientAuthLight as [string, string, ...string[]]}
         style={styles.backgroundGradient}

@@ -1,7 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useRef, useEffect, useState } from 'react';
-import {  ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated, StatusBar, Alert, Platform, ActivityIndicator, AppState, AppStateStatus } from 'react-native';
+import {  ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated, StatusBar, Alert, Platform, ActivityIndicator, AppState, AppStateStatus, Linking } from 'react-native';
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -57,6 +57,11 @@ const SOCIAL_MEDIA_LINKS: Array<{ name: string; url: string; icon: string; gradi
     icon: 'logo-whatsapp',
     gradient: ['#25D366', '#128C7E'],
   },
+];
+
+const CONTACT_NUMBERS: Array<{ label: string; value: string; dial: string }> = [
+  { label: 'Support', value: '+91 70207 81343', dial: '+917020781343' },
+  { label: 'Assistance', value: '+91 80101 40176', dial: '+918010140176' },
 ];
 
 export default function ProfileScreen() {
@@ -309,6 +314,21 @@ export default function ProfileScreen() {
     }
   }, []);
 
+  const handleContactPress = useCallback(async (phone: string) => {
+    try {
+      const url = `tel:${phone}`;
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Unavailable', 'Calling is not supported on this device.');
+      }
+    } catch (error) {
+      console.error('Error opening dialer:', error);
+      Alert.alert('Error', 'Unable to open the dialer right now.');
+    }
+  }, []);
+
   const handleEditStream = useCallback(() => {
     navigation.navigate('GroupSelection', { editMode: true });
   }, [navigation]);
@@ -332,7 +352,7 @@ export default function ProfileScreen() {
   const hasAvatar = !!user?.avatarUrl;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.backgroundGradient}>
         {/* Sticky Header */}
@@ -584,6 +604,41 @@ export default function ProfileScreen() {
                   </View>
                 </View>
                 */}
+
+                {/* Contact us row */}
+                <View style={styles.infoCard}>
+                  <View style={styles.infoCardHeader}>
+                    <LinearGradient
+                      colors={colors.gradientPrimary as [string, string, ...string[]]}
+                      style={styles.infoIconContainer}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons name="call" size={20} color="#FFFFFF" />
+                    </LinearGradient>
+                    <View style={styles.infoCardContent}>
+                      <Text style={styles.infoCardLabel}>Contact us</Text>
+                      <Text style={styles.infoCardSubtext}>Reach our support team directly</Text>
+                      <Text style={styles.contactAvailability}>Available Mon–Sat • 10:00 AM – 6:00 PM</Text>
+                      <View style={styles.contactList}>
+                        {CONTACT_NUMBERS.map((item) => (
+                          <TouchableOpacity
+                            key={item.dial}
+                            onPress={() => handleContactPress(item.dial)}
+                            activeOpacity={0.8}
+                            style={styles.contactItem}
+                          >
+                            <View style={styles.contactTextWrap}>
+                              <Text style={styles.contactLabel}>{item.label}</Text>
+                              <Text style={styles.contactNumber}>{item.value}</Text>
+                            </View>
+                            <Ionicons name="call-outline" size={18} color={colors.primary} />
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+                </View>
 
                 {/* Social media row */}
                 <View style={styles.infoCard}>
@@ -920,6 +975,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     marginTop: spacing.sm,
+  },
+  contactList: {
+    marginTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  contactAvailability: {
+    ...typography.caption,
+    color: colors.primary,
+    fontSize: 12,
+    marginTop: spacing.xs,
+    fontWeight: '600',
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  contactTextWrap: {
+    flex: 1,
+    minWidth: 0,
+    marginRight: spacing.sm,
+  },
+  contactLabel: {
+    ...typography.caption,
+    color: '#6B7280',
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
+  contactNumber: {
+    ...typography.body,
+    color: '#111827',
+    fontSize: 14,
+    fontWeight: '700',
   },
   socialIconButton: {
     borderRadius: radius.md,

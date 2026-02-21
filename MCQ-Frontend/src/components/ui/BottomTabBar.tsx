@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { StyleSheet, TouchableOpacity, View, Animated } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, Animated, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing, shadow } from '../../theme';
@@ -17,11 +17,11 @@ interface BottomTabBarProps {
 }
 
 const tabs: TabItem[] = [
-  { name: 'Dashboard', label: 'HOME', icon: 'home' },
-  { name: 'Chapters', label: 'CHAPTERS', icon: 'book' },
-  { name: 'Tests', label: 'TESTS', icon: 'document-text' },
-  { name: 'Leaderboard', label: 'LEADERBOARD', icon: 'trophy' },
-  { name: 'Stats', label: 'ANALYTICS', icon: 'bar-chart' },
+  { name: 'Dashboard', label: 'Home', icon: 'home' },
+  { name: 'Chapters', label: 'Chapters', icon: 'book' },
+  { name: 'Tests', label: 'Tests', icon: 'document-text' },
+  { name: 'Leaderboard', label: 'Leaderboard', icon: 'trophy' },
+  { name: 'Stats', label: 'Stats', icon: 'bar-chart' },
 ];
 
 export default function BottomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
@@ -103,19 +103,38 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
                   ]}
                 >
                   <View style={styles.activeIndicator} />
-                  <Ionicons name={tab.icon} size={26} color={colors.primary} />
+                  <Ionicons name={tab.icon} size={21} color={colors.primary} />
+                  <Text
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.8}
+                    style={[styles.label, styles.activeLabel]}
+                  >
+                    {tab.label}
+                  </Text>
                 </Animated.View>
               ) : (
                 <Animated.View
-                  style={{
-                    transform: [{ scale: iconAnimations[index] }],
-                  }}
+                  style={[
+                    styles.inactiveTabContainer,
+                    {
+                      transform: [{ scale: iconAnimations[index] }],
+                    },
+                  ]}
                 >
                   <Ionicons
                     name={`${tab.icon}-outline` as any}
-                    size={24}
+                    size={20}
                     color={colors.authTextMuted}
                   />
+                  <Text
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.8}
+                    style={styles.label}
+                  >
+                    {tab.label}
+                  </Text>
                 </Animated.View>
               )}
             </TouchableOpacity>
@@ -139,28 +158,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     height: 56,
     paddingHorizontal: spacing.xs,
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-around',
-    paddingTop: spacing.xs,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: spacing.xs,
+    justifyContent: 'center',
     borderRadius: radius.md,
+    minWidth: 0,
   },
   activeTabContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
     position: 'relative',
+    minWidth: 0,
+  },
+  inactiveTabContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    minWidth: 0,
+  },
+  label: {
+    marginTop: 2,
+    fontSize: 10,
+    lineHeight: 12,
+    color: colors.authTextMuted,
+    fontWeight: '600',
+    width: '100%',
+    textAlign: 'center',
+  },
+  activeLabel: {
+    color: colors.primary,
   },
   activeIndicator: {
     position: 'absolute',
-    bottom: -10,
-    width: 36,
-    height: 3,
+    bottom: -3,
+    width: 28,
+    height: 2,
     backgroundColor: colors.primary,
     borderRadius: radius.full,
   },

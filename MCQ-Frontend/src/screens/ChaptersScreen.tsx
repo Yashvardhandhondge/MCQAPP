@@ -501,7 +501,7 @@ export default function ChaptersScreen({ route, navigation }: ChaptersScreenProp
   }, [chapters, error, loading, navigation, subject, subjects, subjectsLoading, fadeAnim, slideAnim, isPremium, appNavigation, selectedStandard, chaptersData]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
       <View style={styles.backgroundGradient}>
         {subject ? (
           <BackHeader

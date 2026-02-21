@@ -141,7 +141,7 @@ export default function RegisterScreen() {
         colors={['#F5F3FF', '#EDE9FE', '#E0E7FF']}
         style={styles.gradientBackground}
       >
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView edges={['top']} style={styles.safeArea}>
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"

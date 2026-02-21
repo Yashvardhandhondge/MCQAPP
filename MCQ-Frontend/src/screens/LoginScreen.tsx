@@ -87,7 +87,7 @@ export default function LoginScreen() {
         colors={colors.gradientAuthLight}
         style={styles.gradientBackground}
       >
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView edges={['top']} style={styles.safeArea}>
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"

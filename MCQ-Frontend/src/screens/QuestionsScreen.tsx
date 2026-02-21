@@ -38,6 +38,7 @@ import ReportQuestionModal from '../components/ui/ReportQuestionModal';
 import { safeGoBack } from '../utils/navigation';
 import MathText from '../components/ui/MathText';
 import PremiumLockModal from '../components/ui/PremiumLockModal';
+import DailyLimitModal from '../components/ui/DailyLimitModal';
 
 const QUESTIONS_PER_PAGE = 5;
 
@@ -85,6 +86,7 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [reportingQuestionId, setReportingQuestionId] = useState<string | null>(null);
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
+  const [limitModalVisible, setLimitModalVisible] = useState(false);
   const [revealedQuestions, setRevealedQuestions] = useState<Set<string>>(new Set());
   const [dailyViewsRemaining, setDailyViewsRemaining] = useState<number | null>(null);
   const { user } = useAuth();
@@ -291,17 +293,7 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
 
     // Check daily limit
     if (dailyViewsRemaining !== null && dailyViewsRemaining <= 0) {
-      Alert.alert(
-        'Daily Limit Reached',
-        "You have reached your today's limit to see more questions. Upgrade to premium to see unlimited questions.",
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Upgrade to Premium',
-            onPress: () => navigation.navigate('PremiumPurchase'),
-          },
-        ],
-      );
+      setLimitModalVisible(true);
       return;
     }
 
@@ -311,32 +303,12 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
         setRevealedQuestions((prev) => new Set(prev).add(questionId));
         setDailyViewsRemaining(response.dailyViewsRemaining);
       } else {
-        Alert.alert(
-          'Daily Limit Reached',
-          response.message || "You have reached your today's limit to see more questions. Upgrade to premium to see unlimited questions.",
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Upgrade to Premium',
-              onPress: () => navigation.navigate('PremiumPurchase'),
-            },
-          ],
-        );
+        setLimitModalVisible(true);
       }
     } catch (error) {
       const message = (error as Error)?.message || 'Failed to reveal question';
       if (message.includes('limit')) {
-        Alert.alert(
-          'Daily Limit Reached',
-          "You have reached your today's limit to see more questions. Upgrade to premium to see unlimited questions.",
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Upgrade to Premium',
-              onPress: () => navigation.navigate('PremiumPurchase'),
-            },
-          ],
-        );
+        setLimitModalVisible(true);
       } else {
         Alert.alert('Error', message);
       }
@@ -619,7 +591,7 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
       : `${totalQuestions} questions available`;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
       <LinearGradient
         colors={colors.gradientAuthLight as [string, string, ...string[]]}
         style={styles.backgroundGradient}
@@ -1019,6 +991,16 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
         onClose={() => setPremiumModalVisible(false)}
         onBuyPremium={() => {
           setPremiumModalVisible(false);
+          navigation.navigate('PremiumPurchase');
+        }}
+      />
+      <DailyLimitModal
+        visible={limitModalVisible}
+        type="questions"
+        remaining={dailyViewsRemaining ?? 0}
+        onClose={() => setLimitModalVisible(false)}
+        onUpgrade={() => {
+          setLimitModalVisible(false);
           navigation.navigate('PremiumPurchase');
         }}
       />

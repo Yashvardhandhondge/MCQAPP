@@ -8,7 +8,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,6 +16,7 @@ import type { AppStackParamList } from '../navigation/types';
 import { useAuth } from '../context/AuthContext';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import BackHeader from '../components/ui/BackHeader';
+import DailyLimitModal from '../components/ui/DailyLimitModal';
 import { getDistinctYears, generateRandomTest } from '../services/mcq.service';
 
 type FilterType = 'year' | 'subject';
@@ -62,6 +62,7 @@ export default function TestsScreen() {
   const [generatingRandom, setGeneratingRandom] = useState<number | null>(null);
   const [generatingYear, setGeneratingYear] = useState<string | null>(null);
   const [generatingSubject, setGeneratingSubject] = useState<string | null>(null);
+  const [testLimitModalVisible, setTestLimitModalVisible] = useState(false);
 
   useEffect(() => {
     if (filter === 'year') {
@@ -82,14 +83,7 @@ export default function TestsScreen() {
     if (isPremium) return true;
     const { getTestCount, canTakeTest } = await import('../utils/testTracking');
     if (!canTakeTest(false, await getTestCount())) {
-      Alert.alert(
-        'Test Limit Reached',
-        'You’ve used 3 free tests. Upgrade for unlimited.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Upgrade', onPress: () => navigation.navigate('PremiumPurchase') },
-        ]
-      );
+      setTestLimitModalVisible(true);
       return false;
     }
     return true;
@@ -466,6 +460,15 @@ export default function TestsScreen() {
           )}
         </ScrollView>
       </LinearGradient>
+      <DailyLimitModal
+        visible={testLimitModalVisible}
+        type="tests"
+        onClose={() => setTestLimitModalVisible(false)}
+        onUpgrade={() => {
+          setTestLimitModalVisible(false);
+          navigation.navigate('PremiumPurchase');
+        }}
+      />
     </View>
   );
 }

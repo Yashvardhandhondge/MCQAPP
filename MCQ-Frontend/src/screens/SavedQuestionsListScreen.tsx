@@ -132,7 +132,7 @@ export default function SavedQuestionsListScreen({ route, navigation }: SavedQue
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
       <LinearGradient
         colors={colors.gradientAuthLight as [string, string, ...string[]]}
         style={styles.backgroundGradient}

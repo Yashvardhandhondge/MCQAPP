@@ -103,7 +103,7 @@ export default function EditProfileScreen({ navigation }: EditProfileScreenProps
   const hasAvatar = !!avatarUrl;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
       <StatusBar barStyle="dark-content" />
       <ScrollView
         contentContainerStyle={styles.scrollContainer}

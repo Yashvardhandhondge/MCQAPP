@@ -116,7 +116,7 @@ export default function ChapterDetailScreen({ route, navigation }: ChapterDetail
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
       <View style={styles.backgroundGradient}>
         <BackHeader
           title={chapter}

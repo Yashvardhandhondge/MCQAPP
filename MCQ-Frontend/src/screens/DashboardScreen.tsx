@@ -312,7 +312,7 @@ export default function DashboardScreen() {
   };
 
   return (
-    <SafeAreaView  style={styles.safeArea}>
+    <SafeAreaView  edges={['top']} style={styles.safeArea}>
       <View style={styles.backgroundGradient}>
         {/* Sticky Header - Enhanced */}
         <View style={styles.stickyHeader}>
@@ -388,147 +388,51 @@ export default function DashboardScreen() {
             }}
           >
 
-            {/* Premium Upgrade Banner - Only for Non-Premium Users */}
+            {/* Free Plan Info Card - Only for Non-Premium Users */}
             {!isPremium && (
-              <TouchableOpacity
-                style={styles.premiumBanner}
-                onPress={() => navigation.navigate('PremiumPurchase')}
-                activeOpacity={0.95}
-              >
-                <LinearGradient
-                  colors={['#667EEA', '#764BA2', '#F093FB', '#4FACFE'] as [string, string, string, string]}
-                  style={styles.premiumBannerGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
+              <View style={styles.freePlanCard}>
+                {/* Left: Free benefits */}
+                <View style={styles.freePlanLeft}>
+                  <View style={styles.freePlanBadgeRow}>
+                    <View style={styles.freePlanBadge}>
+                      <Ionicons name="gift" size={12} color="#10B981" />
+                      <Text style={styles.freePlanBadgeText}>FREE PLAN</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.freePlanTitle}>What you get free</Text>
+                  <View style={styles.freePlanBenefitRow}>
+                    <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                    <Text style={styles.freePlanBenefitText}>25 questions / day</Text>
+                  </View>
+                  <View style={styles.freePlanBenefitRow}>
+                    <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                    <Text style={styles.freePlanBenefitText}>3 chapters free per subject</Text>
+                  </View>
+                  <View style={styles.freePlanBenefitRow}>
+                    <Ionicons name="swap-horizontal" size={14} color="#6366F1" />
+                    <Text style={styles.freePlanBenefitText}>Switch PCM/PCB/PCMB in Profile</Text>
+                  </View>
+                </View>
+
+                {/* Right: Upgrade CTA */}
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('PremiumPurchase')}
+                  activeOpacity={0.85}
+                  style={styles.freePlanUpgradeButton}
                 >
-                  {/* Decorative Background Elements */}
-                  <View style={styles.premiumDecorativeCircle1} />
-                  <View style={styles.premiumDecorativeCircle2} />
-                  <View style={styles.premiumDecorativeCircle3} />
-                  
-                  {/* Floating Icons */}
-                  <View style={styles.premiumFloatingIcons}>
-                    <View style={styles.premiumFloatingIcon1}>
-                      <Ionicons name="star" size={20} color="rgba(255, 255, 255, 0.6)" />
-                    </View>
-                    <View style={styles.premiumFloatingIcon2}>
-                      <Ionicons name="diamond" size={18} color="rgba(255, 255, 255, 0.5)" />
-                    </View>
-                    <View style={styles.premiumFloatingIcon3}>
-                      <Ionicons name="sparkles" size={16} color="rgba(255, 255, 255, 0.4)" />
-                    </View>
-                  </View>
-
-                  {/* Main Content */}
-                  <View style={styles.premiumContent}>
-                    <View style={styles.premiumHeaderRow}>
-                      <View style={styles.premiumBadgeContainer}>
-                        <LinearGradient
-                          colors={['rgba(255, 255, 255, 0.3)', 'rgba(255, 255, 255, 0.15)'] as [string, string]}
-                          style={styles.premiumBadgeGradient}
-                        >
-                          <Ionicons name="diamond" size={16} color="#FFFFFF" />
-                          <Text style={styles.premiumBadgeText}>PREMIUM</Text>
-                        </LinearGradient>
-                      </View>
-                      <View style={styles.premiumCrownIcon}>
-                        <Text style={styles.premiumCrownEmoji}>👑</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.premiumTitleSection}>
-                      <Text style={styles.premiumMainTitle}>Unlock Premium</Text>
-                      <Text style={styles.premiumSubTitle}>Transform Your Learning Journey</Text>
-                    </View>
-
-                    {/* Feature Grid */}
-                    <View style={styles.premiumFeaturesGrid}>
-                      <TouchableOpacity
-                        style={styles.premiumFeatureBox}
-                        onPress={() => (navigation as any).getParent()?.navigate('MainTabs', { screen: 'Chapters' })}
-                        activeOpacity={0.7}
-                      >
-                        <View style={styles.premiumFeatureIconContainer}>
-                          <LinearGradient
-                            colors={['rgba(255, 255, 255, 0.25)', 'rgba(255, 255, 255, 0.15)'] as [string, string]}
-                            style={styles.premiumFeatureIconBg}
-                          >
-                            <Text style={styles.premiumFeatureEmoji}>📚</Text>
-                          </LinearGradient>
-                        </View>
-                        <Text style={styles.premiumFeatureNumber}>20K+</Text>
-                        <Text style={styles.premiumFeatureLabel}>Chapterwise PYQs</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={styles.premiumFeatureBox}
-                        onPress={() => navigation.navigate('MockTestSelection')}
-                        activeOpacity={0.7}
-                      >
-                        <View style={styles.premiumFeatureIconContainer}>
-                          <LinearGradient
-                            colors={['rgba(255, 255, 255, 0.25)', 'rgba(255, 255, 255, 0.15)'] as [string, string]}
-                            style={styles.premiumFeatureIconBg}
-                          >
-                            <Text style={styles.premiumFeatureEmoji}>📝</Text>
-                          </LinearGradient>
-                        </View>
-                        <Text style={styles.premiumFeatureNumber}>15+</Text>
-                        <Text style={styles.premiumFeatureLabel}>Full Length Mock Test</Text>
-                      </TouchableOpacity>
-
-                      <View style={styles.premiumFeatureBox}>
-                        <View style={styles.premiumFeatureIconContainer}>
-                          <LinearGradient
-                            colors={['rgba(255, 255, 255, 0.25)', 'rgba(255, 255, 255, 0.15)'] as [string, string]}
-                            style={styles.premiumFeatureIconBg}
-                          >
-                            <Text style={styles.premiumFeatureEmoji}>🎯</Text>
-                          </LinearGradient>
-                        </View>
-                        <Text style={styles.premiumFeatureNumber}>AI</Text>
-                        <Text style={styles.premiumFeatureLabel}>Solutions</Text>
-                      </View>
-
-                      <TouchableOpacity
-                        style={styles.premiumFeatureBox}
-                        onPress={() => (navigation as any).getParent()?.navigate('MainTabs', { screen: 'Stats' })}
-                        activeOpacity={0.7}
-                      >
-                        <View style={styles.premiumFeatureIconContainer}>
-                          <LinearGradient
-                            colors={['rgba(255, 255, 255, 0.25)', 'rgba(255, 255, 255, 0.15)'] as [string, string]}
-                            style={styles.premiumFeatureIconBg}
-                          >
-                            <Text style={styles.premiumFeatureEmoji}>📊</Text>
-                          </LinearGradient>
-                        </View>
-                        <Text style={styles.premiumFeatureNumber}>Advanced</Text>
-                        <Text style={styles.premiumFeatureLabel}>Analytics & Insights</Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    {/* CTA Button */}
-                    <TouchableOpacity
-                      style={styles.premiumCTAButton}
-                      onPress={() => navigation.navigate('PremiumPurchase')}
-                      activeOpacity={0.8}
-                    >
-                      <LinearGradient
-                        colors={['#FFFFFF', '#F8FAFF'] as [string, string]}
-                        style={styles.premiumCTAButtonGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                      >
-                        <Text style={styles.premiumCTAButtonText}>Upgrade Now</Text>
-                        <View style={styles.premiumCTAButtonIcon}>
-                          <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
-                        </View>
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
+                  <LinearGradient
+                    colors={['#667EEA', '#764BA2'] as [string, string]}
+                    style={styles.freePlanUpgradeGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 0, y: 1 }}
+                  >
+                    <Text style={styles.freePlanUpgradePrice}>₹99</Text>
+                    <Text style={styles.freePlanUpgradeLabel}>All Access</Text>
+                    <Text style={styles.freePlanUpgradeHint}>one-time</Text>
+                    <Ionicons name="arrow-forward-circle" size={20} color="rgba(255,255,255,0.9)" style={{ marginTop: 6 }} />
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
             )}
 
             {/* Compact Exam Countdown + Quick Stats */}
@@ -1061,11 +965,11 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F3E8ff',
-    
+    backgroundColor: '#F3E8FF',
   },
   backgroundGradient: {
     flex: 1,
+    backgroundColor: '#F3E8FF',
   },
   container: {
     flexGrow: 1,
@@ -2145,207 +2049,97 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
-  premiumBanner: {
-    borderRadius: radius.xl + 6,
-    overflow: 'hidden',
-    marginBottom: spacing.xl,
-    ...shadow.xl,
-    marginHorizontal: -spacing.xs,
-  },
-  premiumBannerGradient: {
-    padding: spacing.xxl + 4,
-    position: 'relative',
-    minHeight: 280,
-    overflow: 'hidden',
-  },
-  premiumDecorativeCircle1: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    top: -80,
-    right: -60,
-  },
-  premiumDecorativeCircle2: {
-    position: 'absolute',
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    bottom: -50,
-    left: -40,
-  },
-  premiumDecorativeCircle3: {
-    position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    top: '50%',
-    right: 20,
-  },
-  premiumFloatingIcons: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-  },
-  premiumFloatingIcon1: {
-    position: 'absolute',
-    top: spacing.lg,
-    right: spacing.xl + 10,
-  },
-  premiumFloatingIcon2: {
-    position: 'absolute',
-    bottom: spacing.xl + 20,
-    right: spacing.lg,
-  },
-  premiumFloatingIcon3: {
-    position: 'absolute',
-    top: spacing.xl + 30,
-    left: spacing.lg,
-  },
-  premiumContent: {
-    position: 'relative',
-    zIndex: 10,
-  },
-  premiumHeaderRow: {
+  freePlanCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  premiumBadgeContainer: {
-    borderRadius: radius.full,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
+    marginBottom: spacing.xl,
+    borderWidth: 1.5,
+    borderColor: '#E0E7FF',
     overflow: 'hidden',
     ...shadow.md,
   },
-  premiumBadgeGradient: {
+  freePlanLeft: {
+    flex: 1,
+    padding: spacing.lg,
+    justifyContent: 'center',
+  },
+  freePlanBadgeRow: {
+    marginBottom: spacing.sm,
+  },
+  freePlanBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingHorizontal: spacing.md + 2,
-    paddingVertical: spacing.xs + 4,
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.md,
+    alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: '#6EE7B7',
   },
-  premiumBadgeText: {
+  freePlanBadgeText: {
     ...typography.caption,
-    color: '#FFFFFF',
-    fontWeight: '800',
+    color: '#065F46',
     fontSize: 10,
-    letterSpacing: 1.5,
+    fontWeight: '800',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
-  premiumCrownIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    ...shadow.md,
-  },
-  premiumCrownEmoji: {
-    fontSize: 24,
-  },
-  premiumTitleSection: {
-    marginBottom: spacing.xl,
-  },
-  premiumMainTitle: {
-    ...typography.h1,
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 32,
-    lineHeight: 38,
-    marginBottom: spacing.xs,
-    letterSpacing: -0.5,
-  },
-  premiumSubTitle: {
-    ...typography.body,
-    color: 'rgba(255, 255, 255, 0.95)',
-    fontSize: 15,
-    lineHeight: 22,
-    fontWeight: '500',
-  },
-  premiumFeaturesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-    marginBottom: spacing.xl,
-  },
-  premiumFeatureBox: {
-    flex: 1,
-    minWidth: '47%',
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    borderRadius: radius.lg + 2,
-    padding: spacing.md + 2,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    backdropFilter: 'blur(10px)',
-  },
-  premiumFeatureIconContainer: {
+  freePlanTitle: {
+    ...typography.subtitle,
+    color: '#111827',
+    fontWeight: '700',
+    fontSize: 13,
     marginBottom: spacing.sm,
   },
-  premiumFeatureIconBg: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-  },
-  premiumFeatureEmoji: {
-    fontSize: 24,
-  },
-  premiumFeatureNumber: {
-    ...typography.h3,
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 16,
-    marginBottom: spacing.xs / 2,
-    textAlign: 'center',
-  },
-  premiumFeatureLabel: {
-    ...typography.caption,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 11,
-    fontWeight: '600',
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  premiumCTAButton: {
-    borderRadius: radius.xl,
-    overflow: 'hidden',
-    ...shadow.lg,
-  },
-  premiumCTAButtonGradient: {
+  freePlanBenefitRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md + 4,
-    paddingHorizontal: spacing.xl,
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
   },
-  premiumCTAButtonText: {
-    ...typography.subtitle,
-    color: '#667EEA',
-    fontWeight: '800',
-    fontSize: 16,
-    letterSpacing: 0.5,
+  freePlanBenefitText: {
+    ...typography.caption,
+    color: '#374151',
+    fontSize: 12,
+    fontWeight: '500',
+    flex: 1,
   },
-  premiumCTAButtonIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#667EEA',
-    justifyContent: 'center',
+  freePlanUpgradeButton: {
+    overflow: 'hidden',
+    alignSelf: 'stretch',
+  },
+  freePlanUpgradeGradient: {
+    width: 88,
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.sm,
+  },
+  freePlanUpgradePrice: {
+    ...typography.h2,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 22,
+    letterSpacing: -0.5,
+  },
+  freePlanUpgradeLabel: {
+    ...typography.caption,
+    color: 'rgba(255,255,255,0.95)',
+    fontWeight: '700',
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  freePlanUpgradeHint: {
+    ...typography.caption,
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 10,
+    textAlign: 'center',
+    marginTop: 1,
   },
 });
 

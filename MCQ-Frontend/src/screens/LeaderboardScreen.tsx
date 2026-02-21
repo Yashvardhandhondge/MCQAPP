@@ -159,7 +159,7 @@ export default function LeaderboardScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
         <View style={styles.backgroundGradient}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
@@ -172,7 +172,7 @@ export default function LeaderboardScreen() {
 
   if (error && leaderboard.length === 0) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
         <View style={styles.backgroundGradient}>
           <View style={styles.errorContainer}>
             <Ionicons name="alert-circle" size={64} color={colors.danger} />
@@ -195,7 +195,7 @@ export default function LeaderboardScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
       <View style={styles.backgroundGradient}>
         {/* Sticky Header */}
         <View style={styles.stickyHeader}>
