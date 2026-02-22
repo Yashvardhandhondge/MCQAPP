@@ -34,6 +34,7 @@ export default function MockTestLeaderboardSelectionScreen({ navigation }: MockT
   const [mockTests, setMockTests] = useState<MockTest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryTrigger, setRetryTrigger] = useState(0);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -53,7 +54,7 @@ export default function MockTestLeaderboardSelectionScreen({ navigation }: MockT
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [retryTrigger]);
 
   useEffect(() => {
     let isMounted = true;
@@ -116,7 +117,7 @@ export default function MockTestLeaderboardSelectionScreen({ navigation }: MockT
             <TouchableOpacity
               onPress={() => {
                 setError(null);
-                setLoading(true);
+                setRetryTrigger((prev) => prev + 1);
               }}
               style={styles.retryButton}
             >

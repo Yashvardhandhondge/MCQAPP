@@ -32,6 +32,7 @@ export default function MockTestLeaderboardScreen({ route }: MockTestLeaderboard
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryTrigger, setRetryTrigger] = useState(0);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -83,7 +84,7 @@ export default function MockTestLeaderboardScreen({ route }: MockTestLeaderboard
     return () => {
       isMounted = false;
     };
-  }, [mockTestNumber]);
+  }, [mockTestNumber, retryTrigger]);
 
   const getRankGradient = (rank: number, isCurrentUser: boolean): [string, string, ...string[]] | null => {
     if (isCurrentUser) {
@@ -126,7 +127,7 @@ export default function MockTestLeaderboardScreen({ route }: MockTestLeaderboard
             <TouchableOpacity
               onPress={() => {
                 setError(null);
-                setLoading(true);
+                setRetryTrigger((prev) => prev + 1);
               }}
               style={styles.retryButton}
             >

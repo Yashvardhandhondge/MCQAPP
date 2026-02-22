@@ -7,8 +7,20 @@ import { Platform } from 'react-native';
 // For iOS Physical Device: use your computer's network IP
 
 let API_BASE_URL: string;
+const ENV_API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
 
 if (__DEV__) {
+  if (ENV_API_BASE_URL) {
+    API_BASE_URL = ENV_API_BASE_URL;
+  } else if (Platform.OS === 'android') {
+    // Android Emulator default for local backend
+    API_BASE_URL = 'http://10.20.232.180:8000';
+  } else {
+    // iOS Simulator default for local backend
+    API_BASE_URL = 'http://localhost:8000';
+  }
+
+  // Previous remote defaults kept below as comments for quick switching.
   if (Platform.OS === 'android') {
     // For physical Android device via Expo Go, use your network IP
     // Change this to your computer's IP address (found via ipconfig)
@@ -18,7 +30,7 @@ if (__DEV__) {
     // API_BASE_URL = 'http://10.228.232.180:8000';
     // API_BASE_URL = 'http://192.168.29.158:8000'; // Local URL - commented out
     // API_BASE_URL = 'http://10.228.232.180:8000';
-    API_BASE_URL = 'https://goldfish-app-vwvh7.ondigitalocean.app';
+    // API_BASE_URL = 'https://goldfish-app-vwvh7.ondigitalocean.app';
     // API_BASE_URL = 'http://192.168.1.6:8000'; // Local URL - commented out
 
 
@@ -26,7 +38,7 @@ if (__DEV__) {
     // API_BASE_URL = 'http://10.0.2.2:8000';
   } else {
     // iOS Simulator can use localhost
-    API_BASE_URL = 'https://goldfish-app-vwvh7.ondigitalocean.app';
+    // API_BASE_URL = 'https://goldfish-app-vwvh7.ondigitalocean.app';
     // For physical iOS device via Expo Go, use network IP:
     // API_BASE_URL = 'http://192.168.1.7:8000';
   }

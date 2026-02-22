@@ -2,6 +2,10 @@ const createError = require('http-errors');
 const UserAttempt = require('../models/UserAttempt');
 const User = require('../Modals/UserModal');
 const TestSession = require('../models/TestSession');
+const MockTestModel = require('../models/MockTest');
+
+const getQuestionSubjectName = (question) =>
+  String(question?.subject || question?.originalSubject || question?.sub || '').trim();
 
 /**
  * Get leaderboard
@@ -184,7 +188,7 @@ const getMockTestLeaderboard = async (req, res, next) => {
       mockTestNumber: mockTestNum,
       status: 'completed',
     })
-      .select('user score totalQuestions completedAt')
+      .select('user score totalQuestions completedAt answers.questionId answers.isCorrect')
       .sort({ score: -1, completedAt: 1 }) // Sort by score descending, then by completion time (earlier first for same score)
       .limit(100)
       .lean();
@@ -196,14 +200,60 @@ const getMockTestLeaderboard = async (req, res, next) => {
       });
     }
 
+    const allCorrectQuestionIds = sessions
+      .flatMap((session) =>
+        (session.answers || [])
+          .filter((answer) => Boolean(answer?.isCorrect) && answer?.questionId)
+          .map((answer) => answer.questionId)
+      );
+
+    const questions = allCorrectQuestionIds.length
+      ? await MockTestModel.find({ _id: { $in: allCorrectQuestionIds } })
+          .select('subject originalSubject sub')
+          .lean()
+      : [];
+
+    const questionSubjectMap = new Map(
+      questions.map((question) => [question._id.toString(), getQuestionSubjectName(question)])
+    );
+
+    const resolveSessionScore = (session) => {
+      const baseScore = Number(session?.score) || 0;
+      if (baseScore > 0) {
+        return baseScore;
+      }
+
+      const answers = Array.isArray(session?.answers) ? session.answers : [];
+      if (answers.length === 0) {
+        return baseScore;
+      }
+
+      let recoveredMarks = 0;
+      for (const answer of answers) {
+        if (!answer?.isCorrect || !answer?.questionId) {
+          continue;
+        }
+
+        const subject = questionSubjectMap.get(answer.questionId.toString());
+        if (subject === 'Maths' || subject === 'Mathematics') {
+          recoveredMarks += 2;
+        } else if (subject === 'Physics' || subject === 'Chemistry') {
+          recoveredMarks += 1;
+        }
+      }
+
+      return recoveredMarks;
+    };
+
     // Get unique user IDs (in case a user has multiple attempts, we'll take the best one)
     const userScoreMap = new Map();
     sessions.forEach((session) => {
       const userIdStr = session.user.toString();
-      if (!userScoreMap.has(userIdStr) || userScoreMap.get(userIdStr).score < session.score) {
+      const resolvedScore = resolveSessionScore(session);
+      if (!userScoreMap.has(userIdStr) || userScoreMap.get(userIdStr).score < resolvedScore) {
         userScoreMap.set(userIdStr, {
           userId: userIdStr,
-          score: session.score || 0,
+          score: resolvedScore,
           totalQuestions: session.totalQuestions || 0,
           completedAt: session.completedAt,
         });

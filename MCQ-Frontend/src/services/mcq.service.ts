@@ -748,7 +748,86 @@ export async function getAvailableMockTests(): Promise<{
 }> {
   try {
     const response = await axiosInstance.get('/api/mcq/mock-tests');
-    return response.data;
+
+    const parseMockTestNumber = (value: unknown): number | null => {
+      if (value === null || value === undefined) {
+        return null;
+      }
+
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+      }
+
+      const text = String(value).trim();
+      const direct = text.match(/^(?:mock\s*test|mock)\s*[-_ ]*(\d+)(?:\.json)?$/i);
+      if (direct) {
+        return parseInt(direct[1], 10);
+      }
+
+      const fallback = text.match(/(\d+)/);
+      if (fallback) {
+        return parseInt(fallback[1], 10);
+      }
+
+      return null;
+    };
+
+    const rawList = Array.isArray(response.data?.data) ? response.data.data : [];
+    const normalizedMap = new Map<number, {
+      mockTestNumber: number;
+      name: string;
+      sourceFile: string;
+      questionCount: number;
+      physicsCount: number;
+      chemistryCount: number;
+      mathsCount: number;
+    }>();
+
+    for (const item of rawList) {
+      const source = (item ?? {}) as Record<string, unknown>;
+      const mockTestNumber =
+        parseMockTestNumber(source.mockTestNumber) ??
+        parseMockTestNumber(source.name) ??
+        parseMockTestNumber(source.mocktest) ??
+        parseMockTestNumber(source.MockTest) ??
+        parseMockTestNumber(source.sourceFile);
+
+      if (mockTestNumber === null) {
+        continue;
+      }
+
+      normalizedMap.set(mockTestNumber, {
+        mockTestNumber,
+        name:
+          (typeof source.mocktest === 'string' && source.mocktest.trim().length > 0
+            ? source.mocktest
+            : null) ||
+          (typeof source.MockTest === 'string' && source.MockTest.trim().length > 0
+            ? source.MockTest
+            : null) ||
+          (typeof source.name === 'string' && source.name.trim().length > 0
+            ? source.name
+            : null) ||
+          `MockTest ${mockTestNumber}`,
+        sourceFile:
+          typeof source.sourceFile === 'string' && source.sourceFile.trim().length > 0
+            ? source.sourceFile
+            : `mock${mockTestNumber}.json`,
+        questionCount: Number(source.questionCount) || 0,
+        physicsCount: Number(source.physicsCount) || 0,
+        chemistryCount: Number(source.chemistryCount) || 0,
+        mathsCount: Number(source.mathsCount) || 0,
+      });
+    }
+
+    const normalizedData = Array.from(normalizedMap.values()).sort(
+      (a, b) => a.mockTestNumber - b.mockTestNumber
+    );
+
+    return {
+      success: Boolean(response.data?.success),
+      data: normalizedData,
+    };
   } catch (error) {
     if (axios.isAxiosError(error)) {
       throw new Error(error.response?.data?.message ?? 'Failed to load mock tests');

@@ -40,6 +40,7 @@ export default function MockTestSelectionScreen({ navigation }: MockTestSelectio
   const [mockTests, setMockTests] = useState<MockTest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryTrigger, setRetryTrigger] = useState(0);
   const [startingTest, setStartingTest] = useState<number | null>(null);
   const [mockTestResults, setMockTestResults] = useState<Map<number, MockTestResult>>(new Map());
 
@@ -61,7 +62,7 @@ export default function MockTestSelectionScreen({ navigation }: MockTestSelectio
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [retryTrigger]);
 
   useEffect(() => {
     let isMounted = true;
@@ -71,8 +72,11 @@ export default function MockTestSelectionScreen({ navigation }: MockTestSelectio
       setError(null);
       try {
         const response = await getAvailableMockTests();
+        console.log('[MockTestSelection] getAvailableMockTests response:', response);
+        console.log('[MockTestSelection] mock tests count:', response?.data?.length ?? 0);
         if (isMounted) {
           setMockTests(response.data);
+          console.log('[MockTestSelection] mock tests list:', response.data);
           
           // Fetch results for each mock test
           const resultsMap = new Map<number, MockTestResult>();
@@ -164,7 +168,7 @@ export default function MockTestSelectionScreen({ navigation }: MockTestSelectio
             <TouchableOpacity
               onPress={() => {
                 setError(null);
-                setLoading(true);
+                setRetryTrigger((prev) => prev + 1);
               }}
               style={styles.retryButton}
             >

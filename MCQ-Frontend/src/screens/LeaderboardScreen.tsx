@@ -32,6 +32,7 @@ export default function LeaderboardScreen() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryTrigger, setRetryTrigger] = useState(0);
   const [availableMockTests, setAvailableMockTests] = useState<Array<{ mockTestNumber: number; name: string }>>([]);
   const [selectedMockTestNumber, setSelectedMockTestNumber] = useState<number | null>(null);
   const [loadingMockTests, setLoadingMockTests] = useState(false);
@@ -139,7 +140,7 @@ export default function LeaderboardScreen() {
     return () => {
       isMounted = false;
     };
-  }, [timeframe, selectedMockTestNumber]);
+  }, [timeframe, selectedMockTestNumber, retryTrigger]);
 
   const getRankGradient = (rank: number, isCurrentUser: boolean): [string, string, ...string[]] | null => {
     if (isCurrentUser) {
@@ -180,7 +181,7 @@ export default function LeaderboardScreen() {
             <TouchableOpacity
               onPress={() => {
                 setError(null);
-                setLoading(true);
+                setRetryTrigger((prev) => prev + 1);
               }}
               style={styles.retryButton}
             >
@@ -551,7 +552,7 @@ export default function LeaderboardScreen() {
                             </View>
                             <View style={styles.scoreContainer}>
                               <Text style={styles.userScore}>{entry.score}</Text>
-                              <Text style={styles.scoreLabel}>pts</Text>
+                              <Text style={styles.scoreLabel}>{timeframe === 'mocktest' ? 'marks' : 'pts'}</Text>
                             </View>
                           </View>
                         </LinearGradient>
@@ -583,7 +584,7 @@ export default function LeaderboardScreen() {
                             </View>
                             <View style={styles.scoreContainer}>
                               <Text style={styles.userScoreDefault}>{entry.score}</Text>
-                              <Text style={styles.scoreLabelDefault}>pts</Text>
+                              <Text style={styles.scoreLabelDefault}>{timeframe === 'mocktest' ? 'marks' : 'pts'}</Text>
                             </View>
                           </View>
                         </View>
