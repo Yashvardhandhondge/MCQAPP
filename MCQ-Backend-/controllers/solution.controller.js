@@ -103,7 +103,7 @@ const getQuestionSolution = async (req, res, next) => {
 
     // Generate solution using Gemini AI (only when not in DB) — free Flash model only
     try {
-      const modelName = 'gemini-1.5-flash';
+      const modelName = 'gemini-2.5-flash';
       const model = genAI.getGenerativeModel({ model: modelName });
 
       const systemPrompt = 'You are an AI helping students with MCQ solutions. Give SHORT, direct answers only.\n\n' +
