@@ -2,8 +2,8 @@ const createError = require('http-errors');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { getModelBySubject } = require('../models/Mcq');
 
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'AIzaSyAIEd-a6TmTlKZ6cTu8NV7rHNAoV01QHRc');
+// Initialize Gemini AI (use GEMINI_API_KEY in .env for your Gemini Pro key)
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'AIzaSyCTxDNDVrGUQbmb1FFnScnSEHudQfQNJ_o');
 
 /**
  * Remove markdown syntax from text for better user experience
@@ -43,13 +43,8 @@ function removeMarkdownSyntax(text) {
   // Remove strikethrough (~~text~~)
   cleaned = cleaned.replace(/~~([^~]+)~~/g, '$1');
   
-  // Remove LaTeX math blocks ($...$ and $$...$$)
-  cleaned = cleaned.replace(/\$\$[\s\S]*?\$\$/g, '');
-  cleaned = cleaned.replace(/\$([^$]+)\$/g, '$1');
-  
-  // Remove boxed answers (\boxed{...})
-  cleaned = cleaned.replace(/\\boxed\{([^}]+)\}/g, '$1');
-  
+  // Keep LaTeX math ($...$ and $$...$$) and \boxed{} - frontend MathText needs them for rendering
+
   // Clean up extra whitespace
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n'); // Max 2 newlines
   cleaned = cleaned.replace(/[ \t]+/g, ' '); // Multiple spaces to single
@@ -106,10 +101,10 @@ const getQuestionSolution = async (req, res, next) => {
       });
     }
 
-    // Generate solution using Gemini AI
+    // Generate solution using Gemini AI (only when not in DB)
     try {
-      // Try gemini-2.5-flash first (newest model), then fallback to others
-      const modelNames = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+      // Prefer Gemini Pro for quality, then fallbacks
+      const modelNames = ['gemini-1.5-pro', 'gemini-2.5-flash', 'gemini-1.5-flash'];
       let model = null;
       let modelUsed = null;
       
@@ -129,20 +124,19 @@ const getQuestionSolution = async (req, res, next) => {
         throw new Error('No available Gemini models. Please check your API key and model availability.');
       }
 
-      const systemPrompt = 'You are an advanced AI helping students prepare to crack 2026 exams. Your task is to provide clear, concise, and educational explanations for multiple-choice questions.\n\n' +
-        'IMPORTANT FORMATTING RULES:\n' +
-        '- DO NOT use any markdown syntax (no asterisks, underscores, backticks, hash symbols, square brackets, etc.)\n' +
-        '- Write in plain text only\n' +
-        '- Use simple formatting: line breaks for paragraphs, numbers for lists\n' +
-        '- Do not use code blocks, bold, italic, or any special formatting\n' +
-        '- Write naturally as if explaining to a student in person\n\n' +
-        'Guidelines:\n' +
-        '- Explain why the correct answer is correct\n' +
-        '- Provide step-by-step reasoning when applicable\n' +
-        '- Keep explanations focused and relevant\n' +
-        '- Use clear language suitable for exam preparation\n' +
-        '- Highlight key concepts and principles involved\n' +
-        '- Use plain text formatting only';
+      const systemPrompt = 'You are an AI helping students with MCQ solutions. Give SHORT, direct answers only.\n\n' +
+        'STRICT LENGTH RULES:\n' +
+        '- Maximum 2 to 4 sentences. Answer only what the question needs.\n' +
+        '- No long paragraphs, no extra theory, no repetition.\n' +
+        '- For simple MCQs: one short reason why the correct option is right.\n' +
+        '- For math: only the essential steps in brief; use LaTeX for formulas.\n\n' +
+        'MATH FORMATTING (for Maths subject):\n' +
+        '- Use LaTeX so our app can render it: inline math in $...$ (e.g. $x^2$, $\\frac{a}{b}$), display math in $$...$$ for key steps (e.g. $$\\int_0^1 x\\,dx = \\frac{1}{2}$$).\n' +
+        '- Use \\frac{}{}, \\sqrt{}, \\int, \\sum, etc. for fractions, roots, integrals, sums.\n' +
+        '- Keep math readable and minimal—only what is needed for the solution.\n\n' +
+        'OTHER FORMATTING:\n' +
+        '- No markdown (no **, *, #, backticks, [](url)). Plain text only.\n' +
+        '- Line breaks for steps are fine; no code blocks or bold/italic.';
 
       const userPrompt = `Question: ${question.question}
 
@@ -154,7 +148,7 @@ Correct Answer: ${question.correctanswrs}
 Subject: ${question.subject}
 Chapter: ${question.chapter}
 
-Please provide a clear explanation of why this answer is correct and how to solve this question.`;
+Give a short, direct explanation (2–4 sentences max) of why this answer is correct. For math, use LaTeX in $...$ or $$...$$.`;
 
       const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
       
