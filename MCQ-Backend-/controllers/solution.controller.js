@@ -101,28 +101,10 @@ const getQuestionSolution = async (req, res, next) => {
       });
     }
 
-    // Generate solution using Gemini AI (only when not in DB)
+    // Generate solution using Gemini AI (only when not in DB) — free Flash model only
     try {
-      // Prefer Gemini Pro for quality, then fallbacks
-      const modelNames = ['gemini-1.5-pro', 'gemini-2.5-flash', 'gemini-1.5-flash'];
-      let model = null;
-      let modelUsed = null;
-      
-      for (const modelName of modelNames) {
-        try {
-          model = genAI.getGenerativeModel({ model: modelName });
-          modelUsed = modelName;
-          console.log(`Successfully initialized model: ${modelName}`);
-          break;
-        } catch (modelError) {
-          console.log(`Model ${modelName} not available: ${modelError.message}`);
-          continue;
-        }
-      }
-      
-      if (!model) {
-        throw new Error('No available Gemini models. Please check your API key and model availability.');
-      }
+      const modelName = 'gemini-1.5-flash';
+      const model = genAI.getGenerativeModel({ model: modelName });
 
       const systemPrompt = 'You are an AI helping students with MCQ solutions. Give SHORT, direct answers only.\n\n' +
         'STRICT LENGTH RULES:\n' +
@@ -154,7 +136,7 @@ Give a short, direct explanation (2–4 sentences max) of why this answer is cor
       
       console.log('Calling Gemini API for question:', questionId);
       console.log('Question subject:', question.subject);
-      console.log('Using model:', modelUsed);
+      console.log('Using model:', modelName);
       
       const result = await model.generateContent(fullPrompt);
       const response = result.response;
