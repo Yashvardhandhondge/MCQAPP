@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // const UPDATE_INITIATED_KEY = '@update_initiated';
 // const UPDATE_VERSION_KEY = '@update_version';
 
+import { usePreventScreenCapture } from 'expo-screen-capture';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import type { AppStackParamList, AuthStackParamList } from './src/navigation/types';
 import ChapterDetailScreen from './src/screens/ChapterDetailScreen';
@@ -302,6 +303,13 @@ function AppStackNavigator() {
   );
 }
 
+// Prevents screenshots and screen recording when mounted (e.g. chapters, mock tests).
+// Keeps app content from being captured and leaked.
+function ScreenCaptureBlocker() {
+  usePreventScreenCapture();
+  return null;
+}
+
 function RootNavigator() {
   const { user, initializing } = useAuth();
   
@@ -314,8 +322,13 @@ function RootNavigator() {
     return <AuthStackNavigator />;
   }
   
-  // Always show AppStackNavigator - it will handle group selection logic
-  return <AppStackNavigator />;
+  // Block screenshots/recording app-wide for authenticated users (chapters, mock tests, etc.)
+  return (
+    <>
+      <ScreenCaptureBlocker />
+      <AppStackNavigator />
+    </>
+  );
 }
 
 function AppWithVersionCheck() {

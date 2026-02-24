@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '../context/AuthContext';
 import type { AppStackParamList } from '../navigation/types';
-import { getDashboard, getUserStats, getExamConfig, getStudyStreak, getTimeSeriesAnalytics, generateRandomTest, getRecentActivity, getUserRank } from '../services/mcq.service';
+import { getDashboard, getUserStats, getExamConfig, getStudyStreak, getTimeSeriesAnalytics, generateRandomTest, getRecentActivity, getUserRank, getPremiumContent } from '../services/mcq.service';
 import { getNotifications } from '../services/notification.service';
 import type { DashboardData, SubjectSummary, UserStatsData } from '../types/mcq';
 import { colors, radius, shadow, spacing, typography } from '../theme';
@@ -118,6 +118,7 @@ export default function DashboardScreen() {
     icon: string;
   }>>([]);
   const [userRank, setUserRank] = useState<number | null>(null);
+  const [premiumPrice, setPremiumPrice] = useState<number | null>(null);
 
   const normalizedActivityDates = useMemo(
     () => normalizeActivityDates(studyStreak.activityDates),
@@ -235,6 +236,16 @@ export default function DashboardScreen() {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (isPremium) return;
+    getPremiumContent()
+      .then((res) => {
+        const price = res?.data?.pricingPlans?.[0]?.price;
+        if (typeof price === 'number') setPremiumPrice(price);
+      })
+      .catch(() => {});
+  }, [isPremium]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -409,6 +420,18 @@ export default function DashboardScreen() {
                     <Text style={styles.freePlanBenefitText}>3 chapters free per subject</Text>
                   </View>
                   <View style={styles.freePlanBenefitRow}>
+                    <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                    <Text style={styles.freePlanBenefitText}>2 full-length free mock tests</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('MockTestSelection')}
+                    activeOpacity={0.8}
+                    style={styles.freePlanMockTestCta}
+                  >
+                    <Text style={styles.freePlanMockTestCtaText}>Take mock tests</Text>
+                    <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+                  </TouchableOpacity>
+                  <View style={styles.freePlanBenefitRow}>
                     <Ionicons name="swap-horizontal" size={14} color="#6366F1" />
                     <Text style={styles.freePlanBenefitText}>Switch PCM/PCB/PCMB in Profile</Text>
                   </View>
@@ -426,7 +449,7 @@ export default function DashboardScreen() {
                     start={{ x: 0, y: 0 }}
                     end={{ x: 0, y: 1 }}
                   >
-                    <Text style={styles.freePlanUpgradePrice}>₹99</Text>
+                    <Text style={styles.freePlanUpgradePrice}>₹{premiumPrice === 100 ? 99 : (premiumPrice ?? 99)}</Text>
                     <Text style={styles.freePlanUpgradeLabel}>All Access</Text>
                     <Text style={styles.freePlanUpgradeHint}>one-time</Text>
                     <Ionicons name="arrow-forward-circle" size={20} color="rgba(255,255,255,0.9)" style={{ marginTop: 6 }} />
@@ -2106,6 +2129,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     flex: 1,
+  },
+  freePlanMockTestCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: 0,
+  },
+  freePlanMockTestCtaText: {
+    ...typography.caption,
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '600',
   },
   freePlanUpgradeButton: {
     overflow: 'hidden',

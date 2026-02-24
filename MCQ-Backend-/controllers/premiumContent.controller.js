@@ -5,6 +5,8 @@ const PremiumContent = require('../models/PremiumContent');
  * Get premium content
  * GET /api/mcq/premium-content
  */
+const PREMIUM_ONE_TIME_PRICE = 99;
+
 const getPremiumContent = async (req, res, next) => {
   try {
     console.log('Premium content endpoint accessed - PUBLIC ENDPOINT');
@@ -15,6 +17,13 @@ const getPremiumContent = async (req, res, next) => {
     delete contentObj.__v;
     delete contentObj.createdAt;
     delete contentObj.updatedAt;
+    // Ensure one-time premium price is always ₹99 (normalize 100 → 99 if stored by mistake)
+    if (contentObj.pricingPlans && Array.isArray(contentObj.pricingPlans)) {
+      contentObj.pricingPlans = contentObj.pricingPlans.map((plan) => ({
+        ...plan,
+        price: plan.price === 100 ? PREMIUM_ONE_TIME_PRICE : (plan.price ?? PREMIUM_ONE_TIME_PRICE),
+      }));
+    }
     res.status(200).json({
       success: true,
       data: contentObj,

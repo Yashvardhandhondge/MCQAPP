@@ -16,14 +16,23 @@ interface PremiumLockModalProps {
   visible: boolean;
   onClose: () => void;
   onBuyPremium: () => void;
+  /** Optional custom title (default: "Premium Chapter") */
+  title?: string;
+  /** Optional custom message (default: chapter message) */
+  message?: string;
 }
 
 const { width } = Dimensions.get('window');
+
+const DEFAULT_TITLE = 'Premium Chapter';
+const DEFAULT_MESSAGE = 'This chapter is for premium users. If you want to solve questions, buy premium.';
 
 export default function PremiumLockModal({
   visible,
   onClose,
   onBuyPremium,
+  title = DEFAULT_TITLE,
+  message = DEFAULT_MESSAGE,
 }: PremiumLockModalProps) {
   const scaleAnim = React.useRef(new Animated.Value(0)).current;
   const opacityAnim = React.useRef(new Animated.Value(0)).current;
@@ -104,12 +113,10 @@ export default function PremiumLockModal({
             </View>
 
             {/* Title */}
-            <Text style={styles.title}>Premium Chapter</Text>
+            <Text style={styles.title}>{title}</Text>
 
             {/* Message */}
-            <Text style={styles.message}>
-              This chapter is for premium users. If you want to solve questions, buy premium.
-            </Text>
+            <Text style={styles.message}>{message}</Text>
 
             {/* Buttons */}
             <View style={styles.buttonContainer}>

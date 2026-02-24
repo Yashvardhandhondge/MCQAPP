@@ -70,7 +70,10 @@ export default function PremiumPurchaseScreen() {
     setExpandedFaq(expandedFaq === index ? null : index);
   };
 
-  // FAQ data
+  // Premium one-time price is ₹99; normalize if API ever returns 100
+  const displayPrice = (content?.pricingPlans?.[0]?.price === 100 ? 99 : content?.pricingPlans?.[0]?.price) ?? 99;
+
+  // FAQ data (price from admin / API)
   const faqData = [
     {
       question: 'What\'s included in the premium plan?',
@@ -79,17 +82,17 @@ export default function PremiumPurchaseScreen() {
     },
     {
       question: 'How is this different from free content?',
-      answer: 'Free users get 25 questions per day and 3 free chapters per subject to explore. Premium unlocks the complete question bank (20K+), all previous year questions from 2015, AI-analyzed step-by-step solutions, advanced performance analytics, unlimited mock tests, and all chapter access. Think of it as getting a complete coaching institute\'s question bank at a fraction of the cost!',
+      answer: 'Free users get 25 questions per day, 3 free chapters per subject, and 2 full-length free mock tests. Premium unlocks the complete question bank (20K+), all previous year questions from 2015, AI-analyzed step-by-step solutions, advanced performance analytics, unlimited mock tests, and all chapter access. Think of it as getting a complete coaching institute\'s question bank at a fraction of the cost!',
       icon: 'star',
     },
     {
       question: 'Is this a one-time payment or subscription?',
-      answer: 'It\'s a one-time payment of just ₹99! Once you purchase, you get lifetime access to all premium features — PCM, PCB, and PCMB all included. No monthly fees, no recurring charges. Pay once and study forever. This makes it incredibly cost-effective compared to buying physical books or paying for coaching.',
+      answer: `It's a one-time payment of just ₹${displayPrice}! Once you purchase, you get lifetime access to all premium features — PCM, PCB, and PCMB all included. No monthly fees, no recurring charges. Pay once and study forever. This makes it incredibly cost-effective compared to buying physical books or paying for coaching.`,
       icon: 'card',
     },
     {
       question: 'Can I switch my stream after buying?',
-      answer: 'Yes! Since the ₹99 plan includes all three streams (PCM, PCB, PCMB), you can switch your active stream anytime from your Profile page. Go to Profile → Stream → Change. No extra charges. Whether you\'re in PCM, PCB, or PCMB, the same plan covers you completely.',
+      answer: `Yes! Since the ₹${displayPrice} plan includes all three streams (PCM, PCB, PCMB), you can switch your active stream anytime from your Profile page. Go to Profile → Stream → Change. No extra charges. Whether you're in PCM, PCB, or PCMB, the same plan covers you completely.`,
       icon: 'swap-horizontal',
     },
   ];
@@ -179,14 +182,14 @@ export default function PremiumPurchaseScreen() {
 
   const handlePurchase = useCallback(async (planId: string) => {
     if (purchasing || loading || !content) return;
-
+    const price = (content.pricingPlans?.[0]?.price === 100 ? 99 : content.pricingPlans?.[0]?.price) ?? 99;
     Alert.alert(
       'Upgrade to Premium',
-      'Get All Access for ₹99 — PCM, PCB & PCMB all included. One-time payment, lifetime access.',
+      `Get All Access for ₹${price} PCM, PCB & PCMB all included. One-time payment, lifetime access.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Pay ₹99',
+          text: `Pay ₹${price}`,
           onPress: async () => {
             setPurchasing(true);
             try {
@@ -447,10 +450,10 @@ export default function PremiumPurchaseScreen() {
                       Physics · Chemistry · Mathematics · Biology{'\n'}Switch streams anytime from your Profile
                     </Text>
 
-                    {/* Price + CTA row */}
+                    {/* Price + CTA row (from admin / API) */}
                     <View style={styles.allAccessPriceRow}>
                       <View>
-                        <Text style={styles.allAccessPrice}>₹99</Text>
+                        <Text style={styles.allAccessPrice}>₹{displayPrice}</Text>
                         <Text style={styles.allAccessOneTime}>one-time payment</Text>
                       </View>
                       <TouchableOpacity
