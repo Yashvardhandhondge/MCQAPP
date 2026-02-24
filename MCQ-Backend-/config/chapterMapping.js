@@ -192,7 +192,30 @@ const mathsMapping = {
 };
 
 // Biology mapping (placeholder - to be filled later)
-const biologyMapping = {};
+const biologyMapping = {
+  // Std. XI
+  'Biomolecules': { standard: '11', chapterNumber: 1 },
+  'Respiration and Energy Transfer': { standard: '11', chapterNumber: 2 },
+  'Human Nutrition': { standard: '11', chapterNumber: 3 },
+  'Excretion and Osmoregulation': { standard: '11', chapterNumber: 4 },
+
+  // Std. XII
+  'Reproduction in Lower and Higher Plants': { standard: '12', chapterNumber: 1 },
+  'Reproduction in Lower and Higher Animals': { standard: '12', chapterNumber: 2 },
+  'Inheritance and Variation': { standard: '12', chapterNumber: 3 },
+  'Molecular Basis of Inheritance': { standard: '12', chapterNumber: 4 },
+  'Origin and Evolution of Life': { standard: '12', chapterNumber: 5 },
+  'Plant Water Relations': { standard: '12', chapterNumber: 6 },
+  'Plant Growth and Mineral Nutrition': { standard: '12', chapterNumber: 7 },
+  'Respiration and Circulation': { standard: '12', chapterNumber: 8 },
+  'Control and Co-ordination': { standard: '12', chapterNumber: 9 },
+  'Human Health and Diseases': { standard: '12', chapterNumber: 10 },
+  'Enhancement of Food Production': { standard: '12', chapterNumber: 11 },
+  'Biotechnology': { standard: '12', chapterNumber: 12 },
+  'Organisms and Populations': { standard: '12', chapterNumber: 13 },
+  'Ecosystems and Energy Flow': { standard: '12', chapterNumber: 14 },
+  'Biodiversity, Conservation and Environmental Issues': { standard: '12', chapterNumber: 15 }
+};
 
 // Get mapping for a subject
 const getSubjectMapping = (subject) => {

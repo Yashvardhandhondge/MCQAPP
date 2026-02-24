@@ -14,7 +14,7 @@ if (__DEV__) {
     API_BASE_URL = ENV_API_BASE_URL;
   } else if (Platform.OS === 'android') {
     // Android Emulator default for local backend
-    API_BASE_URL = 'http://10.20.232.180:8000';
+    API_BASE_URL = 'http://192.168.29.158:8000';
   } else {
     // iOS Simulator default for local backend
     API_BASE_URL = 'http://localhost:8000';
