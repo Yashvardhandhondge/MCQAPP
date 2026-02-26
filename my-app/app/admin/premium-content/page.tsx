@@ -50,7 +50,7 @@ export default function PremiumContentPage() {
     try {
       setLoading(true);
       // Fetch from public endpoint (no auth required)
-      const response = await fetch('https://goldfish-app-vwvh7.ondigitalocean.appapi/mcq/premium-content', {
+      const response = await fetch('https://goldfish-app-vwvh7.ondigitalocean.app/api/mcq/premium-content', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

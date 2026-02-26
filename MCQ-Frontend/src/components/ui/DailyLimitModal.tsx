@@ -24,6 +24,8 @@ interface DailyLimitModalProps {
   onUpgrade: () => void;
   /** For questions: how many views remain (0 when limit hit) */
   remaining?: number;
+  /** Premium price from API (admin). When provided, replaces hardcoded ₹99. */
+  premiumPrice?: number | null;
 }
 
 const CONFIG = {
@@ -61,11 +63,12 @@ export default function DailyLimitModal({
   onClose,
   onUpgrade,
   remaining,
+  premiumPrice,
 }: DailyLimitModalProps) {
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
-
+  const priceDisplay = premiumPrice != null ? (premiumPrice === 100 ? 99 : premiumPrice) : 99;
   const cfg = CONFIG[type];
 
   useEffect(() => {
@@ -152,7 +155,7 @@ export default function DailyLimitModal({
         <View style={styles.divider} />
 
         {/* Benefits */}
-        <Text style={styles.benefitsTitle}>Unlock with Premium — just ₹99</Text>
+        <Text style={styles.benefitsTitle}>Unlock with Premium — just ₹{priceDisplay}</Text>
         {cfg.benefits.map((b, i) => (
           <View key={i} style={styles.benefitRow}>
             <LinearGradient
@@ -179,7 +182,7 @@ export default function DailyLimitModal({
             end={{ x: 1, y: 1 }}
           >
             <Ionicons name="diamond" size={18} color="#FFFFFF" />
-            <Text style={styles.upgradeText}>Get Premium — ₹99 one-time</Text>
+            <Text style={styles.upgradeText}>Get Premium — ₹{priceDisplay} one-time</Text>
           </LinearGradient>
         </TouchableOpacity>
 

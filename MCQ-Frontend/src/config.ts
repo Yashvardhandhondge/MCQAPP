@@ -30,7 +30,7 @@ if (__DEV__) {
     // API_BASE_URL = 'http://10.228.232.180:8000';
     // API_BASE_URL = 'http://192.168.29.158:8000'; // Local URL - commented out
     // API_BASE_URL = 'http://10.228.232.180:8000';
-    // API_BASE_URL = 'https://goldfish-app-vwvh7.ondigitalocean.app';
+    API_BASE_URL = 'https://goldfish-app-vwvh7.ondigitalocean.app';
     // API_BASE_URL = 'http://192.168.1.6:8000'; // Local URL - commented out
 
 

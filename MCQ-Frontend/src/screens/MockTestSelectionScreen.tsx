@@ -13,10 +13,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { AppStackParamList } from '../navigation/types';
+import { useAuth } from '../context/AuthContext';
 import { getAvailableMockTests, startMockTestSession, getMockTestResults } from '../services/mcq.service';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import BackHeader from '../components/ui/BackHeader';
+import PremiumLockModal from '../components/ui/PremiumLockModal';
 import { safeGoBack } from '../utils/navigation';
+
+const FREE_MOCK_TESTS_COUNT = 2;
 
 export type MockTestSelectionScreenProps = NativeStackScreenProps<AppStackParamList, 'MockTestSelection'>;
 
@@ -37,12 +41,15 @@ interface MockTestResult {
 }
 
 export default function MockTestSelectionScreen({ navigation }: MockTestSelectionScreenProps) {
+  const { user } = useAuth();
+  const isPremium = user?.subscription === 'premium';
   const [mockTests, setMockTests] = useState<MockTest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryTrigger, setRetryTrigger] = useState(0);
   const [startingTest, setStartingTest] = useState<number | null>(null);
   const [mockTestResults, setMockTestResults] = useState<Map<number, MockTestResult>>(new Map());
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -207,47 +214,63 @@ export default function MockTestSelectionScreen({ navigation }: MockTestSelectio
                 {mockTests.map((mockTest, index) => {
                   const hasResult = mockTestResults.has(mockTest.mockTestNumber);
                   const result = hasResult ? mockTestResults.get(mockTest.mockTestNumber) : null;
-                  
+                  const isLocked = !isPremium && index >= FREE_MOCK_TESTS_COUNT;
                   return (
                     <Animated.View
                       key={mockTest.mockTestNumber}
-                      style={{
-                        opacity: fadeAnim,
-                        transform: [
-                          {
-                            translateY: slideAnim.interpolate({
-                              inputRange: [0, 30],
-                              outputRange: [0, 30 + index * 10],
-                            }),
-                          },
-                        ],
-                      }}
+                      style={[
+                        {
+                          opacity: fadeAnim,
+                          transform: [
+                            {
+                              translateY: slideAnim.interpolate({
+                                inputRange: [0, 30],
+                                outputRange: [0, 30 + index * 10],
+                              }),
+                            },
+                          ],
+                        },
+                        isLocked && styles.mockTestCardLocked,
+                      ]}
                     >
                       <TouchableOpacity
-                        onPress={() => handleStartMockTest(mockTest.mockTestNumber)}
-                        disabled={startingTest === mockTest.mockTestNumber}
+                        onPress={() => {
+                          if (isLocked) {
+                            setPremiumModalVisible(true);
+                            return;
+                          }
+                          handleStartMockTest(mockTest.mockTestNumber);
+                        }}
+                        disabled={!isLocked && startingTest === mockTest.mockTestNumber}
                         activeOpacity={0.7}
                         style={styles.mockTestCard}
                       >
                         <View style={styles.cardContent}>
                           <View style={styles.cardLeft}>
-                            <View style={styles.iconContainer}>
-                              <Ionicons 
-                                name="calendar" 
-                                size={24} 
-                                color={colors.primary} 
+                            <View style={[styles.iconContainer, isLocked && styles.iconContainerLocked]}>
+                              <Ionicons
+                                name={isLocked ? 'lock-closed' : 'calendar'}
+                                size={24}
+                                color={isLocked ? colors.authTextMuted : colors.primary}
                               />
                             </View>
                             <View style={styles.cardInfo}>
                               <View style={styles.titleRow}>
-                                <Text style={styles.mockTestTitle}>{mockTest.name}</Text>
-                                {hasResult && (
+                                <Text style={[styles.mockTestTitle, isLocked && styles.mockTestTitleLocked]}>
+                                  {mockTest.name}
+                                </Text>
+                                {isLocked && (
+                                  <View style={styles.premiumBadge}>
+                                    <Text style={styles.premiumBadgeText}>Premium</Text>
+                                  </View>
+                                )}
+                                {!isLocked && hasResult && (
                                   <View style={styles.completedBadge}>
                                     <Ionicons name="checkmark-circle" size={16} color={colors.success} />
                                   </View>
                                 )}
                               </View>
-                              {hasResult ? (
+                              {hasResult && !isLocked ? (
                                 <View style={styles.resultInfo}>
                                   <View style={styles.resultRow}>
                                     <Ionicons name="star" size={14} color={colors.warning} />
@@ -260,8 +283,9 @@ export default function MockTestSelectionScreen({ navigation }: MockTestSelectio
                                   </Text>
                                 </View>
                               ) : (
-                                <Text style={styles.cardDescription}>
+                                <Text style={[styles.cardDescription, isLocked && styles.cardDescriptionLocked]}>
                                   {mockTest.questionCount} questions • {mockTest.physicsCount + mockTest.chemistryCount} P&C • {mockTest.mathsCount} Maths
+                                  {isLocked ? ' • Unlock with Premium' : ''}
                                 </Text>
                               )}
                             </View>
@@ -270,10 +294,10 @@ export default function MockTestSelectionScreen({ navigation }: MockTestSelectio
                             {startingTest === mockTest.mockTestNumber ? (
                               <ActivityIndicator size="small" color={colors.primary} />
                             ) : (
-                              <Ionicons 
-                                name={hasResult ? "refresh" : "chevron-forward"} 
-                                size={20} 
-                                color={colors.authTextMuted} 
+                              <Ionicons
+                                name={isLocked ? 'lock-closed' : hasResult ? 'refresh' : 'chevron-forward'}
+                                size={20}
+                                color={isLocked ? colors.authTextMuted : colors.authTextMuted}
                               />
                             )}
                           </View>
@@ -286,6 +310,16 @@ export default function MockTestSelectionScreen({ navigation }: MockTestSelectio
             </View>
           )}
         </ScrollView>
+        <PremiumLockModal
+          visible={premiumModalVisible}
+          onClose={() => setPremiumModalVisible(false)}
+          onBuyPremium={() => {
+            setPremiumModalVisible(false);
+            navigation.navigate('PremiumPurchase');
+          }}
+          title="Premium Mock Test"
+          message="Free users get 2 mock tests. Unlock all mock tests with Premium. Purchase to access this and more."
+        />
       </View>
     </SafeAreaView>
   );
@@ -378,6 +412,31 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.authBorder,
     ...shadow.sm,
+  },
+  mockTestCardLocked: {
+    opacity: 0.9,
+  },
+  iconContainerLocked: {
+    backgroundColor: colors.authInputBg,
+  },
+  mockTestTitleLocked: {
+    color: colors.authTextSecondary,
+  },
+  cardDescriptionLocked: {
+    color: colors.authTextMuted,
+  },
+  premiumBadge: {
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+    marginLeft: spacing.xs,
+  },
+  premiumBadgeText: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600',
+    fontSize: 11,
   },
   cardContent: {
     flexDirection: 'row',
