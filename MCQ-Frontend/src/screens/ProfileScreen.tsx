@@ -9,6 +9,7 @@ import { Image } from 'expo-image';
 import { openBrowserAsync } from 'expo-web-browser';
 import { useAuth } from '../context/AuthContext';
 import type { AppStackParamList } from '../navigation/types';
+import { DISCLAIMER_TEXT, OFFICIAL_SOURCES } from '../constants/disclaimer';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // React Native Code - Update functionality imports commented out
@@ -547,7 +548,28 @@ export default function ProfileScreen() {
                   </View>
                 </TouchableOpacity>
 
-                
+                {/* Privacy Policy */}
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('Privacy')}
+                  activeOpacity={0.8}
+                  style={styles.infoCard}
+                >
+                  <View style={styles.infoCardHeader}>
+                    <LinearGradient
+                      colors={['#0EA5E9', '#0284C7'] as [string, string, ...string[]]}
+                      style={styles.infoIconContainer}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons name="shield-checkmark-outline" size={20} color="#FFFFFF" />
+                    </LinearGradient>
+                    <View style={styles.infoCardContent}>
+                      <Text style={styles.infoCardLabel}>Privacy Policy</Text>
+                      <Text style={styles.infoCardSubtext}>How we collect and use your data</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.authTextMuted} />
+                  </View>
+                </TouchableOpacity>
 
                 {/* React Native Code - App Version row with update functionality commented out */}
                 {/* COMMENTED OUT - App Version card with update button
@@ -636,6 +658,41 @@ export default function ProfileScreen() {
                           </TouchableOpacity>
                         ))}
                       </View>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Official sources & disclaimer - Misleading Claims policy compliance */}
+                <View style={styles.infoCard}>
+                  <View style={styles.infoCardHeader}>
+                    <LinearGradient
+                      colors={['#4338CA', '#6366F1'] as [string, string, ...string[]]}
+                      style={styles.infoIconContainer}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons name="shield-checkmark" size={20} color="#FFFFFF" />
+                    </LinearGradient>
+                    <View style={styles.infoCardContent}>
+                      <Text style={styles.infoCardLabel}>Official sources & disclaimer</Text>
+                      <Text style={styles.disclaimerFullText}>{DISCLAIMER_TEXT}</Text>
+                      <Text style={styles.officialSourcesLabel}>Official government/official sources:</Text>
+                      {OFFICIAL_SOURCES.map((source) => (
+                        <TouchableOpacity
+                          key={source.url}
+                          onPress={() => openBrowserAsync(source.url)}
+                          activeOpacity={0.8}
+                          style={styles.officialSourceLink}
+                        >
+                          <Ionicons name="open-outline" size={16} color={colors.primary} />
+                          <View style={styles.officialSourceLinkTextWrap}>
+                            <Text style={styles.officialSourceLinkTitle}>{source.name}</Text>
+                            {source.description ? (
+                              <Text style={styles.officialSourceLinkDesc}>{source.description}</Text>
+                            ) : null}
+                          </View>
+                        </TouchableOpacity>
+                      ))}
                     </View>
                   </View>
                 </View>
@@ -866,6 +923,50 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: '#6B7280',
     fontSize: 13,
+  },
+  disclaimerFullText: {
+    ...typography.caption,
+    color: '#374151',
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  officialSourcesLabel: {
+    ...typography.caption,
+    color: '#6B7280',
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+  },
+  officialSourceLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginTop: spacing.xs,
+  },
+  officialSourceLinkTextWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  officialSourceLinkTitle: {
+    ...typography.caption,
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
+  officialSourceLinkDesc: {
+    ...typography.caption,
+    color: '#6B7280',
+    fontSize: 11,
+    marginTop: 2,
   },
   paymentHistoryList: {
     marginTop: spacing.xs,

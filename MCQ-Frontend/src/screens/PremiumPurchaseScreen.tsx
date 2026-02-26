@@ -232,7 +232,7 @@ export default function PremiumPurchaseScreen() {
           razorpay_signature: payload.razorpay_signature,
         });
         if (data.user) {
-          await applyUserUpdate(data.user as Parameters<typeof applyUserUpdate>[0]);
+          await applyUserUpdate(data.user);
         }
         Alert.alert(
           'You\'re Premium!',

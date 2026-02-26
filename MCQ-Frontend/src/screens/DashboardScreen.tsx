@@ -16,8 +16,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
+import { openBrowserAsync } from 'expo-web-browser';
 import { useAuth } from '../context/AuthContext';
 import type { AppStackParamList } from '../navigation/types';
+import { DISCLAIMER_SHORT, OFFICIAL_SOURCES } from '../constants/disclaimer';
 import { getDashboard, getUserStats, getExamConfig, getStudyStreak, getTimeSeriesAnalytics, generateRandomTest, getRecentActivity, getUserRank, getPremiumContent } from '../services/mcq.service';
 import { getNotifications } from '../services/notification.service';
 import type { DashboardData, SubjectSummary, UserStatsData } from '../types/mcq';
@@ -398,6 +400,27 @@ export default function DashboardScreen() {
               transform: [{ translateY: slideAnim }],
             }}
           >
+
+            {/* Disclaimer & official sources - Misleading Claims policy compliance */}
+            <View style={styles.disclaimerCard}>
+              <View style={styles.disclaimerHeader}>
+                <Ionicons name="information-circle" size={18} color="#6366F1" />
+                <Text style={styles.disclaimerTitle}>Official info & disclaimer</Text>
+              </View>
+              <Text style={styles.disclaimerText}>{DISCLAIMER_SHORT}</Text>
+              <Text style={styles.disclaimerSourcesLabel}>Official sources:</Text>
+              {OFFICIAL_SOURCES.map((source) => (
+                <TouchableOpacity
+                  key={source.url}
+                  style={styles.disclaimerLinkRow}
+                  onPress={() => openBrowserAsync(source.url)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="open-outline" size={14} color={colors.primary} />
+                  <Text style={styles.disclaimerLink}>{source.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             {/* Free Plan Info Card - Only for Non-Premium Users */}
             {!isPremium && (
@@ -998,6 +1021,55 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
+  },
+  disclaimerCard: {
+    backgroundColor: '#EEF2FF',
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  disclaimerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  disclaimerTitle: {
+    ...typography.caption,
+    color: '#4338CA',
+    fontWeight: '700',
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  disclaimerText: {
+    ...typography.caption,
+    color: '#374151',
+    fontSize: 12,
+    marginBottom: spacing.sm,
+    lineHeight: 18,
+  },
+  disclaimerSourcesLabel: {
+    ...typography.caption,
+    color: '#6B7280',
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+  },
+  disclaimerLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
+  },
+  disclaimerLink: {
+    ...typography.caption,
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   stickyHeader: {
     borderBottomWidth: 1,

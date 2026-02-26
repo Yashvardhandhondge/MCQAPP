@@ -9,6 +9,7 @@ import {
   Animated,
   StatusBar,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -53,13 +54,17 @@ export default function EditProfileScreen({ navigation }: EditProfileScreenProps
 
   const handlePickImage = useCallback(async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permission needed',
-          'Please allow photo library access to set your profile picture.',
-        );
-        return;
+      // On Android we use the system photo picker and do not request READ_MEDIA_IMAGES
+      // (Google Play policy: one-time/infrequent access must use photo picker only).
+      if (Platform.OS === 'ios') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert(
+            'Permission needed',
+            'Please allow photo library access to set your profile picture.',
+          );
+          return;
+        }
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({

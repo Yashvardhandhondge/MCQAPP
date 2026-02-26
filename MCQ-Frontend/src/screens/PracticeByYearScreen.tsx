@@ -12,8 +12,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { openBrowserAsync } from 'expo-web-browser';
 import type { AppStackParamList } from '../navigation/types';
 import { useAuth } from '../context/AuthContext';
+import { PYQ_PRACTICE_DISCLAIMER, OFFICIAL_SOURCES } from '../constants/disclaimer';
 import { getYearsWithAnalytics } from '../services/mcq.service';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import BackHeader from '../components/ui/BackHeader';
@@ -251,6 +253,17 @@ export default function PracticeByYearScreen({ route, navigation }: PracticeByYe
               transform: [{ translateY: slideAnim }],
             }}
           >
+            <View style={styles.pyqDisclaimerBanner}>
+              <Text style={styles.pyqDisclaimerText}>{PYQ_PRACTICE_DISCLAIMER}</Text>
+              <TouchableOpacity
+                onPress={() => openBrowserAsync(OFFICIAL_SOURCES[0].url)}
+                activeOpacity={0.7}
+                style={styles.pyqDisclaimerLink}
+              >
+                <Ionicons name="open-outline" size={14} color={colors.primary} />
+                <Text style={styles.pyqDisclaimerLinkText}>{OFFICIAL_SOURCES[0].name}</Text>
+              </TouchableOpacity>
+            </View>
             {renderContent()}
           </Animated.View>
         </ScrollView>
@@ -281,6 +294,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xxl,
     paddingTop: spacing.xl,
     paddingBottom: 100,
+  },
+  pyqDisclaimerBanner: {
+    backgroundColor: '#EEF2FF',
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  pyqDisclaimerText: {
+    ...typography.caption,
+    color: '#374151',
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: spacing.sm,
+  },
+  pyqDisclaimerLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  pyqDisclaimerLinkText: {
+    ...typography.caption,
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   yearList: {
     gap: spacing.md,

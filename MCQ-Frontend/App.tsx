@@ -42,6 +42,7 @@ import MockTestLeaderboardSelectionScreen from './src/screens/MockTestLeaderboar
 import MockTestLeaderboardScreen from './src/screens/MockTestLeaderboardScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
 import NotificationDetailScreen from './src/screens/NotificationDetailScreen';
+import PrivacyScreen from './src/screens/PrivacyScreen';
 import BottomTabBar from './src/components/ui/BottomTabBar';
 // React Native Code - Update Required Modal and version check service commented out
 // import UpdateRequiredModal from './src/components/UpdateRequiredModal';
@@ -293,6 +294,15 @@ function AppStackNavigator() {
       <AppStack.Screen
         name="NotificationDetail"
         component={NotificationDetailScreen}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          animationDuration: 300,
+        }}
+      />
+      <AppStack.Screen
+        name="Privacy"
+        component={PrivacyScreen}
         options={{
           headerShown: false,
           animation: 'slide_from_right',

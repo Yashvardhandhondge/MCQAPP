@@ -1,4 +1,5 @@
 import { axiosInstance } from './http';
+import type { User } from '../types/auth';
 
 export interface CreateOrderResponse {
   success: boolean;
@@ -17,7 +18,7 @@ export interface VerifyPaymentPayload {
 export interface VerifyPaymentResponse {
   success: boolean;
   message: string;
-  user: Record<string, unknown>;
+  user: User;
 }
 
 export async function createOrder(planId: 'PCM' | 'PCB' | 'PCMB'): Promise<CreateOrderResponse> {

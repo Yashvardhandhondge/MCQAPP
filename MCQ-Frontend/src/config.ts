@@ -15,9 +15,11 @@ if (__DEV__) {
   } else if (Platform.OS === 'android') {
     // Android Emulator default for local backend
     // API_BASE_URL = 'http://192.168.29.158:8000';
+    API_BASE_URL = 'https://goldfish-app-vwvh7.ondigitalocean.app';
   } else {
     // iOS Simulator default for local backend
     // API_BASE_URL = 'http://localhost:8000';
+    API_BASE_URL = 'https://goldfish-app-vwvh7.ondigitalocean.app';
   }
 
   // Previous remote defaults kept below as comments for quick switching.
