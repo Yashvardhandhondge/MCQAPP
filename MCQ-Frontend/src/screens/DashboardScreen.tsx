@@ -99,7 +99,6 @@ export default function DashboardScreen() {
   const [statsLoading, setStatsLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [examConfig, setExamConfig] = useState<{
-    daysUntilExam: number;
     targetYear: string;
     examName: string;
   } | null>(null);
@@ -180,13 +179,11 @@ export default function DashboardScreen() {
       if (configResponse.status === 'fulfilled') {
         const config = configResponse.value.data;
         setExamConfig({
-          daysUntilExam: config.daysUntilExam,
           targetYear: config.targetYear,
           examName: config.examName,
         });
       } else {
         setExamConfig({
-          daysUntilExam: 120,
           targetYear: '2026',
           examName: 'MHT CET',
         });
@@ -266,7 +263,7 @@ export default function DashboardScreen() {
     return Math.max(0, Math.min(100, Math.round(stats.overall.accuracy)));
   }, [stats]);
 
-  const daysUntilExam = examConfig?.daysUntilExam ?? 120;
+  const daysUntilExam = Math.max(0, Math.ceil((new Date('2026-04-11').getTime() - new Date(new Date().setHours(0, 0, 0, 0)).getTime()) / 86400000));
   const targetYear = examConfig?.targetYear ?? '2026';
   const examName = examConfig?.examName ?? 'MHT CET';
 
@@ -402,7 +399,7 @@ export default function DashboardScreen() {
           >
 
             {/* Disclaimer & official sources - Misleading Claims policy compliance */}
-            <View style={styles.disclaimerCard}>
+            {/* <View style={styles.disclaimerCard}>
               <View style={styles.disclaimerHeader}>
                 <Ionicons name="information-circle" size={18} color="#6366F1" />
                 <Text style={styles.disclaimerTitle}>Official info & disclaimer</Text>
@@ -420,11 +417,12 @@ export default function DashboardScreen() {
                   <Text style={styles.disclaimerLink}>{source.name}</Text>
                 </TouchableOpacity>
               ))}
-            </View>
+            </View> */}
 
             {/* Free Plan Info Card - Only for Non-Premium Users */}
             {!isPremium && (
               <View style={styles.freePlanCard}>
+                <View style={styles.freePlanRow}>
                 {/* Left: Free benefits */}
                 <View style={styles.freePlanLeft}>
                   <View style={styles.freePlanBadgeRow}>
@@ -433,7 +431,7 @@ export default function DashboardScreen() {
                       <Text style={styles.freePlanBadgeText}>FREE PLAN</Text>
                     </View>
                   </View>
-                  <Text style={styles.freePlanTitle}>What you get free</Text>
+                  <Text style={styles.freePlanTitle}>You're on Free Plan</Text>
                   <View style={styles.freePlanBenefitRow}>
                     <Ionicons name="checkmark-circle" size={14} color="#10B981" />
                     <Text style={styles.freePlanBenefitText}>25 questions / day</Text>
@@ -445,18 +443,6 @@ export default function DashboardScreen() {
                   <View style={styles.freePlanBenefitRow}>
                     <Ionicons name="checkmark-circle" size={14} color="#10B981" />
                     <Text style={styles.freePlanBenefitText}>2 full-length free mock tests</Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => navigation.navigate('MockTestSelection')}
-                    activeOpacity={0.8}
-                    style={styles.freePlanMockTestCta}
-                  >
-                    <Text style={styles.freePlanMockTestCtaText}>Take mock tests</Text>
-                    <Ionicons name="chevron-forward" size={14} color={colors.primary} />
-                  </TouchableOpacity>
-                  <View style={styles.freePlanBenefitRow}>
-                    <Ionicons name="swap-horizontal" size={14} color="#6366F1" />
-                    <Text style={styles.freePlanBenefitText}>Switch PCM/PCB/PCMB in Profile</Text>
                   </View>
                 </View>
 
@@ -476,6 +462,25 @@ export default function DashboardScreen() {
                     <Text style={styles.freePlanUpgradeLabel}>All Access</Text>
                     <Text style={styles.freePlanUpgradeHint}>one-time</Text>
                     <Ionicons name="arrow-forward-circle" size={20} color="rgba(255,255,255,0.9)" style={{ marginTop: 6 }} />
+                  </LinearGradient>
+                </TouchableOpacity>
+                </View>
+
+                {/* Buy Premium horizontal CTA */}
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('PremiumPurchase')}
+                  activeOpacity={0.85}
+                  style={styles.buyPremiumButton}
+                >
+                  <LinearGradient
+                    colors={['#F59E0B', '#D97706', '#B45309'] as [string, string, string]}
+                    style={styles.buyPremiumGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
+                    <Ionicons name="diamond" size={18} color="#FFF9E6" />
+                    <Text style={styles.buyPremiumText}>Buy Premium</Text>
+                    <Ionicons name="arrow-forward" size={18} color="#FFF9E6" />
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
@@ -2145,7 +2150,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   freePlanCard: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     backgroundColor: '#FFFFFF',
     borderRadius: radius.xl,
     marginBottom: spacing.xl,
@@ -2153,6 +2158,9 @@ const styles = StyleSheet.create({
     borderColor: '#E0E7FF',
     overflow: 'hidden',
     ...shadow.md,
+  },
+  freePlanRow: {
+    flexDirection: 'row',
   },
   freePlanLeft: {
     flex: 1,
@@ -2250,6 +2258,24 @@ const styles = StyleSheet.create({
     fontSize: 10,
     textAlign: 'center',
     marginTop: 1,
+  },
+  buyPremiumButton: {
+    overflow: 'hidden',
+  },
+  buyPremiumGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: spacing.lg,
+  },
+  buyPremiumText: {
+    color: '#FFF9E6',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   },
 });
 

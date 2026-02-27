@@ -550,6 +550,35 @@ export default function PremiumPurchaseScreen() {
             </View>
           </Animated.View>
         </ScrollView>
+
+        {/* Fixed bottom "Get Premium" button */}
+        <View style={[styles.fixedBottomContainer, { bottom: spacing.md }]} pointerEvents="box-none">
+          <TouchableOpacity
+            onPress={() => handlePurchase((user?.group as 'PCM' | 'PCB' | 'PCMB') || 'PCMB')}
+            disabled={purchasing || loading}
+            activeOpacity={0.88}
+            style={[styles.fixedGetPremiumButton, (purchasing || loading) && { opacity: 0.6 }]}
+          >
+            <LinearGradient
+              colors={['#F59E0B', '#D97706', '#92400E'] as [string, string, string]}
+              style={styles.fixedGetPremiumGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              {purchasing ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Ionicons name="diamond" size={20} color="#FFF9E6" />
+                  <Text style={styles.fixedGetPremiumText}>
+                    Unlock Premium · ₹{displayPrice}
+                  </Text>
+                  <Ionicons name="arrow-forward-circle" size={22} color="#FFF9E6" />
+                </>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       </View>
       {orderDetails && (
         <RazorpayCheckoutWebView
@@ -1263,6 +1292,36 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 20,
     fontWeight: '500',
+  },
+  fixedBottomContainer: {
+    position: 'absolute',
+    left: spacing.xxl,
+    right: spacing.xxl,
+  },
+  fixedGetPremiumButton: {
+    borderRadius: radius.full,
+    overflow: 'hidden',
+    shadowColor: '#D97706',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.45,
+    shadowRadius: 14,
+    elevation: 10,
+  },
+  fixedGetPremiumGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 17,
+    paddingHorizontal: spacing.xl,
+  },
+  fixedGetPremiumText: {
+    color: '#FFF9E6',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    flex: 1,
+    textAlign: 'center',
   },
 });
 
