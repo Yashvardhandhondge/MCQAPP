@@ -193,6 +193,12 @@ export default function AdminDashboardPage() {
           >
             Users
           </Link>
+          <Link
+            href="/admin/classes"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Classes
+          </Link>
           <button
             onClick={() => setShowUpdateModal(true)}
             className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"

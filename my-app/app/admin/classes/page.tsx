@@ -47,7 +47,9 @@ export default function AdminClassesPage() {
   const [savingStudents, setSavingStudents] = useState(false);
   const [newClassName, setNewClassName] = useState('');
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [studentsText, setStudentsText] = useState('');
+  const [newStudentName, setNewStudentName] = useState('');
+  const [newStudentPhone, setNewStudentPhone] = useState('');
+  const [pendingStudents, setPendingStudents] = useState<Array<{ fullName: string; phoneNumber: string }>>([]);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -116,7 +118,9 @@ export default function AdminClassesPage() {
       const klass = data.data?.class as ClassSummary;
       const students = data.data?.students as ClassStudent[];
       setSelectedClass({ ...klass, students });
-      setStudentsText('');
+      setNewStudentName('');
+      setNewStudentPhone('');
+      setPendingStudents([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load class details');
     }
@@ -154,30 +158,21 @@ export default function AdminClassesPage() {
   };
 
   const handleSaveStudents = async () => {
-    if (!selectedClassId || !studentsText.trim()) return;
+    if (!selectedClassId || pendingStudents.length === 0) return;
     try {
       setSavingStudents(true);
       setError(null);
-      // Parse "Name,Phone" per line
-      const lines = studentsText
-        .split('\n')
-        .map((l) => l.trim())
-        .filter(Boolean);
-
-      const students = lines.map((line) => {
-        const [namePart, phonePart] = line.split(',').map((p) => p?.trim() ?? '');
-        return { fullName: namePart || undefined, phoneNumber: phonePart || namePart };
-      });
-
       const res = await fetchWithAuth(`/api/mcq/admin/classes/${selectedClassId}/students`, {
         method: 'POST',
-        body: JSON.stringify({ students }),
+        body: JSON.stringify({ students: pendingStudents }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
         throw new Error(data.message || 'Failed to save students');
       }
-      setStudentsText('');
+      setNewStudentName('');
+      setNewStudentPhone('');
+      setPendingStudents([]);
       await handleSelectClass(selectedClassId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save students');
@@ -390,23 +385,85 @@ export default function AdminClassesPage() {
                       Add / Update Students
                     </label>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                      Paste one student per line in the format: <strong>Name,Mobile</strong>. Example:
-                      <br />
-                      <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded">
-                        Rahul Patil,9876543210
-                      </code>
+                      Use separate boxes for student name and mobile. Click “Add to List” for each student, then save.
                     </p>
-                    <textarea
-                      value={studentsText}
-                      onChange={(e) => setStudentsText(e.target.value)}
-                      rows={5}
-                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 text-sm font-mono"
-                      placeholder="One per line: Name,Mobile"
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+                          Name
+                        </label>
+                        <input
+                          type="text"
+                          value={newStudentName}
+                          onChange={(e) => setNewStudentName(e.target.value)}
+                          placeholder="Rahul Patil"
+                          className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 text-sm"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+                          Mobile
+                        </label>
+                        <input
+                          type="tel"
+                          value={newStudentPhone}
+                          onChange={(e) => setNewStudentPhone(e.target.value)}
+                          placeholder="9876543210"
+                          className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 text-sm"
+                        />
+                      </div>
+                      <div className="md:col-span-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!newStudentName.trim() && !newStudentPhone.trim()) return;
+                            if (!newStudentPhone.trim()) {
+                              setError('Please enter mobile number');
+                              return;
+                            }
+                            setPendingStudents((prev) => [
+                              ...prev,
+                              { fullName: newStudentName.trim(), phoneNumber: newStudentPhone.trim() },
+                            ]);
+                            setNewStudentName('');
+                            setNewStudentPhone('');
+                          }}
+                          className="w-full px-3 py-2 rounded-lg bg-zinc-800 text-white text-xs font-medium hover:bg-zinc-700 transition-colors"
+                        >
+                          Add to List
+                        </button>
+                      </div>
+                    </div>
+                    {pendingStudents.length > 0 && (
+                      <div className="mt-2 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg p-2 text-xs text-zinc-700 dark:text-zinc-300">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-medium">
+                            Pending students to save ({pendingStudents.length})
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setPendingStudents([])}
+                            className="text-[11px] text-red-500 hover:underline"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {pendingStudents.map((s, idx) => (
+                            <span
+                              key={`${s.fullName}-${s.phoneNumber}-${idx}`}
+                              className="px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200"
+                            >
+                              {s.fullName || 'Student'} · {s.phoneNumber}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={handleSaveStudents}
-                      disabled={savingStudents || !studentsText.trim()}
+                      disabled={savingStudents || pendingStudents.length === 0}
                       className="inline-flex items-center px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:pointer-events-none transition-colors"
                     >
                       {savingStudents ? 'Saving…' : 'Save Students'}
