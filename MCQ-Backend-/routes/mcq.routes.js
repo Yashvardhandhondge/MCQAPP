@@ -72,6 +72,15 @@ const { getUserAchievements } = require('../controllers/achievement.controller')
 const { getAppVersion, setAppVersion, disableUpdateRequirement } = require('../controllers/appVersion.controller');
 const { initiateAppUpdate, updateDownloadStatus, getMyUpdateInitiations } = require('../controllers/appUpdateInitiation.controller');
 const notificationRoutes = require('./notification.routes');
+const {
+  listActiveClasses,
+  createClass,
+  listClassesAdmin,
+  updateClass,
+  upsertClassStudents,
+  listClassStudents,
+  loginWithClass,
+} = require('../controllers/class.controller');
 
 const router = express.Router();
 
@@ -80,6 +89,8 @@ const router = express.Router();
  */
 router.get('/premium-content', getPremiumContent);
 router.get('/app-version', getAppVersion);
+router.get('/classes', listActiveClasses);
+router.post('/classes/login', loginWithClass);
 
 /**
  * Apply auth middleware to all routes below
@@ -587,6 +598,45 @@ router.put('/admin/app-version', ...adminAuthGuard, setAppVersion);
  * @access  Private (requires admin role)
  */
 router.delete('/admin/app-version', ...adminAuthGuard, disableUpdateRequirement);
+
+/**
+ * Coaching class admin endpoints
+ */
+
+/**
+ * @route   POST /api/mcq/admin/classes
+ * @desc    Create a new coaching class (Admin only)
+ * @access  Private (requires admin role)
+ */
+router.post('/admin/classes', ...adminAuthGuard, createClass);
+
+/**
+ * @route   GET /api/mcq/admin/classes
+ * @desc    List all coaching classes with basic statistics (Admin only)
+ * @access  Private (requires admin role)
+ */
+router.get('/admin/classes', ...adminAuthGuard, listClassesAdmin);
+
+/**
+ * @route   PUT /api/mcq/admin/classes/:id
+ * @desc    Update a coaching class (Admin only)
+ * @access  Private (requires admin role)
+ */
+router.put('/admin/classes/:id', ...adminAuthGuard, updateClass);
+
+/**
+ * @route   POST /api/mcq/admin/classes/:id/students
+ * @desc    Add or update students for a class (Admin only)
+ * @access  Private (requires admin role)
+ */
+router.post('/admin/classes/:id/students', ...adminAuthGuard, upsertClassStudents);
+
+/**
+ * @route   GET /api/mcq/admin/classes/:id/students
+ * @desc    List students for a class (Admin only)
+ * @access  Private (requires admin role)
+ */
+router.get('/admin/classes/:id/students', ...adminAuthGuard, listClassStudents);
 
 /**
  * @route   POST /api/mcq/app-update/initiate

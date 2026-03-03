@@ -91,6 +91,7 @@ export default function DashboardScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { user } = useAuth();
   const isPremium = user?.subscription === 'premium';
+  const className = user?.className;
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -348,6 +349,12 @@ export default function DashboardScreen() {
                   </Text>
                   <Text style={styles.greetingEmoji}>👋</Text>
                 </View>
+                {className && (
+                  <View style={styles.classBadge}>
+                    <Ionicons name="school-outline" size={14} color="#4F46E5" />
+                    <Text style={styles.classBadgeText}>Powered by {className}</Text>
+                  </View>
+                )}
               </View>
               <View style={styles.headerRight}>
                 <TouchableOpacity

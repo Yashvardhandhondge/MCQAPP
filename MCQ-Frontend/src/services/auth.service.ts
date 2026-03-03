@@ -165,3 +165,28 @@ export async function verifyOTP(phoneNumber: string, otp: string): Promise<AuthR
     throw new Error(extractErrorMessage(error));
   }
 }
+
+export async function loginWithClass(classId: string, phoneNumber: string): Promise<AuthResponse> {
+  console.log('🏫 [CLASS LOGIN] Logging in via class...', {
+    classId,
+    phoneNumber: phoneNumber.replace(/\d(?=\d{4})/g, '*'),
+    endpoint: '/api/mcq/classes/login',
+  });
+
+  try {
+    const { data } = await axiosInstance.post<AuthResponse>('/api/mcq/classes/login', {
+      classId,
+      phoneNumber,
+    });
+
+    console.log('✅ [CLASS LOGIN SUCCESS]', {
+      userId: data.user?._id,
+      className: (data.user as any)?.className,
+      subscription: data.user?.subscription,
+    });
+
+    return data;
+  } catch (error) {
+    throw new Error(extractErrorMessage(error));
+  }
+}

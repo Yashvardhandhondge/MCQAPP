@@ -14,7 +14,7 @@
     },
     "android": {
       "package": "com.mcqfrontend.app",
-      "versionCode": 41,
+      "versionCode": 42,
       "adaptiveIcon": {
         "backgroundColor": "#1a3a5c",
         "foregroundImage": "./assets/images/image1.png",

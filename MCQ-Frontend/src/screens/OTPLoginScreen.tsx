@@ -368,6 +368,17 @@ export default function OTPLoginScreen() {
                     </TouchableOpacity>
                   </View>
 
+                  {/* Class Login Link */}
+                  <View style={styles.switchRow}>
+                    <Text style={styles.switchLabel}>From a coaching class? </Text>
+                    <TouchableOpacity
+                      onPress={() => navigation.navigate('ClassLogin')}
+                      activeOpacity={0.6}
+                    >
+                      <Text style={styles.switchAction}>Login with class</Text>
+                    </TouchableOpacity>
+                  </View>
+
                   
                 </View>
               )}

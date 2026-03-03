@@ -63,6 +63,22 @@ const userSchema = new mongoose.Schema(
       enum: ['student', 'admin'],
       default: 'student',
     },
+    // Optional coaching class association for class-based premium users
+    classId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Class',
+      default: null,
+    },
+    className: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    classLogoUrl: {
+      type: String,
+      default: null,
+      trim: true,
+    },
     group: {
       type: String,
       enum: ['PCM', 'PCB', 'PCMB'],

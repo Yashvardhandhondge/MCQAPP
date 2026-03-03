@@ -91,6 +91,7 @@ function AuthStackNavigator() {
     >
       <AuthStack.Screen name="OTPLogin" component={OTPLoginScreen} />
       <AuthStack.Screen name="Register" component={RegisterScreen} />
+      <AuthStack.Screen name="ClassLogin" component={require('./src/screens/ClassLoginScreen').default} />
     </AuthStack.Navigator>
   );
 }

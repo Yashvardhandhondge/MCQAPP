@@ -1,7 +1,14 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { register as registerRequest, updateUserGroup as updateUserGroupRequest, upgradeSubscription as upgradeSubscriptionRequest, sendOTP as sendOTPRequest, verifyOTP as verifyOTPRequest } from '../services/auth.service';
+import {
+  register as registerRequest,
+  updateUserGroup as updateUserGroupRequest,
+  upgradeSubscription as upgradeSubscriptionRequest,
+  sendOTP as sendOTPRequest,
+  verifyOTP as verifyOTPRequest,
+  loginWithClass as loginWithClassRequest,
+} from '../services/auth.service';
 import { setAuthToken } from '../services/http';
 import { registerDeviceWithBackend, setOneSignalUserId, removeOneSignalUserId } from '../services/oneSignal.service';
 import type { AuthResponse, User } from '../types/auth';
@@ -17,6 +24,7 @@ interface AuthContextValue {
   register: (fullName: string, email: string, phoneNumber: string) => Promise<void>;
   sendOTP: (phoneNumber: string) => Promise<void>;
   loginWithOTP: (phoneNumber: string, otp: string) => Promise<void>;
+   loginWithClass: (classId: string, phoneNumber: string) => Promise<void>;
   updateUserGroup: (group: 'PCM' | 'PCB' | 'PCMB') => Promise<void>;
   upgradeSubscription: (group?: 'PCM' | 'PCB' | 'PCMB') => Promise<void>;
   /** Update user in state and storage (e.g. after payment verification). Keeps existing token. */
@@ -203,6 +211,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applyAuthResponse, handleAuthError],
   );
 
+  const loginWithClass = useCallback(
+    async (classId: string, phoneNumber: string) => {
+      console.log('🏫 [AUTH CONTEXT] Login with class called', {
+        classId,
+        phoneNumber: phoneNumber.replace(/\d(?=\d{4})/g, '*'),
+      });
+      setLoading(true);
+      try {
+        const response = await loginWithClassRequest(classId, phoneNumber);
+        console.log('✅ [AUTH CONTEXT] Class login successful, applying response...');
+        await applyAuthResponse(response);
+        console.log('✅ [AUTH CONTEXT] Login with class complete');
+      } catch (error) {
+        console.error('❌ [AUTH CONTEXT] Login with class failed', error);
+        handleAuthError(error, 'Unable to login with class');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [applyAuthResponse, handleAuthError],
+  );
+
   const updateUserGroup = useCallback(
     async (group: 'PCM' | 'PCB' | 'PCMB') => {
       console.log('📝 [AUTH CONTEXT] Update group called', { group });
@@ -314,13 +344,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       sendOTP,
       loginWithOTP,
+      loginWithClass,
       updateUserGroup,
       upgradeSubscription,
       applyUserUpdate,
       updateProfile,
       logout,
     }),
-    [loading, initializing, logout, register, sendOTP, loginWithOTP, updateUserGroup, upgradeSubscription, applyUserUpdate, updateProfile, token, user],
+    [loading, initializing, logout, register, sendOTP, loginWithOTP, loginWithClass, updateUserGroup, upgradeSubscription, applyUserUpdate, updateProfile, token, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

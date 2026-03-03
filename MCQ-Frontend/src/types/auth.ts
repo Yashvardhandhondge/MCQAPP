@@ -8,6 +8,10 @@ export interface User {
   subscription?: 'free' | 'premium';
   // Optional profile image URL (local or remote) for avatar
   avatarUrl?: string | null;
+  // Optional coaching class association for class-based premium users
+  classId?: string | null;
+  className?: string | null;
+  classLogoUrl?: string | null;
 }
 
 export interface AuthResponse {

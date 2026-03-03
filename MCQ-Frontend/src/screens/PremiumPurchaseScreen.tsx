@@ -298,6 +298,26 @@ export default function PremiumPurchaseScreen() {
               <View style={styles.headerTextContainer}>
                 <Text style={styles.title}>Premium Access</Text>
                 <Text style={styles.titleSubtitle}>Unlock everything in one upgrade</Text>
+                {user?.className && (
+                  <View style={styles.classBanner}>
+                    <View style={styles.classBannerLeft}>
+                      <View style={styles.classLogoCircle}>
+                        {user.classLogoUrl ? (
+                          // Using plain View + icon fallback; React Native Image can be wired later if needed
+                          <Ionicons name="school" size={20} color="#4F46E5" />
+                        ) : (
+                          <Ionicons name="school-outline" size={20} color="#4F46E5" />
+                        )}
+                      </View>
+                      <View>
+                        <Text style={styles.classBannerTitle}>Class Premium Plan</Text>
+                        <Text style={styles.classBannerSubtitle}>
+                          Provided by {user.className}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
               </View>
             </View>
 
@@ -646,6 +666,41 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.authTextMuted,
     marginTop: spacing.xs / 2,
+    fontSize: 12,
+  },
+  classBanner: {
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.lg,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
+  },
+  classBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  classLogoCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#E0E7FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  classBannerTitle: {
+    ...typography.caption,
+    color: '#4338CA',
+    fontWeight: '700',
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  classBannerSubtitle: {
+    ...typography.caption,
+    color: '#4B5563',
     fontSize: 12,
   },
   featuresSection: {
