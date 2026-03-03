@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '../context/AuthContext';
 import type { AuthStackParamList } from '../navigation/types';
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, radius, spacing, typography, shadow } from '../theme';
 import { axiosInstance } from '../services/http';
 import { validatePhoneNumber } from '../utils/phoneValidation';
 

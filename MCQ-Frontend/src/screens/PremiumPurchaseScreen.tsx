@@ -15,6 +15,7 @@ import {
   UIManager,
   Platform,
 } from 'react-native';
+import { Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -303,8 +304,11 @@ export default function PremiumPurchaseScreen() {
                     <View style={styles.classBannerLeft}>
                       <View style={styles.classLogoCircle}>
                         {user.classLogoUrl ? (
-                          // Using plain View + icon fallback; React Native Image can be wired later if needed
-                          <Ionicons name="school" size={20} color="#4F46E5" />
+                          <Image
+                            source={{ uri: user.classLogoUrl }}
+                            style={styles.classLogoImage}
+                            resizeMode="contain"
+                          />
                         ) : (
                           <Ionicons name="school-outline" size={20} color="#4F46E5" />
                         )}
@@ -689,6 +693,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E7FF',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  classLogoImage: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
   },
   classBannerTitle: {
     ...typography.caption,

@@ -12,6 +12,7 @@ import {
   Animated,
   RefreshControl,
 } from 'react-native';
+import { Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -351,7 +352,15 @@ export default function DashboardScreen() {
                 </View>
                 {className && (
                   <View style={styles.classBadge}>
-                    <Ionicons name="school-outline" size={14} color="#4F46E5" />
+                    {user?.classLogoUrl ? (
+                      <Image
+                        source={{ uri: user.classLogoUrl }}
+                        style={styles.classLogoImage}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <Ionicons name="school-outline" size={16} color="#4F46E5" />
+                    )}
                     <Text style={styles.classBadgeText}>Powered by {className}</Text>
                   </View>
                 )}
@@ -1134,6 +1143,23 @@ const styles = StyleSheet.create({
   },
   greetingEmoji: {
     fontSize: 24,
+  },
+  classBadge: {
+    marginTop: spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  classLogoImage: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#E0E7FF',
+  },
+  classBadgeText: {
+    ...typography.caption,
+    color: '#4B5563',
+    fontSize: 11,
   },
   headerRight: {
     flexDirection: 'row',

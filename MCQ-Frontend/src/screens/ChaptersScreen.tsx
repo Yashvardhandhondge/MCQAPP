@@ -1,4 +1,3 @@
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   ActivityIndicator,
@@ -16,6 +15,7 @@ import type { TabParamList } from '../navigation/types';
 import type { AppStackParamList } from '../navigation/types';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { useAuth } from '../context/AuthContext';
 import { getChaptersWithAnalytics, getDashboard } from '../services/mcq.service';
 import { colors, radius, spacing, typography, shadow } from '../theme';
@@ -38,7 +38,7 @@ const SUBJECT_COLORS: Record<string, string[]> = {
   Biology: ['#F59E0B', '#D97706'],
 };
 
-export type ChaptersScreenProps = NativeStackScreenProps<TabParamList, 'Chapters'>;
+export type ChaptersScreenProps = BottomTabScreenProps<TabParamList, 'Chapters'>;
 
 export default function ChaptersScreen({ route, navigation }: ChaptersScreenProps) {
   const { subject } = route.params || {};

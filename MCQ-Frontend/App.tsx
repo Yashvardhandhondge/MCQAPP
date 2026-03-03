@@ -1,10 +1,11 @@
-import { DefaultTheme, NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
+import { DefaultTheme, NavigationContainer, NavigationContainerRef, useNavigation } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React, { useEffect, useState, useRef } from 'react';
 import Constants from 'expo-constants';
-import { AppState, AppStateStatus, Platform } from 'react-native';
+import { AppState, AppStateStatus, Platform, Modal, StyleSheet, View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 /* ============================================
  * UPDATE FUNCTIONALITY TEMPORARILY DISABLED
@@ -17,7 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { usePreventScreenCapture } from 'expo-screen-capture';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
-import type { AppStackParamList, AuthStackParamList } from './src/navigation/types';
+import type { AppStackParamList, AuthStackParamList, TabParamList } from './src/navigation/types';
 import ChapterDetailScreen from './src/screens/ChapterDetailScreen';
 import ChaptersScreen from './src/screens/ChaptersScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
@@ -50,9 +51,11 @@ import BottomTabBar from './src/components/ui/BottomTabBar';
 import { initializeOneSignal, setNotificationOpenedHandler, registerDeviceWithBackend, setOneSignalUserId, removeOneSignalUserId } from './src/services/oneSignal.service';
 import { colors, typography } from './src/theme';
 
+const UPGRADE_POPUP_KEY_PREFIX = '@mcq_free_upgrade_popup_shown_';
+
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStack = createNativeStackNavigator<AppStackParamList>();
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<TabParamList>();
 
 const navigationTheme = {
   ...DefaultTheme,
@@ -76,8 +79,82 @@ const appStackScreenOptions = {
   },
   headerShadowVisible: false,
   headerBackTitleVisible: false,
-  
+
 };
+
+type AppStackNavigation = NativeStackNavigationProp<AppStackParamList>;
+
+interface FreeUserUpgradePopupProps {
+  visible: boolean;
+  onClose: () => void;
+}
+
+function FreeUserUpgradePopup({ visible, onClose }: FreeUserUpgradePopupProps) {
+  const navigation = useNavigation<AppStackNavigation>();
+
+  const handleUpgrade = () => {
+    onClose();
+    navigation.navigate('PremiumPurchase');
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
+        <View style={styles.popupContainer}>
+          <ScrollView contentContainerStyle={styles.popupScroll} bounces={false}>
+
+
+            <Text style={styles.popupTitle}>
+              <Text style={{ color: '#0EA5E9' }}>Welcome to </Text>
+              <Text style={{ color: '#0EA5E9' }}>MHT CET 2026: </Text>
+              <Text style={{ color: '#F97316' }}>PYQ & Mock Tests</Text>
+            </Text>
+
+            <View style={styles.featureCard}>
+              <View style={styles.featureHeader}>
+                <Text style={styles.featureTag}>20+ YEARS OF PYQs</Text>
+              </View>
+              <Text style={styles.featureBody}>
+                Access 10,000+ chapter-wise PYQs (2004–2025). Your gold mine for exam mastery.
+              </Text>
+            </View>
+
+            <View style={styles.featureCardPurple}>
+              <View style={styles.featureHeader}>
+                <Text style={styles.featureTag}>YOUR PERSONAL AI TUTOR</Text>
+              </View>
+              <Text style={styles.featureBody}>
+                Get instant, step-by-step AI solutions for every question. Clarity, 24×7.
+              </Text>
+            </View>
+
+            <View style={styles.featureCardBlue}>
+              <View style={styles.featureHeader}>
+                <Text style={styles.featureTag}>FULL-LENGTH MOCK TESTS</Text>
+              </View>
+              <Text style={styles.featureBody}>
+                10 exam-like simulators. Track speed, accuracy, and rank against thousands.
+              </Text>
+            </View>
+
+            <TouchableOpacity activeOpacity={0.9} style={styles.primaryCta} onPress={handleUpgrade}>
+              <Text style={styles.primaryCtaText}>LET&apos;S GET THE TOP PERCENTILE!</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity activeOpacity={0.7} onPress={onClose}>
+              <Text style={styles.secondaryCtaText}>Maybe Later</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
 
 function AuthStackNavigator() {
   return (
@@ -104,11 +181,11 @@ function TabNavigator() {
       screenOptions={{
         headerShown: false,
         animation: 'fade',
-        sceneStyle: {  paddingBottom: 0, marginBottom: 0 },
+        sceneStyle: { paddingBottom: 0, marginBottom: 0 },
         tabBarStyle: { paddingTop: 0, marginTop: 0, height: 56 },
         tabBarItemStyle: { paddingVertical: 0 },
       }}
-      
+
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
       <Tab.Screen name="Chapters" component={ChaptersScreen} />
@@ -122,7 +199,7 @@ function TabNavigator() {
 // Main App Stack Navigator - wraps tabs and handles detail screens
 function AppStackNavigator() {
   const { user } = useAuth();
-  
+
   return (
     <AppStack.Navigator
       initialRouteName={user?.group ? 'MainTabs' : 'GroupSelection'}
@@ -142,20 +219,20 @@ function AppStackNavigator() {
           animationDuration: 300,
         }}
       />
-      
+
       {/* Main tabs */}
       <AppStack.Screen
         name="MainTabs"
         component={TabNavigator}
         options={{
-          
+
           headerShown: false,
           animation: 'fade',
           animationDuration: 400,
-          
+
         }}
       />
-      
+
       {/* Detail screens */}
       <AppStack.Screen
         name="ChapterDetail"
@@ -323,21 +400,39 @@ function ScreenCaptureBlocker() {
 
 function RootNavigator() {
   const { user, initializing } = useAuth();
-  
+  const [showUpgradePopup, setShowUpgradePopup] = useState(false);
+  const popupShownRef = useRef(false);
+
+  useEffect(() => {
+    if (!user || user.subscription === 'premium') {
+      setShowUpgradePopup(false);
+      return;
+    }
+
+    if (!popupShownRef.current) {
+      setShowUpgradePopup(true);
+      popupShownRef.current = true;
+    }
+  }, [user]);
+
   // Show loading screen while checking AsyncStorage for auth state
   if (initializing) {
     return null; // Or you can return a loading component here
   }
-  
+
   if (!user) {
     return <AuthStackNavigator />;
   }
-  
+
   // Block screenshots/recording app-wide for authenticated users (chapters, mock tests, etc.)
   return (
     <>
       <ScreenCaptureBlocker />
       <AppStackNavigator />
+      <FreeUserUpgradePopup
+        visible={showUpgradePopup}
+        onClose={() => setShowUpgradePopup(false)}
+      />
     </>
   );
 }
@@ -437,7 +532,7 @@ function AppWithVersionCheck() {
     // Initialize OneSignal when app starts
     try {
       initializeOneSignal();
-      
+
       // Set up notification opened handler for navigation
       setNotificationOpenedHandler((notificationId?: string) => {
         // Use a small delay to ensure navigation is ready
@@ -512,3 +607,106 @@ function AppWithVersionCheck() {
 export default function App() {
   return <AppWithVersionCheck />;
 }
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  popupContainer: {
+    width: '100%',
+    borderRadius: 28,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    zIndex: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: 'bold',
+  },
+  popupScroll: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 20,
+  },
+  popupTitle: {
+    ...typography.h3,
+    textAlign: 'center',
+    color: colors.text,
+    fontWeight: '800',
+    marginBottom: 20,
+    fontSize: 20,
+  },
+  featureCard: {
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 10,
+    backgroundColor: '#F97316',
+  },
+  featureCardPurple: {
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 10,
+    backgroundColor: '#4F46E5',
+  },
+  featureCardBlue: {
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 14,
+    backgroundColor: '#0EA5E9',
+  },
+  featureHeader: {
+    marginBottom: 6,
+  },
+  featureTag: {
+    ...typography.caption,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    fontSize: 11,
+  },
+  featureBody: {
+    ...typography.body,
+    color: '#FFF7ED',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  primaryCta: {
+    borderRadius: 999,
+    backgroundColor: '#F97316',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  primaryCtaText: {
+    ...typography.subtitle,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 13,
+    letterSpacing: 0.7,
+  },
+  secondaryCtaText: {
+    ...typography.caption,
+    textAlign: 'center',
+    color: colors.text,
+    fontSize: 13,
+    marginTop: 4,
+  },
+});
