@@ -14,6 +14,7 @@ interface User {
   group?: string;
   subscription: 'free' | 'premium';
   createdAt: string;
+   premiumActivatedAt?: string | null;
 }
 
 export default function AdminUsersPage() {
@@ -25,6 +26,9 @@ export default function AdminUsersPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [subscriptionFilter, setSubscriptionFilter] = useState<'all' | 'free' | 'premium'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [exportingCsv, setExportingCsv] = useState(false);
 
@@ -34,13 +38,16 @@ export default function AdminUsersPage() {
       return;
     }
     fetchUsers();
-  }, [router, page, subscriptionFilter]);
+  }, [router, page, subscriptionFilter, searchTerm, startDate, endDate]);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({ page: String(page), limit: '30' });
       if (subscriptionFilter !== 'all') params.set('subscription', subscriptionFilter);
+      if (searchTerm.trim()) params.set('search', searchTerm.trim());
+      if (startDate) params.set('startDate', startDate);
+      if (endDate) params.set('endDate', endDate);
       const response = await fetchWithAuth(`/api/mcq/admin/users?${params}`);
 
       if (!response.ok) {
@@ -69,6 +76,9 @@ export default function AdminUsersPage() {
       setError(null);
       const params = new URLSearchParams();
       if (subscriptionFilter !== 'all') params.set('subscription', subscriptionFilter);
+      if (searchTerm.trim()) params.set('search', searchTerm.trim());
+      if (startDate) params.set('startDate', startDate);
+      if (endDate) params.set('endDate', endDate);
       const url = `/api/mcq/admin/users/export${params.toString() ? `?${params.toString()}` : ''}`;
       const response = await fetchWithAuth(url);
 
@@ -175,18 +185,56 @@ export default function AdminUsersPage() {
           </Link>
         </div>
 
-        {/* Filter and Export */}
+        {/* Filters and Export */}
         <div className="mb-6 flex gap-4 items-center flex-wrap">
-          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Subscription:</label>
-          <select
-            value={subscriptionFilter}
-            onChange={(e) => { setSubscriptionFilter(e.target.value as 'all' | 'free' | 'premium'); setPage(1); }}
-            className="px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50"
-          >
-            <option value="all">All</option>
-            <option value="free">Free</option>
-            <option value="premium">Premium</option>
-          </select>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+              Search
+            </label>
+            <input
+              type="text"
+              placeholder="Name, email or mobile"
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+              className="px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 text-sm min-w-[220px]"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+              Joined from
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
+              className="px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 text-sm"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+              Joined to
+            </label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
+              className="px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 text-sm"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+              Subscription
+            </label>
+            <select
+              value={subscriptionFilter}
+              onChange={(e) => { setSubscriptionFilter(e.target.value as 'all' | 'free' | 'premium'); setPage(1); }}
+              className="px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 text-sm"
+            >
+              <option value="all">All</option>
+              <option value="free">Free</option>
+              <option value="premium">Premium</option>
+            </select>
+          </div>
           <button
             type="button"
             onClick={exportToCsv}
@@ -214,7 +262,9 @@ export default function AdminUsersPage() {
                   <th className="text-left py-3 px-4 text-sm font-medium text-zinc-700 dark:text-zinc-300">Group</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-zinc-700 dark:text-zinc-300">Subscription</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-zinc-700 dark:text-zinc-300">Actions</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-zinc-700 dark:text-zinc-300">Joined</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Joined / Premium Since
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -272,7 +322,11 @@ export default function AdminUsersPage() {
                       )}
                     </td>
                     <td className="py-3 px-4 text-sm text-zinc-500 dark:text-zinc-400">
-                      {new Date(user.createdAt).toLocaleDateString()}
+                      {new Date(
+                        user.subscription === 'premium' && user.premiumActivatedAt
+                          ? user.premiumActivatedAt
+                          : user.createdAt
+                      ).toLocaleDateString()}
                     </td>
                   </tr>
                 ))}

@@ -1,9 +1,9 @@
-import { DefaultTheme, NavigationContainer, NavigationContainerRef, useNavigation } from '@react-navigation/native';
+import { DefaultTheme, NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React, { useEffect, useState, useRef } from 'react';
 import Constants from 'expo-constants';
-import { AppState, AppStateStatus, Platform, Modal, StyleSheet, View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { AppState, AppStateStatus, Platform, Modal, StyleSheet, View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -50,6 +50,7 @@ import BottomTabBar from './src/components/ui/BottomTabBar';
 // import { getAppVersion, isVersionOutdated } from './src/services/appVersion.service';
 import { initializeOneSignal, setNotificationOpenedHandler, registerDeviceWithBackend, setOneSignalUserId, removeOneSignalUserId } from './src/services/oneSignal.service';
 import { colors, typography } from './src/theme';
+import BannerImage from './assets/images/Banner.png';
 
 const UPGRADE_POPUP_KEY_PREFIX = '@mcq_free_upgrade_popup_shown_';
 
@@ -90,13 +91,6 @@ interface FreeUserUpgradePopupProps {
 }
 
 function FreeUserUpgradePopup({ visible, onClose }: FreeUserUpgradePopupProps) {
-  const navigation = useNavigation<AppStackNavigation>();
-
-  const handleUpgrade = () => {
-    onClose();
-    navigation.navigate('PremiumPurchase');
-  };
-
   return (
     <Modal
       visible={visible}
@@ -106,50 +100,11 @@ function FreeUserUpgradePopup({ visible, onClose }: FreeUserUpgradePopupProps) {
     >
       <View style={styles.overlay}>
         <View style={styles.popupContainer}>
-          <ScrollView contentContainerStyle={styles.popupScroll} bounces={false}>
+          <TouchableOpacity activeOpacity={0.7} style={styles.closeButton} onPress={onClose}>
+            <Text style={styles.closeButtonText}>✕</Text>
+          </TouchableOpacity>
 
-
-            <Text style={styles.popupTitle}>
-              <Text style={{ color: '#0EA5E9' }}>Welcome to </Text>
-              <Text style={{ color: '#0EA5E9' }}>MHT CET 2026: </Text>
-              <Text style={{ color: '#F97316' }}>PYQ & Mock Tests</Text>
-            </Text>
-
-            <View style={styles.featureCard}>
-              <View style={styles.featureHeader}>
-                <Text style={styles.featureTag}>20+ YEARS OF PYQs</Text>
-              </View>
-              <Text style={styles.featureBody}>
-                Access 10,000+ chapter-wise PYQs (2004–2025). Your gold mine for exam mastery.
-              </Text>
-            </View>
-
-            <View style={styles.featureCardPurple}>
-              <View style={styles.featureHeader}>
-                <Text style={styles.featureTag}>YOUR PERSONAL AI TUTOR</Text>
-              </View>
-              <Text style={styles.featureBody}>
-                Get instant, step-by-step AI solutions for every question. Clarity, 24×7.
-              </Text>
-            </View>
-
-            <View style={styles.featureCardBlue}>
-              <View style={styles.featureHeader}>
-                <Text style={styles.featureTag}>FULL-LENGTH MOCK TESTS</Text>
-              </View>
-              <Text style={styles.featureBody}>
-                10 exam-like simulators. Track speed, accuracy, and rank against thousands.
-              </Text>
-            </View>
-
-            <TouchableOpacity activeOpacity={0.9} style={styles.primaryCta} onPress={handleUpgrade}>
-              <Text style={styles.primaryCtaText}>LET&apos;S GET THE TOP PERCENTILE!</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity activeOpacity={0.7} onPress={onClose}>
-              <Text style={styles.secondaryCtaText}>Maybe Later</Text>
-            </TouchableOpacity>
-          </ScrollView>
+          <Image source={BannerImage} style={styles.bannerImage} resizeMode="cover" />
         </View>
       </View>
     </Modal>
@@ -618,6 +573,7 @@ const styles = StyleSheet.create({
   },
   popupContainer: {
     width: '100%',
+    height: '75%',
     borderRadius: 28,
     backgroundColor: '#FFFFFF',
     overflow: 'hidden',
@@ -641,9 +597,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   popupScroll: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 20,
+    padding: 0,
   },
   popupTitle: {
     ...typography.h3,
@@ -708,5 +662,9 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 13,
     marginTop: 4,
+  },
+  bannerImage: {
+    width: '100%',
+    height: '100%',
   },
 });

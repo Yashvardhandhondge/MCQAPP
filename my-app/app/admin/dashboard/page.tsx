@@ -16,6 +16,7 @@ interface UserStats {
     email: string;
     group: string | null;
     createdAt: string;
+    premiumActivatedAt?: string | null;
   }>;
 }
 
@@ -302,7 +303,7 @@ export default function AdminDashboardPage() {
                       Group
                     </th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                      Joined
+                      Premium Since
                     </th>
                   </tr>
                 </thead>
@@ -324,7 +325,7 @@ export default function AdminDashboardPage() {
                         </span>
                       </td>
                       <td className="py-3 px-4 text-sm text-zinc-600 dark:text-zinc-400">
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        {new Date(user.premiumActivatedAt || user.createdAt).toLocaleDateString()}
                       </td>
                     </tr>
                   ))}
