@@ -144,15 +144,18 @@ const updateGroup = async (req, res, next) => {
 
 const upgradeSubscription = async (req, res, next) => {
   try {
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { subscription: 'premium' },
-      { new: true, runValidators: true }
-    );
+    const user = await User.findById(req.user._id);
 
     if (!user) {
       return next(createError(404, 'User not found'));
     }
+
+    user.subscription = 'premium';
+    if (!user.premiumActivatedAt) {
+      user.premiumActivatedAt = new Date();
+    }
+    await user.save();
+
 
     const response = buildAuthPayload(user);
 

@@ -269,12 +269,16 @@ const loginWithClass = async (req, res, next) => {
         email: undefined,
         phoneNumber: normalizedPhone,
         subscription: 'premium',
+        premiumActivatedAt: new Date(),
         classId: klass._id,
         className: klass.name,
         classLogoUrl: klass.logoUrl || null,
       });
     } else {
       user.subscription = 'premium';
+      if (!user.premiumActivatedAt) {
+        user.premiumActivatedAt = new Date();
+      }
       user.classId = klass._id;
       user.className = klass.name;
       user.classLogoUrl = klass.logoUrl || null;

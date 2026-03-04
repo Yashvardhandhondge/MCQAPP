@@ -46,8 +46,8 @@ const getUserStats = async (req, res, next) => {
     const premiumUsersDetails = await User.find({
       subscription: 'premium',
     })
-      .select('fullName email group createdAt')
-      .sort({ createdAt: -1 })
+      .select('fullName email group createdAt premiumActivatedAt')
+      .sort({ premiumActivatedAt: -1, createdAt: -1 })
       .lean();
 
     res.status(200).json({
@@ -86,6 +86,33 @@ const exportAllUsersAsCsv = async (req, res, next) => {
     if (req.query.subscription) filter.subscription = req.query.subscription;
     if (req.query.group) filter.group = req.query.group;
     if (req.query.role) filter.role = req.query.role;
+    if (req.query.search) {
+      const search = String(req.query.search).trim();
+      if (search) {
+        const regex = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        filter.$or = [
+          { fullName: regex },
+          { email: regex },
+          { phoneNumber: regex },
+        ];
+      }
+    }
+    if (req.query.startDate || req.query.endDate) {
+      filter.createdAt = {};
+      if (req.query.startDate) {
+        const start = new Date(req.query.startDate);
+        if (!Number.isNaN(start.getTime())) {
+          filter.createdAt.$gte = start;
+        }
+      }
+      if (req.query.endDate) {
+        const end = new Date(req.query.endDate);
+        if (!Number.isNaN(end.getTime())) {
+          end.setHours(23, 59, 59, 999);
+          filter.createdAt.$lte = end;
+        }
+      }
+    }
 
     const users = await User.find(filter)
       .select('-password')
@@ -101,10 +128,18 @@ const exportAllUsersAsCsv = async (req, res, next) => {
       `Free,${freeCount}`,
       `Premium,${premiumCount}`,
       '',
-      'No.,Name,Email,Mobile,Group,Subscription,Joined',
+      'No.,Name,Email,Mobile,Group,Subscription,Joined/PremiumSince',
       ...users.map((user, i) => {
-        const joined = user.createdAt
-          ? new Date(user.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: '2-digit', day: '2-digit' })
+        const effectiveDate =
+          user.subscription === 'premium' && user.premiumActivatedAt
+            ? user.premiumActivatedAt
+            : user.createdAt;
+        const joined = effectiveDate
+          ? new Date(effectiveDate).toLocaleDateString('en-IN', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+            })
           : '';
         return [
           i + 1,
@@ -148,6 +183,33 @@ const getAllUsers = async (req, res, next) => {
     }
     if (req.query.role) {
       filter.role = req.query.role;
+    }
+    if (req.query.search) {
+      const search = String(req.query.search).trim();
+      if (search) {
+        const regex = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        filter.$or = [
+          { fullName: regex },
+          { email: regex },
+          { phoneNumber: regex },
+        ];
+      }
+    }
+    if (req.query.startDate || req.query.endDate) {
+      filter.createdAt = {};
+      if (req.query.startDate) {
+        const start = new Date(req.query.startDate);
+        if (!Number.isNaN(start.getTime())) {
+          filter.createdAt.$gte = start;
+        }
+      }
+      if (req.query.endDate) {
+        const end = new Date(req.query.endDate);
+        if (!Number.isNaN(end.getTime())) {
+          end.setHours(23, 59, 59, 999);
+          filter.createdAt.$lte = end;
+        }
+      }
     }
 
     const users = await User.find(filter)
@@ -236,15 +298,17 @@ const updateUserSubscription = async (req, res, next) => {
       return next(createError(400, 'subscription must be "free" or "premium"'));
     }
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { subscription },
-      { new: true, runValidators: true }
-    ).select('-password');
+    const user = await User.findById(userId).select('-password');
 
     if (!user) {
       return next(createError(404, 'User not found'));
     }
+
+    user.subscription = subscription;
+    if (subscription === 'premium' && !user.premiumActivatedAt) {
+      user.premiumActivatedAt = new Date();
+    }
+    await user.save();
 
     return res.status(200).json({
       success: true,

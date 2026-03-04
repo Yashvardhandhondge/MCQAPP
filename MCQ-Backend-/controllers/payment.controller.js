@@ -111,15 +111,18 @@ const verifyPayment = async (req, res, next) => {
       return next(createError(403, 'Order does not belong to this user'));
     }
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { subscription: 'premium', group: planId },
-      { new: true, runValidators: true }
-    );
+    let user = await User.findById(userId);
 
     if (!user) {
       return next(createError(404, 'User not found'));
     }
+
+    if (!user.premiumActivatedAt) {
+      user.premiumActivatedAt = new Date();
+    }
+    user.subscription = 'premium';
+    user.group = planId;
+    await user.save();
 
     await PaymentEventLog.create({
       event: 'payment.captured',
@@ -241,10 +244,15 @@ const webhook = async (req, res, next) => {
       return res.status(200).json({ received: true });
     }
 
-    await User.findByIdAndUpdate(userId, {
-      subscription: 'premium',
-      group: planId,
-    });
+    const user = await User.findById(userId);
+    if (user) {
+      if (!user.premiumActivatedAt) {
+        user.premiumActivatedAt = new Date();
+      }
+      user.subscription = 'premium';
+      user.group = planId;
+      await user.save();
+    }
 
     console.log('Webhook: user upgraded to premium', { userId, planId });
     return res.status(200).json({ received: true });

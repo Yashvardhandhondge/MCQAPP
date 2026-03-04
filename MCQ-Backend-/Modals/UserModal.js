@@ -89,6 +89,11 @@ const userSchema = new mongoose.Schema(
       enum: ['free', 'premium'],
       default: 'free',
     },
+    // When the user first became premium (manual upgrade, payment, or class access)
+    premiumActivatedAt: {
+      type: Date,
+      default: null,
+    },
     savedQuestions: {
       type: [mongoose.Schema.Types.ObjectId],
       default: [],
