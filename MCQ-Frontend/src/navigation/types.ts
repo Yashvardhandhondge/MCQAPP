@@ -27,8 +27,9 @@ export type AppStackParamList = {
   CBT: {
     testId: string;
     questions: any[];
-    testType?: 'pyq' | 'practice' | 'chapter' | 'mocktest';
+    testType?: 'pyq' | 'practice' | 'chapter' | 'mocktest' | 'pyq-mocktest';
     mockTestNumber?: number;
+    testTitle?: string;
     sections?: {
       section1: { start: number; end: number; timeLimit: number };
       section2: { start: number; end: number; timeLimit: number };
@@ -49,4 +50,14 @@ export type AppStackParamList = {
   Notifications: undefined;
   NotificationDetail: { notificationId: string };
   Privacy: undefined;
+  PyqMockTestSelection: undefined;
+  PyqMockTestInstructions: {
+    test: {
+      id: string;
+      title: string;
+      year: string;
+      questionCount: number;
+      subjects: string[];
+    };
+  };
 };

@@ -1,35 +1,36 @@
 import axios from 'axios';
 import type {
-    ChaptersResponse,
-    ChaptersAnalyticsResponse,
-    DashboardResponse,
-    QuestionsResponse,
-    SubmitAnswerPayload,
-    SubmitAnswerResponse,
-    UserAttemptsResponse,
-    UserProgressResponse,
-    UserStatsResponse,
-    YearsResponse,
-    YearsAnalyticsResponse,
-    TestsResponse,
-    StartTestPayload,
-    StartTestResponse,
-    SubmitTestPayload,
-    SubmitTestResponse,
-    TestReportResponse,
-    TestReportsResponse,
-    LeaderboardResponse,
-    ExamConfigResponse,
-    StudyStreakResponse,
-    SolutionResponse,
-    SavedQuestionResponse,
-    SaveQuestionResponse,
-    SavedStatusResponse,
-    SavedQuestionsBySubjectResponse,
-    SavedQuestionsByChapterResponse,
-    SavedQuestionsWithAttemptsResponse,
-    ReportQuestionPayload,
-    ReportQuestionResponse,
+  ChaptersResponse,
+  ChaptersAnalyticsResponse,
+  DashboardResponse,
+  QuestionsResponse,
+  SubmitAnswerPayload,
+  SubmitAnswerResponse,
+  UserAttemptsResponse,
+  UserProgressResponse,
+  UserStatsResponse,
+  YearsResponse,
+  YearsAnalyticsResponse,
+  TestsResponse,
+  StartTestPayload,
+  StartTestResponse,
+  SubmitTestPayload,
+  SubmitTestResponse,
+  TestReportResponse,
+  TestReportsResponse,
+  LeaderboardResponse,
+  ExamConfigResponse,
+  StudyStreakResponse,
+  SolutionResponse,
+  SavedQuestionResponse,
+  SaveQuestionResponse,
+  SavedStatusResponse,
+  SavedQuestionsBySubjectResponse,
+  SavedQuestionsByChapterResponse,
+  SavedQuestionsWithAttemptsResponse,
+  ReportQuestionPayload,
+  ReportQuestionResponse,
+  PyqMockTestsResponse,
 } from '../types/mcq';
 import { axiosInstance } from './http';
 
@@ -900,5 +901,43 @@ export async function getMockTestResults(mockTestNumber: number): Promise<{
       throw new Error(error.response?.data?.message ?? 'Failed to load mock test results');
     }
     throw new Error('Failed to load mock test results');
+  }
+}
+
+// PYQ Mock Test functions
+export async function getPyqMockTests(): Promise<PyqMockTestsResponse> {
+  try {
+    const response = await axiosInstance.get<PyqMockTestsResponse>('/api/mcq/pyq-mock-tests');
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(
+        error.response?.data?.message ?? 'Failed to load PYQ mock tests'
+      );
+    }
+    throw new Error('Failed to load PYQ mock tests');
+  }
+}
+
+export async function startPyqMockTestSession(
+  title: string,
+  year?: string
+): Promise<StartTestResponse> {
+  try {
+    const payload: { title: string; year?: string } = { title };
+    if (year) payload.year = year;
+
+    const response = await axiosInstance.post<StartTestResponse>(
+      '/api/mcq/pyq-mock-tests/start',
+      payload
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(
+        error.response?.data?.message ?? 'Failed to start PYQ mock test session'
+      );
+    }
+    throw new Error('Failed to start PYQ mock test session');
   }
 }

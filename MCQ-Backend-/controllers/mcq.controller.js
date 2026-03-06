@@ -958,17 +958,23 @@ const getQuestionsByIds = async (req, res, next) => {
       }
     }
 
-    // If questions not found in subject collections, try MockTest collection
-    if (questions.length === 0) {
-      try {
-        const MockTestModel = require('../models/MockTest');
-        const mockQuestions = await MockTestModel.find({
+    // Also look into mock test collections (official mocks + PYQ mock tests)
+    try {
+      const MockTestModel = require('../models/MockTest');
+      const PyqMockTestModel = require('../models/PyqMockTest');
+
+      const [mockQuestions, pyqMockQuestions] = await Promise.all([
+        MockTestModel.find({
           _id: { $in: questionIds },
-        }).lean();
-        questions.push(...mockQuestions);
-      } catch (error) {
-        console.error('Error querying MockTest collection:', error);
-      }
+        }).lean(),
+        PyqMockTestModel.find({
+          _id: { $in: questionIds },
+        }).lean(),
+      ]);
+
+      questions.push(...mockQuestions, ...pyqMockQuestions);
+    } catch (error) {
+      console.error('Error querying mock test collections:', error);
     }
 
     if (questions.length === 0) {

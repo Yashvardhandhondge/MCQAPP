@@ -2,6 +2,39 @@ const createError = require('http-errors');
 const UserAttempt = require('../models/UserAttempt');
 const { getModelBySubject } = require('../models/Mcq');
 
+const normalizeAnswerValue = (value) => {
+  return typeof value === 'string' ? value.trim() : '';
+};
+
+const getQuestionCorrectAnswers = (question) => {
+  const rawAnswer =
+    question?.correctanswrs ??
+    question?.correctAnswer ??
+    question?.correctAnswers;
+
+  if (Array.isArray(rawAnswer)) {
+    return rawAnswer.map(normalizeAnswerValue).filter(Boolean);
+  }
+
+  const normalized = normalizeAnswerValue(rawAnswer);
+  return normalized ? [normalized] : [];
+};
+
+const getDisplayCorrectAnswer = (question) => {
+  return getQuestionCorrectAnswers(question)[0] || '';
+};
+
+const isSelectedAnswerCorrect = (question, selectedOption) => {
+  const normalizedSelectedOption = normalizeAnswerValue(selectedOption);
+  if (!normalizedSelectedOption) {
+    return false;
+  }
+
+  return getQuestionCorrectAnswers(question).some(
+    (correctAnswer) => correctAnswer === normalizedSelectedOption
+  );
+};
+
 /**
  * Submit an answer for a question
  * POST /api/mcq/answer
@@ -41,7 +74,7 @@ const submitAnswer = async (req, res, next) => {
     }
 
     // Compare selected option with correct answer
-    const isCorrect = selectedOption.trim() === question.correctanswrs.trim();
+    const isCorrect = isSelectedAnswerCorrect(question, selectedOption);
 
     // Check if user has already attempted this question - if yes, update it; if no, create new
     const existingAttempt = await UserAttempt.findOne({
@@ -52,7 +85,7 @@ const submitAnswer = async (req, res, next) => {
     let userAttempt;
     if (existingAttempt) {
       // Update existing attempt
-      existingAttempt.selectedOption = selectedOption.trim();
+      existingAttempt.selectedOption = normalizeAnswerValue(selectedOption);
       existingAttempt.isCorrect = isCorrect;
       existingAttempt.answeredAt = new Date(); // Update timestamp
       await existingAttempt.save();
@@ -65,7 +98,7 @@ const submitAnswer = async (req, res, next) => {
         subject: question.subject,
         chapter: question.chapter,
         year: question.year,
-        selectedOption: selectedOption.trim(),
+        selectedOption: normalizeAnswerValue(selectedOption),
         isCorrect,
         sourceFile: question.sourceFile,
       });
@@ -77,7 +110,7 @@ const submitAnswer = async (req, res, next) => {
       success: true,
       data: {
         isCorrect,
-        correctAnswer: question.correctanswrs,
+        correctAnswer: getDisplayCorrectAnswer(question),
         questionId: question._id,
       },
     });
@@ -113,13 +146,13 @@ const getUserStatsOverview = async (req, res, next) => {
       }
     ]);
 
-    // Overall stats from completed tests (excluding mock tests)
+    // Overall stats from completed tests (excluding mock-style tests)
     const [overallTestStats] = await TestSession.aggregate([
       { 
         $match: { 
           user: userId,
           status: 'completed',
-          testType: { $ne: 'mocktest' }, // Exclude mock tests
+          testType: { $nin: ['mocktest', 'pyq-mocktest'] }, // Exclude mock-style tests
         } 
       },
       {
@@ -160,13 +193,13 @@ const getUserStatsOverview = async (req, res, next) => {
       },
     ]);
 
-    // Per subject stats from completed tests (where subject is specified, excluding mock tests)
+    // Per subject stats from completed tests (where subject is specified, excluding mock-style tests)
     const perSubjectTestStats = await TestSession.aggregate([
       { 
         $match: { 
           user: userId,
           status: 'completed',
-          testType: { $ne: 'mocktest' }, // Exclude mock tests
+          testType: { $nin: ['mocktest', 'pyq-mocktest'] }, // Exclude mock-style tests
           subject: { $exists: true, $ne: null },
         } 
       },
@@ -544,7 +577,7 @@ const getStudyStreakAndTodayProgress = async (req, res, next) => {
       },
     });
 
-    // Count questions from tests completed today (excluding mock tests)
+    // Count questions from tests completed today (excluding mock-style tests)
     const TestSession = require('../models/TestSession');
     const todayTests = await TestSession.find({
       user: userId,
@@ -553,8 +586,8 @@ const getStudyStreakAndTodayProgress = async (req, res, next) => {
         $gte: startOfToday,
         $lte: endOfToday,
       },
-      // Exclude mock tests from today's progress
-      testType: { $ne: 'mocktest' },
+      // Exclude mock-style tests from today's progress
+      testType: { $nin: ['mocktest', 'pyq-mocktest'] },
     });
 
     const todayTestQuestions = todayTests.reduce((sum, test) => sum + (test.totalQuestions || 0), 0);

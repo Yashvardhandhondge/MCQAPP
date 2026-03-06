@@ -1,0 +1,356 @@
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import React, { useEffect, useState, useRef } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Animated,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import type { AppStackParamList } from '../navigation/types';
+import { getPyqMockTests } from '../services/mcq.service';
+import { colors, radius, spacing, typography, shadow } from '../theme';
+import BackHeader from '../components/ui/BackHeader';
+import { safeGoBack } from '../utils/navigation';
+
+export type PyqMockTestSelectionScreenProps = NativeStackScreenProps<
+  AppStackParamList,
+  'PyqMockTestSelection'
+>;
+
+interface PyqMockTest {
+  id: string;
+  title: string;
+  year: string;
+  questionCount: number;
+  subjects: string[];
+}
+
+export default function PyqMockTestSelectionScreen({
+  navigation,
+}: PyqMockTestSelectionScreenProps) {
+  const [tests, setTests] = useState<PyqMockTest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryTrigger, setRetryTrigger] = useState(0);
+
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        tension: 50,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [retryTrigger]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchTests() {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await getPyqMockTests();
+        if (isMounted) {
+          setTests(response.data || []);
+        }
+      } catch (requestError) {
+        if (isMounted) {
+          const message =
+            requestError instanceof Error ? requestError.message : 'Failed to load PYQ mock tests';
+          setError(message);
+          setTests([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchTests();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [retryTrigger]);
+
+  if (loading) {
+    return (
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
+        <View style={styles.backgroundGradient}>
+          <BackHeader title="PYQ Mock Tests" navigation={navigation} />
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>Loading PYQ mock tests...</Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error && tests.length === 0) {
+    return (
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
+        <View style={styles.backgroundGradient}>
+          <BackHeader title="PYQ Mock Tests" navigation={navigation} />
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle" size={64} color={colors.danger} />
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity
+              onPress={() => {
+                setError(null);
+                setRetryTrigger((prev) => prev + 1);
+              }}
+              style={styles.retryButton}
+            >
+              <LinearGradient
+                colors={colors.gradientPrimary as [string, string, ...string[]]}
+                style={styles.retryGradient}
+              >
+                <Text style={styles.retryText}>Retry</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
+      <View style={styles.backgroundGradient}>
+        <BackHeader title="PYQ Mock Tests" onBack={() => safeGoBack(navigation)} />
+        <ScrollView
+          contentContainerStyle={styles.container}
+          showsVerticalScrollIndicator={false}
+        >
+          {tests.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="document-text-outline" size={64} color={colors.authTextMuted} />
+              <Text style={styles.emptyText}>No PYQ mock tests available</Text>
+              <Text style={styles.emptySubtext}>
+                Check back later for newly added PYQ mock tests
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.contentCard}>
+              <View style={styles.headerInfo}>
+                <Text style={styles.sectionTitle}>Previous Year Full Papers</Text>
+                <Text style={styles.sectionSubTitle}>
+                  Attempt full PYQ papers by year and shift-wise.
+                </Text>
+              </View>
+              <View style={styles.testList}>
+                {tests.map((test, index) => (
+                  <Animated.View
+                    key={test.id}
+                    style={{
+                      opacity: fadeAnim,
+                      transform: [
+                        {
+                          translateY: slideAnim.interpolate({
+                            inputRange: [0, 30],
+                            outputRange: [0, 30 + index * 10],
+                          }),
+                        },
+                      ],
+                    }}
+                  >
+                    <TouchableOpacity
+                      onPress={() => navigation.navigate('PyqMockTestInstructions', { test })}
+                      activeOpacity={0.7}
+                      style={styles.testCard}
+                    >
+                      <View style={styles.cardContent}>
+                        <View style={styles.cardLeft}>
+                          <View style={styles.iconContainer}>
+                            <Ionicons name="calendar" size={24} color={colors.primary} />
+                          </View>
+                          <View style={styles.cardInfo}>
+                            <Text style={styles.testTitle}>{test.title}</Text>
+                            <Text style={styles.testSubtitle}>
+                              {test.year ? `Year ${test.year}` : 'Previous Year Paper'} ·{' '}
+                              {test.questionCount} questions
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.cardRight}>
+                          <Ionicons
+                            name="chevron-forward"
+                            size={20}
+                            color={colors.authTextMuted}
+                          />
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  </Animated.View>
+                ))}
+              </View>
+            </View>
+          )}
+        </ScrollView>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F3E8FF',
+  },
+  backgroundGradient: {
+    flex: 1,
+    backgroundColor: '#F3E8FF',
+  },
+  container: {
+    flexGrow: 1,
+    paddingHorizontal: spacing.xxl,
+    paddingTop: spacing.lg,
+    paddingBottom: 100,
+  },
+  contentCard: {
+    backgroundColor: colors.authSurface,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    ...shadow.md,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  loadingText: {
+    ...typography.body,
+    color: colors.authTextSecondary,
+    fontSize: 14,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+    gap: spacing.lg,
+  },
+  errorText: {
+    ...typography.body,
+    color: colors.danger,
+    textAlign: 'center',
+    fontSize: 14,
+  },
+  retryButton: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    marginTop: spacing.md,
+    ...shadow.md,
+  },
+  retryGradient: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+  },
+  retryText: {
+    ...typography.subtitle,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: spacing.xxxl,
+    gap: spacing.md,
+  },
+  emptyText: {
+    ...typography.body,
+    color: colors.authTextSecondary,
+    fontWeight: '600',
+  },
+  emptySubtext: {
+    ...typography.caption,
+    color: colors.authTextMuted,
+  },
+  headerInfo: {
+    marginBottom: spacing.lg,
+  },
+  sectionTitle: {
+    ...typography.h3,
+    color: colors.authText,
+    fontWeight: '700',
+    marginBottom: spacing.xs,
+  },
+  sectionSubTitle: {
+    ...typography.body,
+    color: colors.authTextSecondary,
+    fontSize: 13,
+  },
+  testList: {
+    gap: spacing.md,
+  },
+  testCard: {
+    backgroundColor: colors.authSurface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.authBorder,
+    ...shadow.sm,
+  },
+  cardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  cardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: colors.primarySoft,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
+  cardInfo: {
+    flex: 1,
+  },
+  testTitle: {
+    ...typography.h3,
+    color: colors.authText,
+    fontWeight: '700',
+    fontSize: 17,
+  },
+  testSubtitle: {
+    ...typography.body,
+    color: colors.authTextSecondary,
+    fontSize: 13,
+    marginTop: spacing.xs,
+  },
+  cardRight: {
+    marginLeft: spacing.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});
+

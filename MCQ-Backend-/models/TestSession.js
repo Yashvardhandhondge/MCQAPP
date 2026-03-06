@@ -10,7 +10,7 @@ const testSessionSchema = new mongoose.Schema(
     },
     testType: {
       type: String,
-      enum: ['pyq', 'practice', 'chapter', 'mocktest'],
+      enum: ['pyq', 'practice', 'chapter', 'mocktest', 'pyq-mocktest'],
       required: true,
     },
     year: {
@@ -36,7 +36,7 @@ const testSessionSchema = new mongoose.Schema(
     }],
     questionModel: {
       type: String,
-      enum: ['Chemistry', 'Physics', 'Maths', 'Biology', 'MockTest'],
+      enum: ['Chemistry', 'Physics', 'Maths', 'Biology', 'MockTest', 'PyqMockTest'],
     },
     answers: [{
       questionId: mongoose.Schema.Types.ObjectId,

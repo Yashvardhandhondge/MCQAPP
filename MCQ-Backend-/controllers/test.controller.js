@@ -1,6 +1,7 @@
 const createError = require('http-errors');
 const { getAllModels, getModelBySubject } = require('../models/Mcq');
 const MockTestModel = require('../models/MockTest');
+const PyqMockTestModel = require('../models/PyqMockTest');
 const TestSession = require('../models/TestSession');
 const UserAttempt = require('../models/UserAttempt');
 const { getChapterInfo } = require('../config/chapterMapping');
@@ -104,6 +105,39 @@ const getQuestionSubjectName = (question) => {
   return String(question?.subject || question?.originalSubject || question?.sub || '').trim();
 };
 
+const normalizeAnswerValue = (value) => {
+  return typeof value === 'string' ? value.trim() : '';
+};
+
+const getQuestionCorrectAnswers = (question) => {
+  const rawAnswer =
+    question?.correctanswrs ??
+    question?.correctAnswer ??
+    question?.correctAnswers;
+
+  if (Array.isArray(rawAnswer)) {
+    return rawAnswer.map(normalizeAnswerValue).filter(Boolean);
+  }
+
+  const normalized = normalizeAnswerValue(rawAnswer);
+  return normalized ? [normalized] : [];
+};
+
+const isSelectedAnswerCorrect = (question, selectedOption) => {
+  const normalizedSelectedOption = normalizeAnswerValue(selectedOption);
+  if (!normalizedSelectedOption) {
+    return false;
+  }
+
+  return getQuestionCorrectAnswers(question).some(
+    (correctAnswer) => correctAnswer === normalizedSelectedOption
+  );
+};
+
+const getDisplayCorrectAnswer = (question) => {
+  return getQuestionCorrectAnswers(question)[0] || '';
+};
+
 const calculateMockTestMarksFromSession = async (session) => {
   const baseScore = Number(session?.score) || 0;
   if (baseScore > 0) {
@@ -122,11 +156,20 @@ const calculateMockTestMarksFromSession = async (session) => {
     return 0;
   }
 
-  const correctQuestions = await MockTestModel.find({
-    _id: { $in: correctQuestionIds },
-  })
-    .select('subject originalSubject sub')
-    .lean();
+  const [mockQuestions, pyqMockQuestions] = await Promise.all([
+    MockTestModel.find({
+      _id: { $in: correctQuestionIds },
+    })
+      .select('subject originalSubject sub')
+      .lean(),
+    PyqMockTestModel.find({
+      _id: { $in: correctQuestionIds },
+    })
+      .select('subject originalSubject sub')
+      .lean(),
+  ]);
+
+  const correctQuestions = [...mockQuestions, ...pyqMockQuestions];
 
   let recoveredMarks = 0;
   for (const question of correctQuestions) {
@@ -716,13 +759,16 @@ const submitTestSession = async (req, res, next) => {
     const allModels = getAllModels();
     const allQuestions = [];
     
-    // For mock tests, query from MockTest collection
-    if (session.testType === 'mocktest') {
+    // For mock-style tests (official mocks + PYQ mock tests), query from both collections
+    if (session.testType === 'mocktest' || session.testType === 'pyq-mocktest') {
       try {
-        const mockQuestions = await MockTestModel.find({ _id: { $in: session.questions } }).lean();
-        allQuestions.push(...mockQuestions);
+        const [mockQuestions, pyqMockQuestions] = await Promise.all([
+          MockTestModel.find({ _id: { $in: session.questions } }).lean(),
+          PyqMockTestModel.find({ _id: { $in: session.questions } }).lean(),
+        ]);
+        allQuestions.push(...mockQuestions, ...pyqMockQuestions);
       } catch (error) {
-        console.error('Error querying MockTest collection:', error);
+        console.error('Error querying mock test collections:', error);
       }
     } else {
       // Try to find questions in all subject collections
@@ -751,13 +797,10 @@ const submitTestSession = async (req, res, next) => {
       const question = questionIdStr ? questionMap.get(questionIdStr) : null;
       
       // Calculate isCorrect - ensure it's always a boolean
-      let isCorrect = false;
-      if (question && ans.selectedOption && question.correctanswrs) {
-        isCorrect = ans.selectedOption.trim() === question.correctanswrs.trim();
-      }
+      const isCorrect = isSelectedAnswerCorrect(question, ans.selectedOption);
       
-      // For mock tests, calculate marks based on subject (check both 'subject' and 'sub' fields for compatibility)
-      if (session.testType === 'mocktest' && isCorrect) {
+      // For mock-style tests, calculate marks based on subject (check both 'subject' and 'sub' fields)
+      if ((session.testType === 'mocktest' || session.testType === 'pyq-mocktest') && isCorrect) {
         const subject = getMockQuestionSubject(question);
         if (subject === 'Maths' || subject === 'Mathematics') {
           totalMarks += 2; // 2 marks for Maths
@@ -787,8 +830,11 @@ const submitTestSession = async (req, res, next) => {
 
     // Update session
     session.answers = processedAnswers;
-    // For mock tests, use totalMarks; for others, use correctCount
-    session.score = session.testType === 'mocktest' ? totalMarks : correctCount;
+    // For mock-style tests, use totalMarks; for others, use correctCount
+    session.score =
+      session.testType === 'mocktest' || session.testType === 'pyq-mocktest'
+        ? totalMarks
+        : correctCount;
     session.status = 'completed';
     session.completedAt = new Date();
     session.duration = Math.floor((session.completedAt - session.startedAt) / 1000);
@@ -808,7 +854,7 @@ const submitTestSession = async (req, res, next) => {
         questionId: questionId,
         question: question?.question || '',
         options: question?.options || [],
-        correctAnswer: question?.correctanswrs || '',
+        correctAnswer: getDisplayCorrectAnswer(question),
         selectedOption: answer?.selectedOption || '',
         isCorrect: answer?.isCorrect || false,
         subject: getMockQuestionSubject(question) || session.subject,
@@ -817,10 +863,11 @@ const submitTestSession = async (req, res, next) => {
       };
     });
 
-    // For mock tests, use totalMarks (session.score), for others use correctCount
-    const finalScore = session.testType === 'mocktest' ? session.score : correctCount;
-    const wrongCount = session.testType === 'mocktest' 
-      ? session.totalQuestions - correctCount // Still count wrong answers for mock tests
+    // For mock-style tests, use totalMarks (session.score), for others use correctCount
+    const isMockStyle = session.testType === 'mocktest' || session.testType === 'pyq-mocktest';
+    const finalScore = isMockStyle ? session.score : correctCount;
+    const wrongCount = isMockStyle
+      ? session.totalQuestions - correctCount // Still count wrong answers for mock-style tests
       : session.totalQuestions - correctCount;
     
     res.status(200).json({
@@ -904,14 +951,20 @@ const getTestReport = async (req, res, next) => {
     const allModels = getAllModels();
     const allQuestions = [];
     
-    // For mock tests, query from MockTest collection
-    if (session.testType === 'mocktest') {
+    // For mock-style tests, query from both MockTest and PYQ Mocktests collections
+    if (session.testType === 'mocktest' || session.testType === 'pyq-mocktest') {
       try {
-        const mockQuestions = await MockTestModel.find({ _id: { $in: session.questions } }).lean();
-        allQuestions.push(...mockQuestions);
-        console.log(`Found ${mockQuestions.length} mock test questions for report`);
+        const [mockQuestions, pyqMockQuestions] = await Promise.all([
+          MockTestModel.find({ _id: { $in: session.questions } }).lean(),
+          PyqMockTestModel.find({ _id: { $in: session.questions } }).lean(),
+        ]);
+        const combined = [...mockQuestions, ...pyqMockQuestions];
+        allQuestions.push(...combined);
+        console.log(
+          `Found ${combined.length} mock-style test questions for report (Mock: ${mockQuestions.length}, PYQ: ${pyqMockQuestions.length})`
+        );
       } catch (error) {
-        console.error('Error querying MockTest collection:', error);
+        console.error('Error querying mock test collections:', error);
       }
     } else {
       for (const [subject, Model] of Object.entries(allModels)) {
@@ -947,7 +1000,7 @@ const getTestReport = async (req, res, next) => {
         questionId: questionIdStr || questionId,
         question: question?.question || 'Question not found',
         options: question?.options || [],
-        correctAnswer: question?.correctanswrs || '',
+        correctAnswer: getDisplayCorrectAnswer(question),
         selectedOption: answer?.selectedOption || '',
         isCorrect: answer?.isCorrect || false,
         subject: question?.subject || question?.sub || session.subject || '',
@@ -1022,12 +1075,12 @@ const getTestReports = async (req, res, next) => {
     const reportData = await Promise.all(
       sessions.map(async (session) => {
         const resolvedScore =
-          session.testType === 'mocktest'
+          session.testType === 'mocktest' || session.testType === 'pyq-mocktest'
             ? await calculateMockTestMarksFromSession(session)
             : session.score || 0;
 
         const correctCount =
-          session.testType === 'mocktest'
+          session.testType === 'mocktest' || session.testType === 'pyq-mocktest'
             ? Array.isArray(session.answers)
               ? session.answers.filter((answer) => Boolean(answer?.isCorrect)).length
               : 0
@@ -1112,11 +1165,17 @@ const getRecentActivity = async (req, res, next) => {
 
     const getTestTitle = (session) => {
       if (session.testType === 'pyq') {
-        return `${session.subject || 'MHT CET'} ${session.year || ''} ${session.shift ? `Shift ${session.shift}` : ''}`.trim();
+        return `${session.subject || 'MHT CET'} ${session.year || ''} ${
+          session.shift ? `Shift ${session.shift}` : ''
+        }`.trim();
       } else if (session.testType === 'chapter') {
         return `${session.subject || ''} ${session.chapter || 'Practice'}`.trim();
       } else if (session.testType === 'mocktest') {
         return `MockTest ${session.mockTestNumber || ''}`.trim();
+      } else if (session.testType === 'pyq-mocktest') {
+        return session.chapter
+          ? `PYQ Mock Test • ${session.chapter}`
+          : 'PYQ Mock Test';
       } else {
         return `${session.subject || ''} Mock Test`.trim();
       }
@@ -1124,13 +1183,13 @@ const getRecentActivity = async (req, res, next) => {
 
     const activities = await Promise.all(
       sessions.map(async (session) => {
-        const resolvedScore =
-          session.testType === 'mocktest'
-            ? await calculateMockTestMarksFromSession(session)
-            : session.score || 0;
+        const isMockStyle = session.testType === 'mocktest' || session.testType === 'pyq-mocktest';
+        const resolvedScore = isMockStyle
+          ? await calculateMockTestMarksFromSession(session)
+          : session.score || 0;
 
-        // For mock tests, use 200 as the total marks instead of totalQuestions
-        const totalMarks = session.testType === 'mocktest' ? 200 : session.totalQuestions;
+        // For mock-style tests, use 200 as the total marks instead of totalQuestions
+        const totalMarks = isMockStyle ? 200 : session.totalQuestions;
         return {
           id: session._id.toString(),
           title: getTestTitle(session),
@@ -1466,6 +1525,175 @@ const getMockTestResults = async (req, res, next) => {
   }
 };
 
+/**
+ * Get available PYQ mock tests (grouped by title and year)
+ * GET /api/mcq/pyq-mock-tests
+ */
+const getAvailablePyqMockTests = async (req, res, next) => {
+  try {
+    const aggregates = await PyqMockTestModel.aggregate([
+      {
+        $group: {
+          _id: { title: '$Title', year: '$year' },
+          questionCount: { $sum: 1 },
+          subjects: { $addToSet: '$subject' },
+        },
+      },
+    ]);
+
+    const tests = aggregates
+      .map((doc) => {
+        const rawYear = doc._id.year;
+        const yearStr =
+          rawYear === null || rawYear === undefined ? '' : String(rawYear).trim();
+        const title = doc._id.title || 'Untitled';
+
+        return {
+          id: `${yearStr || 'na'}__${title}`,
+          title,
+          year: yearStr,
+          questionCount: doc.questionCount || 0,
+          subjects: Array.isArray(doc.subjects) ? doc.subjects.filter(Boolean) : [],
+        };
+      })
+      .sort((a, b) => {
+        const aNum = parseInt(a.year, 10);
+        const bNum = parseInt(b.year, 10);
+        if (!Number.isNaN(aNum) && !Number.isNaN(bNum) && aNum !== bNum) {
+          return bNum - aNum; // newer years first
+        }
+        if (!Number.isNaN(aNum) && Number.isNaN(bNum)) return -1;
+        if (Number.isNaN(aNum) && !Number.isNaN(bNum)) return 1;
+        return a.title.localeCompare(b.title);
+      });
+
+    res.status(200).json({
+      success: true,
+      data: tests,
+    });
+  } catch (error) {
+    console.error('Error getting available PYQ mock tests:', error);
+    return next(createError(500, 'Failed to fetch available PYQ mock tests'));
+  }
+};
+
+/**
+ * Start a PYQ mock test session (by title and optional year)
+ * POST /api/mcq/pyq-mock-tests/start
+ */
+const startPyqMockTestSession = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { title, year } = req.body;
+
+    if (!title || typeof title !== 'string' || !title.trim()) {
+      return next(createError(400, 'Title is required to start PYQ mock test'));
+    }
+
+    const normalizedTitle = title.trim();
+
+    // Build year filter similar to other controllers (support numeric/string years)
+    let yearFilter = {};
+    if (year !== undefined && year !== null && String(year).trim() !== '') {
+      const normalizedYear = String(year).trim();
+      const yearNum = parseInt(normalizedYear, 10);
+
+      if (!Number.isNaN(yearNum)) {
+        yearFilter = {
+          $or: [
+            { year: normalizedYear },
+            { year: yearNum },
+            { $expr: { $eq: [{ $toString: '$year' }, normalizedYear] } },
+          ],
+        };
+      } else {
+        yearFilter = {
+          $or: [
+            { year: normalizedYear },
+            { $expr: { $eq: [{ $toString: '$year' }, normalizedYear] } },
+          ],
+        };
+      }
+    }
+
+    const filter = {
+      Title: normalizedTitle,
+      ...yearFilter,
+    };
+
+    const allQuestions = await PyqMockTestModel.find(filter).lean();
+
+    if (!allQuestions || allQuestions.length === 0) {
+      return next(
+        createError(
+          404,
+          'No PYQ mock test questions found for the selected title/year'
+        )
+      );
+    }
+
+    // Separate questions by subject, same ordering logic as official mock tests:
+    // Section 1: Physics then Chemistry, Section 2: Mathematics
+    const physicsQuestions = allQuestions
+      .filter((q) => getQuestionSubjectName(q) === 'Physics')
+      .sort((a, b) => a._id.toString().localeCompare(b._id.toString()));
+    const chemistryQuestions = allQuestions
+      .filter((q) => getQuestionSubjectName(q) === 'Chemistry')
+      .sort((a, b) => a._id.toString().localeCompare(b._id.toString()));
+    const mathsQuestions = allQuestions
+      .filter((q) => {
+        const subjectName = getQuestionSubjectName(q);
+        return subjectName === 'Mathematics' || subjectName === 'Maths';
+      })
+      .sort((a, b) => a._id.toString().localeCompare(b._id.toString()));
+
+    const orderedQuestions = [
+      ...physicsQuestions,
+      ...chemistryQuestions,
+      ...mathsQuestions,
+    ];
+
+    const questionIds = orderedQuestions.map((q) => q._id);
+
+    const firstQuestionYear =
+      allQuestions[0]?.year !== undefined && allQuestions[0]?.year !== null
+        ? String(allQuestions[0].year).trim()
+        : undefined;
+
+    const session = new TestSession({
+      user: userId,
+      testType: 'pyq-mocktest',
+      year: firstQuestionYear,
+      chapter: normalizedTitle, // reuse chapter field to show title in reports
+      questions: questionIds,
+      questionModel: 'PyqMockTest',
+      totalQuestions: questionIds.length,
+      status: 'in-progress',
+      startedAt: new Date(),
+    });
+
+    await session.save();
+
+    res.status(201).json({
+      success: true,
+      data: {
+        sessionId: session._id,
+        questions: questionIds,
+        testType: 'pyq-mocktest',
+        year: session.year,
+      },
+    });
+  } catch (error) {
+    console.error('Error starting PYQ mock test session:', error);
+    return next(
+      createError(
+        error.status || 500,
+        error.message || 'Failed to start PYQ mock test session'
+      )
+    );
+  }
+};
+
 module.exports = {
   getAvailableTests,
   getDistinctYears,
@@ -1480,4 +1708,6 @@ module.exports = {
   getMockTestQuestions,
   startMockTestSession,
   getMockTestResults,
+  getAvailablePyqMockTests,
+  startPyqMockTestSession,
 };

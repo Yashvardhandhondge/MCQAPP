@@ -235,6 +235,21 @@ export default function TestsScreen() {
                 </TouchableOpacity>
               </View>
               <TouchableOpacity
+                onPress={() => navigation.navigate('PyqMockTestSelection' as any)}
+                activeOpacity={0.7}
+                style={s.actionCard}
+              >
+                <View style={[s.actionIconWrap, { backgroundColor: '#DBEAFE' }]}>
+                  <Ionicons name="calendar" size={26} color={colors.primary} />
+                </View>
+                <View style={s.actionBody}>
+                  <Text style={s.actionTitle}>PYQ Mock Test</Text>
+                  <Text style={s.actionSub}>By year, shift-wise full papers</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={22} color={colors.authTextMuted} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 onPress={() => setShowOptions(true)}
                 activeOpacity={0.7}
                 style={s.actionCard}

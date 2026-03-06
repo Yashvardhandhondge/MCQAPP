@@ -36,7 +36,7 @@ interface QuestionState {
 export type CBTSimulatorScreenProps = NativeStackScreenProps<AppStackParamList, 'CBT'>;
 
 export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorScreenProps) {
-  const { testId, questions: questionIds, testType, mockTestNumber } = route.params;
+  const { testId, questions: questionIds, testType, mockTestNumber, testTitle } = route.params;
   const insets = useSafeAreaInsets();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,8 +50,8 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
   const [showQuestionsOverlay, setShowQuestionsOverlay] = useState(false);
   const [reportModalVisible, setReportModalVisible] = useState(false);
   
-  // Mock test section support (for UI display only, no timing restrictions)
-  const isMockTest = testType === 'mocktest';
+  // Mock-style tests (official mocks + PYQ mock tests) section support
+  const isMockTest = testType === 'mocktest' || testType === 'pyq-mocktest';
   const [currentSection, setCurrentSection] = useState<1 | 2>(1);
   
   // Helper function to get subject from question (check both 'sub' and 'subject' fields)
@@ -435,7 +435,9 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
               </TouchableOpacity>
               <View style={styles.headerInfo}>
                 <Text style={styles.headerTitle}>
-                  {isMockTest ? `MockTest ${mockTestNumber || ''}` : 'MHT CET Test'}
+                  {isMockTest
+                    ? testTitle || (mockTestNumber != null ? `MockTest ${mockTestNumber}` : 'Mock Test')
+                    : 'MHT CET Test'}
                 </Text>
                 <View style={styles.headerSubtitleContainer}>
                   <Text style={styles.headerSubtitle}>

@@ -411,3 +411,17 @@ export interface MockTestsResponse {
   success: boolean;
   data: MockTest[];
 }
+
+// PYQ Mock Test types
+export interface PyqMockTest {
+  id: string;
+  title: string;
+  year: string;
+  questionCount: number;
+  subjects: string[];
+}
+
+export interface PyqMockTestsResponse {
+  success: boolean;
+  data: PyqMockTest[];
+}

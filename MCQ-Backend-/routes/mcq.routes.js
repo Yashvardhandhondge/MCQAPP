@@ -36,6 +36,8 @@ const {
   getMockTestQuestions,
   startMockTestSession,
   getMockTestResults,
+  getAvailablePyqMockTests,
+  startPyqMockTestSession,
 } = require('../controllers/test.controller');
 const {
   getLeaderboard,
@@ -209,6 +211,13 @@ router.get('/tests/recent-activity', getRecentActivity);
 router.get('/mock-tests', getAvailableMockTests);
 
 /**
+ * @route   GET /api/mcq/pyq-mock-tests
+ * @desc    Get available PYQ mock tests (grouped by title and year)
+ * @access  Private (requires authentication)
+ */
+router.get('/pyq-mock-tests', getAvailablePyqMockTests);
+
+/**
  * @route   GET /api/mcq/mock-tests/:mockTestNumber/questions
  * @desc    Get questions for a specific mock test
  * @param   {number} mockTestNumber - Mock test number (1, 2, etc.)
@@ -223,6 +232,15 @@ router.get('/mock-tests/:mockTestNumber/questions', getMockTestQuestions);
  * @access  Private (requires authentication)
  */
 router.post('/mock-tests/:mockTestNumber/start', startMockTestSession);
+
+/**
+ * @route   POST /api/mcq/pyq-mock-tests/start
+ * @desc    Start a PYQ mock test session by title (and optional year)
+ * @body    {string} title - Paper title (e.g. "19th April (Shift - I)")
+ * @body    {string|number} year - Optional exam year
+ * @access  Private (requires authentication)
+ */
+router.post('/pyq-mock-tests/start', startPyqMockTestSession);
 
 /**
  * @route   GET /api/mcq/mock-tests/:mockTestNumber/results

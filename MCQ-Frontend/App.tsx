@@ -45,6 +45,7 @@ import NotificationsScreen from './src/screens/NotificationsScreen';
 import NotificationDetailScreen from './src/screens/NotificationDetailScreen';
 import PrivacyScreen from './src/screens/PrivacyScreen';
 import BottomTabBar from './src/components/ui/BottomTabBar';
+import PyqMockTestSelectionScreen from './src/screens/PyqMockTestSelectionScreen';
 // React Native Code - Update Required Modal and version check service commented out
 // import UpdateRequiredModal from './src/components/UpdateRequiredModal';
 // import { getAppVersion, isVersionOutdated } from './src/services/appVersion.service';
@@ -282,6 +283,24 @@ function AppStackNavigator() {
       <AppStack.Screen
         name="SavedQuestionsList"
         component={SavedQuestionsListScreen}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          animationDuration: 300,
+        }}
+      />
+      <AppStack.Screen
+        name="PyqMockTestSelection"
+        component={PyqMockTestSelectionScreen}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          animationDuration: 300,
+        }}
+      />
+      <AppStack.Screen
+        name="PyqMockTestInstructions"
+        component={require('./src/screens/PyqMockTestInstructionsScreen').default}
         options={{
           headerShown: false,
           animation: 'slide_from_right',
