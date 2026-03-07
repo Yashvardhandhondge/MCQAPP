@@ -44,10 +44,15 @@ const PyqMockTestQuestionSchema = new mongoose.Schema(
       // Some imports may use number, some string – allow both
       type: mongoose.Schema.Types.Mixed,
     },
-    // Optional image flag – keep for completeness but we don't rely on it in code
+    // Optional image flag – keep for completeness (yes/true = question has an image slot)
     AddImage: {
       type: String,
       alias: 'Add image',
+    },
+    // Uploaded image URL (Cloudinary) – set when admin adds image for this question
+    image: {
+      type: String,
+      trim: true,
     },
   },
   {

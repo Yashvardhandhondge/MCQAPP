@@ -66,8 +66,7 @@ export default function AdminSubjectsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black p-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-black dark:text-zinc-50 mb-2">
             Admin Panel - Question Reports
@@ -75,46 +74,6 @@ export default function AdminSubjectsPage() {
           <p className="text-zinc-600 dark:text-zinc-400">
             Select a subject to view reported questions by chapter
           </p>
-        </div>
-
-        {/* Navigation */}
-        <div className="mb-8 flex gap-4 flex-wrap">
-          <Link
-            href="/admin"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Question Reports
-          </Link>
-          <Link
-            href="/admin/dashboard"
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            Dashboard
-          </Link>
-          <Link
-            href="/admin/payment-logs"
-            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
-          >
-            Payment Logs
-          </Link>
-          <Link
-            href="/admin/users"
-            className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
-          >
-            Users
-          </Link>
-          <Link
-            href="/admin/notifications"
-            className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
-          >
-            Notifications
-          </Link>
-          <Link
-            href="/admin/premium-content"
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-          >
-            Premium Content
-          </Link>
         </div>
 
         {subjects.length === 0 ? (
@@ -156,7 +115,6 @@ export default function AdminSubjectsPage() {
             ))}
           </div>
         )}
-      </div>
     </div>
   );
 }

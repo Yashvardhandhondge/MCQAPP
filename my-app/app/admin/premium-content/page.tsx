@@ -157,22 +157,6 @@ export default function PremiumContentPage() {
           </p>
         </div>
 
-        {/* Navigation */}
-        <div className="mb-8 flex gap-4">
-          <button
-            onClick={() => router.push('/admin/dashboard')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Dashboard
-          </button>
-          <button
-            onClick={() => router.push('/admin')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Question Reports
-          </button>
-        </div>
-
         {error && (
           <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg">
             <p className="text-sm text-red-700 dark:text-red-400">{error}</p>

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { isAuthenticated, fetchWithAuth, logout } from '@/lib/auth';
 
 interface UserStats {
@@ -25,13 +24,6 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showUpdateModal, setShowUpdateModal] = useState(false);
-  const [updateVersion, setUpdateVersion] = useState('');
-  const [updateVersionCode, setUpdateVersionCode] = useState('');
-  const [updateMessage, setUpdateMessage] = useState('A new version of the app is available. Please update to continue.');
-  const [playStoreUrl, setPlayStoreUrl] = useState('');
-  const [updateUrl, setUpdateUrl] = useState('');
-  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -65,55 +57,6 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleUpdateApp = async () => {
-    if (!updateVersion.trim()) {
-      alert('Please enter a version number');
-      return;
-    }
-
-    setUpdating(true);
-    setError(null);
-
-    try {
-      const response = await fetchWithAuth('/api/mcq/admin/app-version', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          requiredVersion: updateVersion.trim(),
-          requiredVersionCode: updateVersionCode ? parseInt(updateVersionCode) : undefined,
-          updateMessage: updateMessage.trim() || 'A new version of the app is available. Please update to continue.',
-          playStoreUrl: playStoreUrl.trim() || '',
-          updateUrl: updateUrl.trim() || '',
-        }),
-      });
-
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          logout();
-          router.push('/login');
-          return;
-        }
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to update app version');
-      }
-
-      const data = await response.json();
-      alert(`App update notification sent successfully! Required version: ${data.data.requiredVersion}`);
-      setShowUpdateModal(false);
-      setUpdateVersion('');
-      setUpdateVersionCode('');
-      setUpdateMessage('A new version of the app is available. Please update to continue.');
-      setPlayStoreUrl('');
-      setUpdateUrl('');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update app version');
-    } finally {
-      setUpdating(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -139,76 +82,17 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-black dark:text-zinc-50 mb-2">
-            Admin Dashboard
-          </h1>
-          <p className="text-zinc-600 dark:text-zinc-400">
-            Overview of users and statistics
-          </p>
-        </div>
+    <div className="max-w-7xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-black dark:text-zinc-50 mb-2">
+          Admin Dashboard
+        </h1>
+        <p className="text-zinc-600 dark:text-zinc-400">
+          Overview of users and statistics
+        </p>
+      </div>
 
-        {/* Navigation */}
-        <div className="mb-8 flex gap-4 flex-wrap">
-          <Link
-            href="/admin"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Question Reports
-          </Link>
-          <Link
-            href="/admin/dashboard"
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            Dashboard
-          </Link>
-          <Link
-            href="/admin/notifications"
-            className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
-          >
-            Send Notifications
-          </Link>
-          <Link
-            href="/admin/notifications/device-stats"
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            Device Stats
-          </Link>
-          <Link
-            href="/admin/premium-content"
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-          >
-            Edit Premium Content
-          </Link>
-          <Link
-            href="/admin/payment-logs"
-            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
-          >
-            Payment Logs
-          </Link>
-          <Link
-            href="/admin/users"
-            className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
-          >
-            Users
-          </Link>
-          <Link
-            href="/admin/classes"
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            Classes
-          </Link>
-          <button
-            onClick={() => setShowUpdateModal(true)}
-            className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-          >
-            Update App
-          </button>
-        </div>
-
-        {/* Statistics Cards */}
+      {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-zinc-200 dark:border-zinc-800 shadow-sm">
             <div className="flex items-center justify-between">
@@ -334,122 +218,6 @@ export default function AdminDashboardPage() {
             </div>
           )}
         </div>
-      </div>
-
-      {/* Update App Modal */}
-      {showUpdateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 max-w-md w-full border border-zinc-200 dark:border-zinc-800">
-            <h2 className="text-2xl font-bold text-black dark:text-zinc-50 mb-4">
-              Send App Update Notification
-            </h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Version Number (e.g., 1.0.1) *
-                </label>
-                <input
-                  type="text"
-                  value={updateVersion}
-                  onChange={(e) => setUpdateVersion(e.target.value)}
-                  placeholder="1.0.1"
-                  className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Version Code (e.g., 2) - Optional
-                </label>
-                <input
-                  type="number"
-                  value={updateVersionCode}
-                  onChange={(e) => setUpdateVersionCode(e.target.value)}
-                  placeholder="2"
-                  className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Update Message
-                </label>
-                <textarea
-                  value={updateMessage}
-                  onChange={(e) => setUpdateMessage(e.target.value)}
-                  rows={3}
-                  placeholder="A new version of the app is available. Please update to continue."
-                  className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Update URL (In-App Update) - Optional
-                </label>
-                <input
-                  type="url"
-                  value={updateUrl}
-                  onChange={(e) => setUpdateUrl(e.target.value)}
-                  placeholder="https://your-server.com/update.apk or OTA update endpoint"
-                  className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                  APK download link or OTA update endpoint. Takes priority over Play Store.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Play Store URL - Optional
-                </label>
-                <input
-                  type="url"
-                  value={playStoreUrl}
-                  onChange={(e) => setPlayStoreUrl(e.target.value)}
-                  placeholder=""
-                  className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                  Used only if Update URL is not provided.
-                </p>
-              </div>
-
-              {error && (
-                <div className="text-red-600 dark:text-red-400 text-sm">
-                  {error}
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 flex gap-3 justify-end">
-              <button
-                onClick={() => {
-                  setShowUpdateModal(false);
-                  setError(null);
-                  setUpdateVersion('');
-                  setUpdateVersionCode('');
-                  setUpdateMessage('A new version of the app is available. Please update to continue.');
-                  setPlayStoreUrl('');
-                  setUpdateUrl('');
-                }}
-                className="px-4 py-2 bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 rounded-lg hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors"
-                disabled={updating}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleUpdateApp}
-                disabled={updating || !updateVersion.trim()}
-                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {updating ? 'Sending...' : 'Send Update Notification'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

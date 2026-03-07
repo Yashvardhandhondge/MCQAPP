@@ -46,6 +46,16 @@ const McqQuestionSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    // PYQ migrated from PYQ Mocktests: paper/shift title (e.g. "19th April (Shift - I)")
+    shift: {
+      type: String,
+      trim: true,
+    },
+    // Optional question image URL (for future use; migrated from PYQ AddImage)
+    addImage: {
+      type: String,
+      trim: true,
+    },
   },
   {
     timestamps: true,

@@ -38,6 +38,9 @@ const {
   getMockTestResults,
   getAvailablePyqMockTests,
   startPyqMockTestSession,
+  adminGetPyqMockTestQuestions,
+  feedPyqQuestionToChapter,
+  updatePyqQuestionImage,
 } = require('../controllers/test.controller');
 const {
   getLeaderboard,
@@ -616,6 +619,15 @@ router.put('/admin/app-version', ...adminAuthGuard, setAppVersion);
  * @access  Private (requires admin role)
  */
 router.delete('/admin/app-version', ...adminAuthGuard, disableUpdateRequirement);
+
+/**
+ * Admin: PYQ mock tests (list tests, list questions, feed to chapter-based)
+ */
+router.get('/admin/pyq-mock-tests', ...adminAuthGuard, getAvailablePyqMockTests);
+router.get('/admin/pyq-mock-tests/questions', ...adminAuthGuard, adminGetPyqMockTestQuestions);
+router.put('/admin/pyq-mock-tests/questions/:questionId/image', ...adminAuthGuard, updatePyqQuestionImage);
+router.post('/admin/pyq-mock-tests/feed-to-chapter', ...adminAuthGuard, feedPyqQuestionToChapter);
+router.get('/admin/subjects/:subject/chapters', ...adminAuthGuard, getChaptersBySubject);
 
 /**
  * Coaching class admin endpoints

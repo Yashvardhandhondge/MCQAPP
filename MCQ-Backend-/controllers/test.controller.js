@@ -1694,6 +1694,207 @@ const startPyqMockTestSession = async (req, res, next) => {
   }
 };
 
+/**
+ * Admin: Get questions for a PYQ mock test by title and year
+ * GET /api/mcq/admin/pyq-mock-tests/questions?title=...&year=...
+ */
+const adminGetPyqMockTestQuestions = async (req, res, next) => {
+  try {
+    const { title, year } = req.query;
+    if (!title || typeof title !== 'string' || !title.trim()) {
+      return next(createError(400, 'Query parameter title is required'));
+    }
+    const normalizedTitle = title.trim();
+
+    let yearFilter = {};
+    if (year !== undefined && year !== null && String(year).trim() !== '') {
+      const normalizedYear = String(year).trim();
+      const yearNum = parseInt(normalizedYear, 10);
+      if (!Number.isNaN(yearNum)) {
+        yearFilter = {
+          $or: [
+            { year: normalizedYear },
+            { year: yearNum },
+            { $expr: { $eq: [{ $toString: '$year' }, normalizedYear] } },
+          ],
+        };
+      } else {
+        yearFilter = {
+          $or: [
+            { year: normalizedYear },
+            { $expr: { $eq: [{ $toString: '$year' }, normalizedYear] } },
+          ],
+        };
+      }
+    }
+
+    const questions = await PyqMockTestModel.find({
+      Title: normalizedTitle,
+      ...yearFilter,
+    })
+      .lean()
+      .select('question options correctAnswer correctanswrs subject chapter year Title AddImage image');
+
+    const data = questions.map((q) => ({
+      _id: q._id,
+      question: q.question,
+      options: q.options,
+      correctAnswer: q.correctAnswer ?? q.correctanswrs,
+      subject: q.subject,
+      chapter: q.chapter || '',
+      year: q.year != null ? String(q.year) : '',
+      shift: q.Title || '',
+      addImage: q.AddImage ?? q['Add image'] ?? '',
+      image: q.image ?? '',
+    }));
+
+    res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error('Error getting PYQ mock test questions for admin:', error);
+    return next(createError(500, 'Failed to fetch PYQ mock test questions'));
+  }
+};
+
+/**
+ * Admin: Feed one PYQ question into chapter-based DB (copy, keep in PYQ Mocktests)
+ * POST /api/mcq/admin/pyq-mock-tests/feed-to-chapter
+ * Body: { pyqQuestionId, subject, chapter, year? }
+ */
+const feedPyqQuestionToChapter = async (req, res, next) => {
+  try {
+    const { pyqQuestionId, subject, chapter, year } = req.body;
+
+    if (!pyqQuestionId) {
+      return next(createError(400, 'pyqQuestionId is required'));
+    }
+    if (!subject || !chapter) {
+      return next(createError(400, 'subject and chapter are required'));
+    }
+
+    const validSubjects = ['Chemistry', 'Physics', 'Maths', 'Biology'];
+    if (!validSubjects.includes(subject)) {
+      return next(createError(400, 'Invalid subject. Must be one of: Chemistry, Physics, Maths, Biology'));
+    }
+
+    const pyqDoc = await PyqMockTestModel.findById(pyqQuestionId).lean();
+    if (!pyqDoc) {
+      return next(createError(404, 'PYQ question not found'));
+    }
+
+    const yearToUse = year != null && String(year).trim() !== '' ? String(year).trim() : (pyqDoc.year != null ? String(pyqDoc.year) : '');
+    if (!yearToUse) {
+      return next(createError(400, 'year is required (provide in body or ensure PYQ question has year)'));
+    }
+
+    const correctAnswer = pyqDoc.correctAnswer ?? pyqDoc.correctanswrs ?? '';
+    const imageOrAddImage = pyqDoc.image ?? pyqDoc.AddImage ?? pyqDoc['Add image'] ?? '';
+    const shift = pyqDoc.Title ?? '';
+
+    const Model = getModelBySubject(subject);
+    const existing = await Model.findOne({
+      subject,
+      chapter,
+      year: yearToUse,
+      question: pyqDoc.question,
+    }).lean();
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: 'This question already exists in chapter-based DB for the selected subject/chapter/year',
+        data: { existingId: existing._id },
+      });
+    }
+
+    const chapterDoc = {
+      question: pyqDoc.question,
+      options: Array.isArray(pyqDoc.options) ? pyqDoc.options : [],
+      correctanswrs: correctAnswer,
+      subject,
+      chapter,
+      year: yearToUse,
+      shift: shift || undefined,
+      addImage: imageOrAddImage || undefined,
+    };
+    if (pyqDoc.solution) chapterDoc.solution = pyqDoc.solution;
+    if (pyqDoc.sourceFile) chapterDoc.sourceFile = pyqDoc.sourceFile;
+
+    const created = await Model.create(chapterDoc);
+
+    res.status(201).json({
+      success: true,
+      message: 'Question added to chapter-based PYQ',
+      data: { _id: created._id, subject, chapter, year: yearToUse },
+    });
+  } catch (error) {
+    if (error.status) return next(error);
+    console.error('Error feeding PYQ question to chapter:', error);
+    return next(createError(500, 'Failed to add question to chapter-based DB'));
+  }
+};
+
+/**
+ * Admin: Set/update image for a PYQ question (Cloudinary URL). Updates both PYQ Mocktests
+ * and any chapter-based copies (same question text + shift) so image stays in sync.
+ * PUT /api/mcq/admin/pyq-mock-tests/questions/:questionId/image
+ * Body: { image: "<url>" }
+ */
+const updatePyqQuestionImage = async (req, res, next) => {
+  try {
+    const { questionId } = req.params;
+    const { image } = req.body;
+
+    if (!questionId) {
+      return next(createError(400, 'questionId is required'));
+    }
+    const imageUrl = typeof image === 'string' ? image.trim() : '';
+    if (!imageUrl) {
+      return next(createError(400, 'image URL is required'));
+    }
+
+    const pyqDoc = await PyqMockTestModel.findById(questionId).lean();
+    if (!pyqDoc) {
+      return next(createError(404, 'PYQ question not found'));
+    }
+
+    await PyqMockTestModel.updateOne(
+      { _id: questionId },
+      { $set: { image: imageUrl } }
+    );
+
+    const questionText = pyqDoc.question;
+    const shiftTitle = pyqDoc.Title || '';
+
+    const models = getAllModels();
+    let chapterUpdatedCount = 0;
+    for (const Model of Object.values(models)) {
+      const result = await Model.updateMany(
+        {
+          question: questionText,
+          ...(shiftTitle ? { shift: shiftTitle } : {}),
+        },
+        { $set: { addImage: imageUrl } }
+      );
+      chapterUpdatedCount += result.modifiedCount;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Image saved for question',
+      data: {
+        pyqUpdated: true,
+        chapterBasedUpdated: chapterUpdatedCount,
+      },
+    });
+  } catch (error) {
+    if (error.status) return next(error);
+    console.error('Error updating PYQ question image:', error);
+    return next(createError(500, 'Failed to update question image'));
+  }
+};
+
 module.exports = {
   getAvailableTests,
   getDistinctYears,
@@ -1710,4 +1911,7 @@ module.exports = {
   getMockTestResults,
   getAvailablePyqMockTests,
   startPyqMockTestSession,
+  adminGetPyqMockTestQuestions,
+  feedPyqQuestionToChapter,
+  updatePyqQuestionImage,
 };

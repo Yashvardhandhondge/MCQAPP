@@ -151,40 +151,6 @@ export default function AdminUsersPage() {
           </p>
         </div>
 
-        {/* Navigation */}
-        <div className="mb-8 flex gap-4 flex-wrap">
-          <Link
-            href="/admin/dashboard"
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            Dashboard
-          </Link>
-          <Link
-            href="/admin/payment-logs"
-            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
-          >
-            Payment Logs
-          </Link>
-          <Link
-            href="/admin"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Question Reports
-          </Link>
-          <Link
-            href="/admin/notifications"
-            className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
-          >
-            Notifications
-          </Link>
-          <Link
-            href="/admin/premium-content"
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-          >
-            Premium Content
-          </Link>
-        </div>
-
         {/* Filters and Export */}
         <div className="mb-6 flex gap-4 items-center flex-wrap">
           <div className="flex flex-col gap-1">

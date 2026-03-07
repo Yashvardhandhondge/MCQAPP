@@ -7,14 +7,8 @@ import { AppState, AppStateStatus, Platform, Modal, StyleSheet, View, Text, Touc
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-/* ============================================
- * UPDATE FUNCTIONALITY TEMPORARILY DISABLED
- * Update facility commented out for launch.
- * Will be re-enabled after launch.
- * ============================================ */
-
-// const UPDATE_INITIATED_KEY = '@update_initiated';
-// const UPDATE_VERSION_KEY = '@update_version';
+const UPDATE_INITIATED_KEY = '@update_initiated';
+const UPDATE_VERSION_KEY = '@update_version';
 
 import { usePreventScreenCapture } from 'expo-screen-capture';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -46,9 +40,8 @@ import NotificationDetailScreen from './src/screens/NotificationDetailScreen';
 import PrivacyScreen from './src/screens/PrivacyScreen';
 import BottomTabBar from './src/components/ui/BottomTabBar';
 import PyqMockTestSelectionScreen from './src/screens/PyqMockTestSelectionScreen';
-// React Native Code - Update Required Modal and version check service commented out
-// import UpdateRequiredModal from './src/components/UpdateRequiredModal';
-// import { getAppVersion, isVersionOutdated } from './src/services/appVersion.service';
+import UpdateRequiredModal from './src/components/UpdateRequiredModal';
+import { getAppVersion, isVersionOutdated } from './src/services/appVersion.service';
 import { initializeOneSignal, setNotificationOpenedHandler, registerDeviceWithBackend, setOneSignalUserId, removeOneSignalUserId } from './src/services/oneSignal.service';
 import { colors, typography } from './src/theme';
 import BannerImage from './assets/images/Banner.png';
@@ -412,8 +405,6 @@ function RootNavigator() {
 }
 
 function AppWithVersionCheck() {
-  // React Native Code - Update functionality state variables commented out
-  /* COMMENTED OUT UPDATE FUNCTIONALITY - START
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateMessage, setUpdateMessage] = useState('A new version of the app is available. Please update to continue.');
   const [playStoreUrl, setPlayStoreUrl] = useState('');
@@ -422,56 +413,33 @@ function AppWithVersionCheck() {
   const [requiredVersionCode, setRequiredVersionCode] = useState<number | undefined>(undefined);
   const [currentVersion, setCurrentVersion] = useState('');
   const [currentVersionCode, setCurrentVersionCode] = useState<number | undefined>(undefined);
-  */
   const appState = useRef(AppState.currentState);
   const navigationRef = useRef<NavigationContainerRef<AppStackParamList>>(null);
 
-  // React Native Code - checkAppVersion function with API calls commented out
-  /* COMMENTED OUT - Version check functionality
   const checkAppVersion = async () => {
     try {
-      // Get current app version from expo-constants
       const currentVer = Constants.expoConfig?.version || '1.0.0';
-      const currentVerCode = Platform.OS === 'android' 
-        ? Constants.expoConfig?.android?.versionCode 
+      const currentVerCode = Platform.OS === 'android'
+        ? Constants.expoConfig?.android?.versionCode
         : undefined;
-      
+
       setCurrentVersion(currentVer);
       setCurrentVersionCode(currentVerCode);
-      
-      console.log('📱 [VERSION CHECK] Current app version:', currentVer);
 
-      // Check if user has already initiated update for a specific version
       const updateInitiated = await AsyncStorage.getItem(UPDATE_INITIATED_KEY);
       const lastUpdateVersion = await AsyncStorage.getItem(UPDATE_VERSION_KEY);
-      
-      // Fetch required version from backend
+
       const versionResponse = await getAppVersion();
-      
+
       if (versionResponse.success && versionResponse.data.isUpdateRequired) {
         const { requiredVersion: reqVersion, requiredVersionCode, updateMessage: msg, playStoreUrl: url, updateUrl: update } = versionResponse.data;
-        
-        // Get current versionCode for Android
-        const currentVersionCode = Platform.OS === 'android' 
-          ? Constants.expoConfig?.android?.versionCode 
-          : undefined;
-        
-        console.log('📱 [VERSION CHECK] Required version:', reqVersion);
-        console.log('📱 [VERSION CHECK] Required versionCode:', requiredVersionCode);
-        console.log('📱 [VERSION CHECK] Current versionCode:', currentVersionCode);
-        console.log('📱 [VERSION CHECK] Update required:', versionResponse.data.isUpdateRequired);
-        console.log('📱 [VERSION CHECK] Update URL:', update);
-        console.log('📱 [VERSION CHECK] Play Store URL:', url);
-        console.log('📱 [VERSION CHECK] Update already initiated:', updateInitiated);
-        console.log('📱 [VERSION CHECK] Last update version:', lastUpdateVersion);
 
-        // Check if current version is outdated (using both version string and versionCode)
+        const currentVersionCodeVal = Platform.OS === 'android'
+          ? Constants.expoConfig?.android?.versionCode
+          : undefined;
+
         if (isVersionOutdated(currentVer, reqVersion, currentVerCode, requiredVersionCode)) {
-          // Only show modal if:
-          // 1. Update was not initiated yet, OR
-          // 2. A new version requirement was set (different from the one user already initiated)
           if (!updateInitiated || lastUpdateVersion !== reqVersion) {
-            console.log('⚠️ [VERSION CHECK] App version is outdated. Showing update modal.');
             setUpdateMessage(msg);
             setPlayStoreUrl(url || '');
             setUpdateUrl(update || '');
@@ -479,37 +447,28 @@ function AppWithVersionCheck() {
             setRequiredVersionCode(requiredVersionCode);
             setShowUpdateModal(true);
           } else {
-            console.log('ℹ️ [VERSION CHECK] Update already initiated for this version. Modal not shown.');
             setShowUpdateModal(false);
           }
         } else {
-          console.log('✅ [VERSION CHECK] App version is up to date.');
-          // Clear update initiated flag if version is now up to date
           await AsyncStorage.removeItem(UPDATE_INITIATED_KEY);
           await AsyncStorage.removeItem(UPDATE_VERSION_KEY);
           setShowUpdateModal(false);
         }
       } else {
-        // No update required, clear flags and hide modal
         await AsyncStorage.removeItem(UPDATE_INITIATED_KEY);
         await AsyncStorage.removeItem(UPDATE_VERSION_KEY);
         setShowUpdateModal(false);
       }
     } catch (error) {
       console.error('❌ [VERSION CHECK] Failed to check app version:', error);
-      // Don't block app usage if version check fails, but keep modal if already shown
     }
   };
-  COMMENTED OUT - Version check functionality - END */
 
   useEffect(() => {
-    // Initialize OneSignal when app starts
     try {
       initializeOneSignal();
 
-      // Set up notification opened handler for navigation
       setNotificationOpenedHandler((notificationId?: string) => {
-        // Use a small delay to ensure navigation is ready
         setTimeout(() => {
           if (notificationId && navigationRef.current?.isReady()) {
             navigationRef.current.navigate('NotificationDetail', { notificationId });
@@ -522,25 +481,17 @@ function AppWithVersionCheck() {
       console.error('Failed to initialize OneSignal:', error);
     }
 
-    // React Native Code - Version check calls commented out
-    /* COMMENTED OUT - Version check on app start
-    // Check version after a short delay to ensure app is initialized
     const timer = setTimeout(() => {
       checkAppVersion();
     }, 1000);
 
-    // Listen for app state changes to recheck version when app comes to foreground
     const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
       if (
         appState.current.match(/inactive|background/) &&
         nextAppState === 'active'
       ) {
-        console.log('📱 [VERSION CHECK] App has come to the foreground, rechecking version...');
-        // Recheck version when app comes to foreground
-        // This ensures that if user updates the app and reopens, the check will run again
         checkAppVersion();
       }
-
       appState.current = nextAppState;
     });
 
@@ -548,7 +499,6 @@ function AppWithVersionCheck() {
       clearTimeout(timer);
       subscription.remove();
     };
-    */
   }, []);
 
   return (
@@ -558,7 +508,6 @@ function AppWithVersionCheck() {
           <RootNavigator />
         </AuthProvider>
       </NavigationContainer>
-      {/* React Native Code - UpdateRequiredModal component commented out
       <UpdateRequiredModal
         visible={showUpdateModal}
         updateMessage={updateMessage}
@@ -569,11 +518,9 @@ function AppWithVersionCheck() {
         currentVersion={currentVersion}
         currentVersionCode={currentVersionCode}
         onUpdate={() => {
-          // Close the modal when update button is clicked
           setShowUpdateModal(false);
         }}
       />
-      */}
     </>
   );
 }
