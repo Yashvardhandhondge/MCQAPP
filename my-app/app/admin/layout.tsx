@@ -117,31 +117,32 @@ export default function AdminLayout({
         </div>
         <nav className="flex-1 overflow-y-auto p-3 space-y-1">
           {NAV_ITEMS.map((item) => {
-            if ('action' in item && item.action === 'update') {
+            if ('href' in item) {
+              const { href, exact, label } = item;
               return (
-                <button
-                  key="update-app"
-                  type="button"
-                  onClick={() => setShowUpdateModal(true)}
-                  className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors"
+                <Link
+                  key={href}
+                  href={href}
+                  className={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive(href, exact)
+                      ? 'bg-zinc-200 dark:bg-zinc-800 text-black dark:text-zinc-50'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200'
+                  }`}
                 >
-                  {item.label}
-                </button>
+                  {label}
+                </Link>
               );
             }
 
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive(item.href, item.exact)
-                    ? 'bg-zinc-200 dark:bg-zinc-800 text-black dark:text-zinc-50'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200'
-                }`}
+              <button
+                key="update-app"
+                type="button"
+                onClick={() => setShowUpdateModal(true)}
+                className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors"
               >
                 {item.label}
-              </Link>
+              </button>
             );
           })}
         </nav>
