@@ -1733,7 +1733,7 @@ const adminGetPyqMockTestQuestions = async (req, res, next) => {
       ...yearFilter,
     })
       .lean()
-      .select('question options correctAnswer correctanswrs subject chapter year Title AddImage image');
+      .select('question options correctAnswer correctanswrs subject chapter year Title AddImage image fedToChapter fedToChapterAt');
 
     const data = questions.map((q) => ({
       _id: q._id,
@@ -1746,6 +1746,8 @@ const adminGetPyqMockTestQuestions = async (req, res, next) => {
       shift: q.Title || '',
       addImage: q.AddImage ?? q['Add image'] ?? '',
       image: q.image ?? '',
+      isFedToChapter: Boolean(q.fedToChapter),
+      fedToChapterAt: q.fedToChapterAt || null,
     }));
 
     res.status(200).json({
@@ -1823,10 +1825,34 @@ const feedPyqQuestionToChapter = async (req, res, next) => {
 
     const created = await Model.create(chapterDoc);
 
+    // Mark this PYQ question as already fed to chapter-based DB (persistent flag)
+    // This allows admin tools to visually highlight questions that have been added.
+    try {
+      await PyqMockTestModel.updateOne(
+        { _id: pyqQuestionId },
+        {
+          $set: {
+            fedToChapter: true,
+            fedToChapterAt: new Date(),
+            ...(req.user?._id ? { fedToChapterBy: req.user._id } : {}),
+          },
+        }
+      );
+    } catch (updateError) {
+      // Log but do not fail the main operation if this secondary update fails
+      console.error('Failed to mark PYQ question as fedToChapter:', updateError);
+    }
+
     res.status(201).json({
       success: true,
       message: 'Question added to chapter-based PYQ',
-      data: { _id: created._id, subject, chapter, year: yearToUse },
+      data: {
+        _id: created._id,
+        subject,
+        chapter,
+        year: yearToUse,
+        fedToChapter: true,
+      },
     });
   } catch (error) {
     if (error.status) return next(error);

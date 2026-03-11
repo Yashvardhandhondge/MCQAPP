@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StatusBar,
@@ -35,6 +36,7 @@ export default function ClassLoginScreen() {
 
   const [classes, setClasses] = useState<CoachingClass[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [classPickerVisible, setClassPickerVisible] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [formattedPhone, setFormattedPhone] = useState('');
   const [fetchingClasses, setFetchingClasses] = useState(false);
@@ -106,6 +108,7 @@ export default function ClassLoginScreen() {
   }, [formattedPhone, phoneNumber, selectedClassId, loginWithClass]);
 
   const canSubmit = !!selectedClassId && phoneNumber.length === 10 && !submitting && !loading;
+  const selectedClass = classes.find((klass) => klass._id === selectedClassId) || null;
 
   return (
     <KeyboardAvoidingView
@@ -167,36 +170,26 @@ export default function ClassLoginScreen() {
                         </Text>
                       </View>
                     ) : (
-                      <View style={styles.dropdownInner}>
-                        <Ionicons name="business-outline" size={18} color="#6366F1" />
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                          <View style={styles.classChipsRow}>
-                            {classes.map((klass) => {
-                              const isSelected = klass._id === selectedClassId;
-                              return (
-                                <TouchableOpacity
-                                  key={klass._id}
-                                  onPress={() => setSelectedClassId(klass._id)}
-                                  activeOpacity={0.7}
-                                  style={[
-                                    styles.classChip,
-                                    isSelected && styles.classChipSelected,
-                                  ]}
-                                >
-                                  <Text
-                                    style={[
-                                      styles.classChipText,
-                                      isSelected && styles.classChipTextSelected,
-                                    ]}
-                                  >
-                                    {klass.name}
-                                  </Text>
-                                </TouchableOpacity>
-                              );
-                            })}
-                          </View>
-                        </ScrollView>
-                      </View>
+                      <TouchableOpacity
+                        style={styles.dropdownSelect}
+                        activeOpacity={0.8}
+                        onPress={() => setClassPickerVisible(true)}
+                      >
+                        <View style={styles.dropdownInner}>
+                          <Ionicons name="business-outline" size={18} color="#6366F1" />
+                          <Text
+                            style={
+                              selectedClass
+                                ? styles.dropdownSelectedText
+                                : styles.dropdownPlaceholder
+                            }
+                            numberOfLines={1}
+                          >
+                            {selectedClass ? selectedClass.name : 'Tap to choose your class'}
+                          </Text>
+                          <Ionicons name="chevron-down" size={18} color="#6B7280" />
+                        </View>
+                      </TouchableOpacity>
                     )}
                   </View>
                 </View>
@@ -264,6 +257,62 @@ export default function ClassLoginScreen() {
           </ScrollView>
         </SafeAreaView>
       </LinearGradient>
+
+      {/* Class picker modal */}
+      <Modal
+        visible={classPickerVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setClassPickerVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Select your class</Text>
+            <ScrollView
+              style={styles.modalList}
+              contentContainerStyle={styles.modalListContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {classes.map((klass) => {
+                const isSelected = klass._id === selectedClassId;
+                return (
+                  <TouchableOpacity
+                    key={klass._id}
+                    style={[
+                      styles.modalItem,
+                      isSelected && styles.modalItemSelected,
+                    ]}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setSelectedClassId(klass._id);
+                      setClassPickerVisible(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalItemText,
+                        isSelected && styles.modalItemTextSelected,
+                      ]}
+                    >
+                      {klass.name}
+                    </Text>
+                    {isSelected && (
+                      <Ionicons name="checkmark-circle" size={20} color="#4F46E5" />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.modalCancelButton}
+              activeOpacity={0.8}
+              onPress={() => setClassPickerVisible(false)}
+            >
+              <Text style={styles.modalCancelButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -356,6 +405,9 @@ const styles = StyleSheet.create({
     minHeight: 56,
     justifyContent: 'center',
   },
+  dropdownSelect: {
+    borderRadius: radius.xl,
+  },
   dropdownInner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -365,6 +417,12 @@ const styles = StyleSheet.create({
   dropdownPlaceholder: {
     ...typography.body,
     color: '#6B7280',
+    fontSize: 13,
+    flex: 1,
+  },
+  dropdownSelectedText: {
+    ...typography.body,
+    color: '#111827',
     fontSize: 13,
     flex: 1,
   },
@@ -485,6 +543,70 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     lineHeight: 18,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: radius.xxl,
+    borderTopRightRadius: radius.xxl,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+  modalTitle: {
+    ...typography.subtitle,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  modalList: {
+    maxHeight: 320,
+  },
+  modalListContent: {
+    paddingBottom: spacing.sm,
+  },
+  modalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: spacing.sm,
+  },
+  modalItemSelected: {
+    borderColor: '#4F46E5',
+    backgroundColor: '#EEF2FF',
+  },
+  modalItemText: {
+    ...typography.body,
+    color: '#111827',
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  modalItemTextSelected: {
+    color: '#312E81',
+    fontWeight: '600',
+  },
+  modalCancelButton: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    borderRadius: radius.lg,
+    backgroundColor: '#F3F4F6',
+  },
+  modalCancelButtonText: {
+    ...typography.body,
+    color: '#111827',
+    fontWeight: '600',
   },
 });
 

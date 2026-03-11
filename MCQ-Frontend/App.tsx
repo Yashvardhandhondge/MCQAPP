@@ -42,6 +42,7 @@ import BottomTabBar from './src/components/ui/BottomTabBar';
 import PyqMockTestSelectionScreen from './src/screens/PyqMockTestSelectionScreen';
 import UpdateRequiredModal from './src/components/UpdateRequiredModal';
 import { getAppVersion, isVersionOutdated } from './src/services/appVersion.service';
+import { setUnauthorizedHandler } from './src/services/http';
 import { initializeOneSignal, setNotificationOpenedHandler, registerDeviceWithBackend, setOneSignalUserId, removeOneSignalUserId } from './src/services/oneSignal.service';
 import { colors, typography } from './src/theme';
 import BannerImage from './assets/images/Banner.png';
@@ -404,6 +405,22 @@ function RootNavigator() {
   );
 }
 
+function AuthAwareRoot() {
+  const { logout } = useAuth();
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      logout();
+    });
+
+    return () => {
+      setUnauthorizedHandler(null);
+    };
+  }, [logout]);
+
+  return <RootNavigator />;
+}
+
 function AppWithVersionCheck() {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateMessage, setUpdateMessage] = useState('A new version of the app is available. Please update to continue.');
@@ -505,7 +522,7 @@ function AppWithVersionCheck() {
     <>
       <NavigationContainer theme={navigationTheme} ref={navigationRef}>
         <AuthProvider>
-          <RootNavigator />
+          <AuthAwareRoot />
         </AuthProvider>
       </NavigationContainer>
       <UpdateRequiredModal

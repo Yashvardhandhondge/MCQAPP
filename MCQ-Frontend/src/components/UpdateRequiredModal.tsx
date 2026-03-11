@@ -1,3 +1,6 @@
+import { StyleSheet } from 'react-native';
+import { colors, typography } from '../theme';
+
 /* ============================================
  * UPDATE FUNCTIONALITY TEMPORARILY DISABLED
  * This update facility is commented out for launch.

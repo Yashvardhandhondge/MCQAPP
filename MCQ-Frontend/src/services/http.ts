@@ -9,6 +9,12 @@ export const axiosInstance = axios.create({
   },
 });
 
+let unauthorizedHandler: (() => void) | null = null;
+
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  unauthorizedHandler = handler;
+}
+
 // Request interceptor for logging
 axiosInstance.interceptors.request.use(
   (config) => {
@@ -65,6 +71,18 @@ axiosInstance.interceptors.response.use(
       data: error.response?.data,
       timestamp: new Date().toISOString(),
     });
+
+    if (
+      error?.response?.status === 401 &&
+      (error?.response?.data?.message === 'Invalid or expired token' ||
+        error?.response?.data?.error === 'Invalid or expired token')
+    ) {
+      console.log('🔒 [AUTH] Detected invalid/expired token. Triggering unauthorized handler.');
+      if (unauthorizedHandler) {
+        unauthorizedHandler();
+      }
+    }
+
     return Promise.reject(error);
   }
 );

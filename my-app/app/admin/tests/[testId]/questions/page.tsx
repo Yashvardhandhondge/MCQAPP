@@ -16,6 +16,8 @@ interface PyqQuestion {
   shift: string;
   addImage: string;
   image: string;
+  isFedToChapter?: boolean;
+  fedToChapterAt?: string | null;
 }
 
 const SUBJECTS = ['Chemistry', 'Physics', 'Maths', 'Biology'];
@@ -253,10 +255,15 @@ export default function AdminTestQuestionsPage() {
           <div className="space-y-4">
             {questions.map((q) => {
               const isExpanded = expandedId === q._id;
+              const wasFedToChapter = Boolean(q.isFedToChapter);
               return (
                 <div
                   key={q._id}
-                  className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden"
+                  className={`rounded-lg border overflow-hidden ${
+                    wasFedToChapter
+                      ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-600'
+                      : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800'
+                  }`}
                 >
                   <div className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -269,6 +276,11 @@ export default function AdminTestQuestionsPage() {
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      {wasFedToChapter && (
+                        <span className="inline-flex items-center rounded-full bg-yellow-200 dark:bg-yellow-700 px-2 py-0.5 text-xs font-medium text-yellow-900 dark:text-yellow-50">
+                          Already added
+                        </span>
+                      )}
                       <button
                         type="button"
                         onClick={() => setExpandedId(isExpanded ? null : q._id)}
