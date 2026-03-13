@@ -68,6 +68,11 @@ export interface Question {
   year: string;
   solution?: string;
   isBlurred?: boolean;
+  // Legacy single image URL for question (from PYQ migrations)
+  addImage?: string;
+  // New: multiple question images and per-option images
+  questionImages?: string[];
+  optionImages?: string[];
 }
 
 export interface QuestionsResponse {

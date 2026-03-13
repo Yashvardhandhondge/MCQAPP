@@ -10,6 +10,7 @@ import {
   Pressable,
   Alert,
   Animated,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -492,12 +493,36 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
                   <View style={styles.questionNumberBadge}>
                     <Text style={styles.questionNumberBadgeText}>{currentQuestionIndex + 1}</Text>
                   </View>
-                  <MathText style={styles.questionText}>{currentQuestion.question}</MathText>
+                  <View style={styles.questionTextWrapper}>
+                    <MathText style={styles.questionText}>{currentQuestion.question}</MathText>
+                    {(currentQuestion.addImage ||
+                      (currentQuestion.questionImages &&
+                        currentQuestion.questionImages.length > 0)) && (
+                      <View style={styles.questionImagesContainer}>
+                        {[currentQuestion.addImage, ...(currentQuestion.questionImages || [])]
+                          .filter((url): url is string => typeof url === 'string' && !!url.trim())
+                          .map((url, idx) => (
+                            <Image
+                              key={`${currentQuestion._id}-qi-${idx}`}
+                              source={{ uri: url }}
+                              style={styles.questionImage}
+                              resizeMode="contain"
+                            />
+                          ))}
+                      </View>
+                    )}
+                  </View>
                 </View>
 
                 <View style={styles.optionsContainer}>
                   {currentQuestion.options.map((option, idx) => {
                     const isSelected = selectedOption === option;
+                    const optionImage =
+                      Array.isArray(currentQuestion.optionImages) &&
+                      typeof currentQuestion.optionImages[idx] === 'string' &&
+                      currentQuestion.optionImages[idx]
+                        ? currentQuestion.optionImages[idx]
+                        : undefined;
                     const optionLabel = String.fromCharCode(65 + idx); // A, B, C, D
                     return (
                       <Pressable
@@ -524,9 +549,18 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
                               {optionLabel}
                             </Text>
                           </View>
-                          <MathText style={[styles.optionText, isSelected && styles.optionTextSelected]}>
-                            {option}
-                          </MathText>
+                          <View style={styles.optionContentInner}>
+                            <MathText style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                              {option}
+                            </MathText>
+                            {optionImage && (
+                              <Image
+                                source={{ uri: optionImage }}
+                                style={styles.optionImage}
+                                resizeMode="contain"
+                              />
+                            )}
+                          </View>
                         </View>
                         {isSelected && (
                           <View style={styles.selectedIconContainer}>
@@ -910,6 +944,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 18,
   },
+  questionTextWrapper: {
+    flex: 1,
+    gap: spacing.sm,
+  },
+  questionImagesContainer: {
+    marginTop: spacing.xs,
+    gap: spacing.xs,
+  },
+  questionImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: radius.lg,
+    backgroundColor: '#FFFFFF',
+  },
   questionNumber: {
     ...typography.h2,
     color: colors.authText,
@@ -944,6 +992,11 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     flex: 1,
   },
+  optionContentInner: {
+    flex: 1,
+    flexDirection: 'column',
+    gap: spacing.xs,
+  },
   optionLabel: {
     width: 40,
     height: 40,
@@ -976,6 +1029,12 @@ const styles = StyleSheet.create({
   optionTextSelected: {
     color: colors.authText,
     fontWeight: '600',
+  },
+  optionImage: {
+    width: '100%',
+    height: 140,
+    borderRadius: radius.md,
+    backgroundColor: '#FFFFFF',
   },
   selectedIconContainer: {
     marginLeft: spacing.xs,

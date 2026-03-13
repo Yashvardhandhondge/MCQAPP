@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -749,9 +750,26 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                               </BlurView>
                             </View>
                           ) : (
-                            <MathText style={styles.questionText}>
-                              {question.question}
-                            </MathText>
+                            <>
+                              <MathText style={styles.questionText}>
+                                {question.question}
+                              </MathText>
+                              {/* Question images (legacy addImage + new questionImages) */}
+                              {(question.addImage || (question.questionImages && question.questionImages.length > 0)) && (
+                                <View style={styles.questionImagesContainer}>
+                                  {[question.addImage, ...(question.questionImages || [])]
+                                    .filter((url): url is string => typeof url === 'string' && !!url.trim())
+                                    .map((url, idx) => (
+                                      <Image
+                                        key={`${question._id}-qi-${idx}`}
+                                        source={{ uri: url }}
+                                        style={styles.questionImage}
+                                        resizeMode="contain"
+                                      />
+                                    ))}
+                                </View>
+                              )}
+                            </>
                           )}
                         </View>
                       
@@ -763,6 +781,12 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                           const isDisabled = (!showWithAttempts && state?.isSubmitted) || state?.isSubmitting;
                           const isBlurred = question.isBlurred && !isPremium && !revealedQuestions.has(question._id);
                           
+                          const optionImage =
+                            Array.isArray(question.optionImages) &&
+                            typeof question.optionImages[optionIndex] === 'string' &&
+                            question.optionImages[optionIndex]
+                              ? question.optionImages[optionIndex]
+                              : undefined;
                           return (
                             <View key={optionIndex} style={styles.optionWrapper}>
                               {isBlurred ? (
@@ -779,15 +803,24 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                                         <View style={styles.optionIconContainer}>
                                           {getOptionIcon(question._id, option)}
                                         </View>
-                                        <MathText
-                                          style={[
-                                            styles.optionText,
-                                            ...(state?.selectedOption === option ? [styles.optionTextSelected] : []),
-                                            styles.blurredOptionText,
-                                          ]}
-                                        >
-                                          {option}
-                                        </MathText>
+                                        <View style={styles.optionContentInner}>
+                                          <MathText
+                                            style={[
+                                              styles.optionText,
+                                              ...(state?.selectedOption === option ? [styles.optionTextSelected] : []),
+                                              styles.blurredOptionText,
+                                            ]}
+                                          >
+                                            {option}
+                                          </MathText>
+                                          {optionImage && (
+                                            <Image
+                                              source={{ uri: optionImage }}
+                                              style={styles.optionImage}
+                                              resizeMode="contain"
+                                            />
+                                          )}
+                                        </View>
                                       </View>
                                     </TouchableOpacity>
                                   </View>
@@ -818,14 +851,23 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                                     <View style={styles.optionIconContainer}>
                                       {getOptionIcon(question._id, option)}
                                     </View>
-                                    <MathText
-                                      style={[
-                                        styles.optionText,
-                                        ...(state?.selectedOption === option ? [styles.optionTextSelected] : []),
-                                      ]}
-                                    >
-                                      {option}
-                                    </MathText>
+                                    <View style={styles.optionContentInner}>
+                                      <MathText
+                                        style={[
+                                          styles.optionText,
+                                          ...(state?.selectedOption === option ? [styles.optionTextSelected] : []),
+                                        ]}
+                                      >
+                                        {option}
+                                      </MathText>
+                                      {optionImage && (
+                                        <Image
+                                          source={{ uri: optionImage }}
+                                          style={styles.optionImage}
+                                          resizeMode="contain"
+                                        />
+                                      )}
+                                    </View>
                                   </View>
                                 </TouchableOpacity>
                               )}
@@ -1147,6 +1189,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
+  questionImagesContainer: {
+    marginTop: spacing.xs,
+    gap: spacing.xs,
+  },
+  questionImage: {
+    width: '100%',
+    height: 160,
+    borderRadius: radius.md,
+    backgroundColor: '#FFFFFF',
+  },
   optionsContainer: {
     marginTop: spacing.md,
     gap: spacing.sm,
@@ -1188,6 +1240,17 @@ const styles = StyleSheet.create({
   optionBlurTouchable: {
     flex: 1,
     minHeight: 50,
+  },
+  optionContentInner: {
+    flex: 1,
+    flexDirection: 'column',
+    gap: spacing.xs,
+  },
+  optionImage: {
+    width: '100%',
+    height: 120,
+    borderRadius: radius.sm,
+    backgroundColor: '#FFFFFF',
   },
   option: {
     backgroundColor: colors.authSurface,

@@ -51,10 +51,20 @@ const McqQuestionSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    // Optional question image URL (for future use; migrated from PYQ AddImage)
+    // Legacy single-question image URL (for future use; migrated from PYQ AddImage)
     addImage: {
       type: String,
       trim: true,
+    },
+    // New: multiple question images (mirrors PYQ questionImages)
+    questionImages: {
+      type: [String],
+      default: [],
+    },
+    // New: per-option images, index-aligned with `options`
+    optionImages: {
+      type: [String],
+      default: [],
     },
   },
   {

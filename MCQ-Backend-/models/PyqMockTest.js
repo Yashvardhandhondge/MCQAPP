@@ -49,10 +49,32 @@ const PyqMockTestQuestionSchema = new mongoose.Schema(
       type: String,
       alias: 'Add image',
     },
-    // Uploaded image URL (Cloudinary) – set when admin adds image for this question
+    // Legacy single-question image URL (Cloudinary) – kept for backward compatibility
     image: {
       type: String,
       trim: true,
+    },
+    // New: multiple question images (e.g. statement diagrams above/below text)
+    questionImages: {
+      type: [String],
+      default: [],
+    },
+    // New: per-option images, index-aligned with `options` array (A,B,C,D...)
+    optionImages: {
+      type: [String],
+      default: [],
+    },
+    // Set when this question has been added to chapter-based PYQ (admin feed-to-chapter)
+    fedToChapter: {
+      type: Boolean,
+      default: false,
+    },
+    fedToChapterAt: {
+      type: Date,
+    },
+    fedToChapterBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
     },
   },
   {

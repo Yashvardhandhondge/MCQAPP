@@ -41,6 +41,7 @@ const {
   adminGetPyqMockTestQuestions,
   feedPyqQuestionToChapter,
   updatePyqQuestionImage,
+  updatePyqOptionImage,
 } = require('../controllers/test.controller');
 const {
   getLeaderboard,
@@ -626,6 +627,7 @@ router.delete('/admin/app-version', ...adminAuthGuard, disableUpdateRequirement)
 router.get('/admin/pyq-mock-tests', ...adminAuthGuard, getAvailablePyqMockTests);
 router.get('/admin/pyq-mock-tests/questions', ...adminAuthGuard, adminGetPyqMockTestQuestions);
 router.put('/admin/pyq-mock-tests/questions/:questionId/image', ...adminAuthGuard, updatePyqQuestionImage);
+router.put('/admin/pyq-mock-tests/questions/:questionId/options/:optionIndex/image', ...adminAuthGuard, updatePyqOptionImage);
 router.post('/admin/pyq-mock-tests/feed-to-chapter', ...adminAuthGuard, feedPyqQuestionToChapter);
 router.get('/admin/subjects/:subject/chapters', ...adminAuthGuard, getChaptersBySubject);
 

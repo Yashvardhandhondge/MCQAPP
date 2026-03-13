@@ -1733,7 +1733,21 @@ const adminGetPyqMockTestQuestions = async (req, res, next) => {
       ...yearFilter,
     })
       .lean()
-      .select('question options correctAnswer correctanswrs subject chapter year Title AddImage image fedToChapter fedToChapterAt');
+      .select('question options correctAnswer correctanswrs subject chapter year Title AddImage image questionImages optionImages fedToChapter fedToChapterAt');
+
+    // Fallback: questions added to chapter-based PYQ before fedToChapter existed may not have the flag.
+    // Check chapter-based collections for same question text so they still show as "Already added".
+    const questionTexts = [...new Set(questions.map((q) => q.question).filter(Boolean))];
+    const existingInChapterTexts = new Set();
+    if (questionTexts.length > 0) {
+      const allModels = getAllModels();
+      for (const Model of Object.values(allModels)) {
+        const docs = await Model.find({ question: { $in: questionTexts } })
+          .select('question')
+          .lean();
+        docs.forEach((d) => existingInChapterTexts.add(d.question));
+      }
+    }
 
     const data = questions.map((q) => ({
       _id: q._id,
@@ -1746,7 +1760,10 @@ const adminGetPyqMockTestQuestions = async (req, res, next) => {
       shift: q.Title || '',
       addImage: q.AddImage ?? q['Add image'] ?? '',
       image: q.image ?? '',
-      isFedToChapter: Boolean(q.fedToChapter),
+      // New multi-image fields
+      questionImages: Array.isArray(q.questionImages) ? q.questionImages : [],
+      optionImages: Array.isArray(q.optionImages) ? q.optionImages : [],
+      isFedToChapter: Boolean(q.fedToChapter) || existingInChapterTexts.has(q.question),
       fedToChapterAt: q.fedToChapterAt || null,
     }));
 
@@ -1767,7 +1784,7 @@ const adminGetPyqMockTestQuestions = async (req, res, next) => {
  */
 const feedPyqQuestionToChapter = async (req, res, next) => {
   try {
-    const { pyqQuestionId, subject, chapter, year } = req.body;
+    const { pyqQuestionId, subject, chapter, year, correctAnswer: bodyCorrectAnswer } = req.body;
 
     if (!pyqQuestionId) {
       return next(createError(400, 'pyqQuestionId is required'));
@@ -1791,7 +1808,15 @@ const feedPyqQuestionToChapter = async (req, res, next) => {
       return next(createError(400, 'year is required (provide in body or ensure PYQ question has year)'));
     }
 
-    const correctAnswer = pyqDoc.correctAnswer ?? pyqDoc.correctanswrs ?? '';
+    const docCorrectAnswer = (pyqDoc.correctAnswer ?? pyqDoc.correctanswrs ?? '').toString().trim();
+    const correctAnswer = (bodyCorrectAnswer != null && String(bodyCorrectAnswer).trim() !== '')
+      ? String(bodyCorrectAnswer).trim()
+      : docCorrectAnswer;
+
+    if (!correctAnswer) {
+      return next(createError(400, 'Correct answer is required. Please select the correct answer for this question before adding to chapter-based PYQ.'));
+    }
+
     const imageOrAddImage = pyqDoc.image ?? pyqDoc.AddImage ?? pyqDoc['Add image'] ?? '';
     const shift = pyqDoc.Title ?? '';
 
@@ -1819,24 +1844,29 @@ const feedPyqQuestionToChapter = async (req, res, next) => {
       year: yearToUse,
       shift: shift || undefined,
       addImage: imageOrAddImage || undefined,
+      // Copy multi-image metadata into chapter-based DB
+      questionImages: Array.isArray(pyqDoc.questionImages) ? pyqDoc.questionImages : [],
+      optionImages: Array.isArray(pyqDoc.optionImages) ? pyqDoc.optionImages : [],
     };
     if (pyqDoc.solution) chapterDoc.solution = pyqDoc.solution;
     if (pyqDoc.sourceFile) chapterDoc.sourceFile = pyqDoc.sourceFile;
 
     const created = await Model.create(chapterDoc);
 
-    // Mark this PYQ question as already fed to chapter-based DB (persistent flag)
-    // This allows admin tools to visually highlight questions that have been added.
+    // Mark this PYQ question as already fed to chapter-based DB (persistent flag).
+    // If admin provided correctAnswer and the PYQ doc didn't have it, save it for next time.
     try {
+      const pyqUpdate = {
+        fedToChapter: true,
+        fedToChapterAt: new Date(),
+        ...(req.user?._id ? { fedToChapterBy: req.user._id } : {}),
+      };
+      if (!docCorrectAnswer && correctAnswer) {
+        pyqUpdate.correctAnswer = correctAnswer;
+      }
       await PyqMockTestModel.updateOne(
         { _id: pyqQuestionId },
-        {
-          $set: {
-            fedToChapter: true,
-            fedToChapterAt: new Date(),
-            ...(req.user?._id ? { fedToChapterBy: req.user._id } : {}),
-          },
-        }
+        { $set: pyqUpdate }
       );
     } catch (updateError) {
       // Log but do not fail the main operation if this secondary update fails
@@ -1921,6 +1951,80 @@ const updatePyqQuestionImage = async (req, res, next) => {
   }
 };
 
+/**
+ * Admin: Set/update image for a specific option of a PYQ question.
+ * Also propagates to any chapter-based copies (same question text + shift).
+ * PUT /api/mcq/admin/pyq-mock-tests/questions/:questionId/options/:optionIndex/image
+ * Body: { image: "<url>" }
+ */
+const updatePyqOptionImage = async (req, res, next) => {
+  try {
+    const { questionId, optionIndex } = req.params;
+    const { image } = req.body;
+
+    if (!questionId) {
+      return next(createError(400, 'questionId is required'));
+    }
+    const idx = parseInt(optionIndex, 10);
+    if (Number.isNaN(idx) || idx < 0) {
+      return next(createError(400, 'optionIndex must be a non-negative integer'));
+    }
+
+    const imageUrl = typeof image === 'string' ? image.trim() : '';
+    if (!imageUrl) {
+      return next(createError(400, 'image URL is required'));
+    }
+
+    const pyqDoc = await PyqMockTestModel.findById(questionId).lean();
+    if (!pyqDoc) {
+      return next(createError(404, 'PYQ question not found'));
+    }
+
+    if (!Array.isArray(pyqDoc.options) || idx >= pyqDoc.options.length) {
+      return next(createError(400, 'Invalid optionIndex for this question'));
+    }
+
+    const setUpdate = {};
+    setUpdate[`optionImages.${idx}`] = imageUrl;
+
+    await PyqMockTestModel.updateOne(
+      { _id: questionId },
+      { $set: setUpdate }
+    );
+
+    // Also update chapter-based copies for this question + shift
+    const questionText = pyqDoc.question;
+    const shiftTitle = pyqDoc.Title || '';
+    const models = getAllModels();
+    const chapterUpdate = {};
+    chapterUpdate[`optionImages.${idx}`] = imageUrl;
+
+    for (const Model of Object.values(models)) {
+      await Model.updateMany(
+        {
+          question: questionText,
+          ...(shiftTitle ? { shift: shiftTitle } : {}),
+        },
+        { $set: chapterUpdate }
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Option image saved for question',
+      data: {
+        questionId,
+        optionIndex: idx,
+        image: imageUrl,
+      },
+    });
+  } catch (error) {
+    if (error.status) return next(error);
+    console.error('Error updating PYQ option image:', error);
+    return next(createError(500, 'Failed to update option image'));
+  }
+};
+
 module.exports = {
   getAvailableTests,
   getDistinctYears,
@@ -1940,4 +2044,5 @@ module.exports = {
   adminGetPyqMockTestQuestions,
   feedPyqQuestionToChapter,
   updatePyqQuestionImage,
+  updatePyqOptionImage,
 };
