@@ -357,6 +357,30 @@ export async function getMockTestLeaderboard(mockTestNumber: number): Promise<Le
   }
 }
 
+export async function getPyqMockTestLeaderboard(
+  title: string,
+  year?: string
+): Promise<LeaderboardResponse> {
+  try {
+    const params: { title: string; year?: string } = { title };
+    if (year) {
+      params.year = year;
+    }
+    const response = await axiosInstance.get<LeaderboardResponse>(
+      '/api/mcq/leaderboard/pyq-mocktest',
+      { params }
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(
+        error.response?.data?.message ?? 'Failed to load PYQ mock test leaderboard'
+      );
+    }
+    throw new Error('Failed to load PYQ mock test leaderboard');
+  }
+}
+
 // Test Report functions
 export async function getTestReport(sessionId: string): Promise<TestReportResponse> {
   try {

@@ -111,9 +111,6 @@ export default function UpdateRequiredModal({
     return null;
   }
 
-  // Modal rendering is temporarily commented out to avoid blocking local login.
-  // Uncomment this block when you want the update modal active again.
-  /*
   return (
     <Modal
       visible={visible}
@@ -157,7 +154,6 @@ export default function UpdateRequiredModal({
       </View>
     </Modal>
   );
-  */
 
   /* COMMENTED OUT UPDATE FUNCTIONALITY - START
   const [updating, setUpdating] = useState(false);
@@ -562,6 +558,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 22,
+  },
+  versionText: {
+    fontSize: typography.caption.fontSize,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 4,
   },
   updateButton: {
     backgroundColor: colors.primary,

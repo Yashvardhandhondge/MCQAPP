@@ -35,6 +35,7 @@ import SavedQuestionsListScreen from './src/screens/SavedQuestionsListScreen';
 import MockTestSelectionScreen from './src/screens/MockTestSelectionScreen';
 import MockTestLeaderboardSelectionScreen from './src/screens/MockTestLeaderboardSelectionScreen';
 import MockTestLeaderboardScreen from './src/screens/MockTestLeaderboardScreen';
+import PyqMockTestLeaderboardScreen from './src/screens/PyqMockTestLeaderboardScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
 import NotificationDetailScreen from './src/screens/NotificationDetailScreen';
 import PrivacyScreen from './src/screens/PrivacyScreen';
@@ -322,6 +323,15 @@ function AppStackNavigator() {
       <AppStack.Screen
         name="MockTestLeaderboard"
         component={MockTestLeaderboardScreen}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          animationDuration: 300,
+        }}
+      />
+      <AppStack.Screen
+        name="PyqMockTestLeaderboard"
+        component={PyqMockTestLeaderboardScreen}
         options={{
           headerShown: false,
           animation: 'slide_from_right',

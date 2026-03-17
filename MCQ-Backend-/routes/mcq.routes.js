@@ -47,6 +47,7 @@ const {
   getLeaderboard,
   getUserRank,
   getMockTestLeaderboard,
+  getPyqMockTestLeaderboard,
 } = require('../controllers/leaderboard.controller');
 const {
   getExamConfig,
@@ -277,6 +278,15 @@ router.get('/leaderboard', getLeaderboard);
  * @access  Private (requires authentication)
  */
 router.get('/leaderboard/mock-test/:mockTestNumber', getMockTestLeaderboard);
+
+/**
+ * @route   GET /api/mcq/leaderboard/pyq-mocktest
+ * @desc    Get leaderboard rankings for a specific PYQ mock test (by title/year)
+ * @query   {string} title - PYQ mock test title
+ * @query   {string} year - Optional exam year
+ * @access  Private (requires authentication)
+ */
+router.get('/leaderboard/pyq-mocktest', getPyqMockTestLeaderboard);
 
 /**
  * @route   POST /api/mcq/questions/by-ids

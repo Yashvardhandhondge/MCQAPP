@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { AppStackParamList } from '../navigation/types';
-import { getPyqMockTests } from '../services/mcq.service';
+import { getPyqMockTests, getTestReports } from '../services/mcq.service';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import BackHeader from '../components/ui/BackHeader';
 import { safeGoBack } from '../utils/navigation';
@@ -38,6 +38,7 @@ export default function PyqMockTestSelectionScreen({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryTrigger, setRetryTrigger] = useState(0);
+  const [attemptedIds, setAttemptedIds] = useState<Set<string>>(new Set());
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -69,6 +70,27 @@ export default function PyqMockTestSelectionScreen({
         const response = await getPyqMockTests();
         if (isMounted) {
           setTests(response.data || []);
+        }
+
+        // After loading tests, fetch attempts to mark attempted PYQ papers
+        try {
+          const reportsResponse = await getTestReports({
+            testType: 'pyq-mocktest',
+          });
+          if (isMounted) {
+            const reports = reportsResponse.data || [];
+            const attempted = new Set<string>();
+            // match by title (stored in chapter) and year
+            reports.forEach((rep: any) => {
+              const key = `${rep.chapter || ''}__${rep.year || ''}`;
+              attempted.add(key);
+            });
+            setAttemptedIds(attempted);
+          }
+        } catch {
+          if (isMounted) {
+            setAttemptedIds(new Set());
+          }
         }
       } catch (requestError) {
         if (isMounted) {
@@ -192,6 +214,11 @@ export default function PyqMockTestSelectionScreen({
                           </View>
                         </View>
                         <View style={styles.cardRight}>
+                          {attemptedIds.has(`${test.title}__${test.year}`) && (
+                            <View style={styles.attemptBadge}>
+                              <Ionicons name="checkmark-circle" size={18} color="#22C55E" />
+                            </View>
+                          )}
                           <Ionicons
                             name="chevron-forward"
                             size={20}
@@ -351,6 +378,11 @@ const styles = StyleSheet.create({
     marginLeft: spacing.md,
     justifyContent: 'center',
     alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  attemptBadge: {
+    marginRight: spacing.xs,
   },
 });
 

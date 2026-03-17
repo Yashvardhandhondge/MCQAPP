@@ -3,6 +3,7 @@ const UserAttempt = require('../models/UserAttempt');
 const User = require('../Modals/UserModal');
 const TestSession = require('../models/TestSession');
 const MockTestModel = require('../models/MockTest');
+const PyqMockTestModel = require('../models/PyqMockTest');
 
 const getQuestionSubjectName = (question) =>
   String(question?.subject || question?.originalSubject || question?.sub || '').trim();
@@ -382,10 +383,104 @@ const getMockTestLeaderboard = async (req, res, next) => {
   }
 };
 
+/**
+ * Get PYQ mock test leaderboard
+ * GET /api/mcq/leaderboard/pyq-mocktest?title=...&year=...
+ * Ranks users for a specific PYQ mock paper (title + optional year)
+ */
+const getPyqMockTestLeaderboard = async (req, res, next) => {
+  try {
+    const userId = req.user._id.toString();
+    const { title, year } = req.query;
+
+    if (!title || typeof title !== 'string' || !title.trim()) {
+      return next(createError(400, 'Title is required for PYQ mock test leaderboard'));
+    }
+
+    const normalizedTitle = title.trim();
+
+    const filter = {
+      testType: 'pyq-mocktest',
+      status: 'completed',
+      chapter: normalizedTitle,
+    };
+
+    if (year !== undefined && year !== null && String(year).trim() !== '') {
+      filter.year = String(year).trim();
+    }
+
+    const sessions = await TestSession.find(filter)
+      .select('user score totalQuestions completedAt')
+      .sort({ score: -1, completedAt: 1 })
+      .limit(100)
+      .lean();
+
+    if (sessions.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+      });
+    }
+
+    // Aggregate best score per user (in case of multiple attempts)
+    const userScoreMap = new Map();
+    sessions.forEach((session) => {
+      const userIdStr = session.user.toString();
+      const resolvedScore = Number(session.score) || 0;
+      if (!userScoreMap.has(userIdStr) || userScoreMap.get(userIdStr).score < resolvedScore) {
+        userScoreMap.set(userIdStr, {
+          userId: userIdStr,
+          score: resolvedScore,
+          totalQuestions: session.totalQuestions || 0,
+          completedAt: session.completedAt,
+        });
+      }
+    });
+
+    const leaderboardData = Array.from(userScoreMap.values())
+      .sort((a, b) => {
+        if (b.score !== a.score) {
+          return b.score - a.score;
+        }
+        return new Date(a.completedAt) - new Date(b.completedAt);
+      })
+      .slice(0, 100);
+
+    const userIds = leaderboardData.map((entry) => entry.userId);
+    const users = await User.find({ _id: { $in: userIds } })
+      .select('fullName email')
+      .lean();
+
+    const userMap = new Map(users.map((u) => [u._id.toString(), u]));
+
+    const leaderboard = leaderboardData.map((entry, index) => {
+      const user = userMap.get(entry.userId);
+      return {
+        id: entry.userId,
+        name: user?.fullName || 'Anonymous',
+        score: parseFloat((entry.score || 0).toFixed(1)),
+        rank: index + 1,
+        isCurrentUser: entry.userId === userId,
+        totalCorrect: Math.round(entry.score || 0),
+        totalAttempts: entry.totalQuestions || 0,
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      data: leaderboard,
+    });
+  } catch (error) {
+    console.error('Error getting PYQ mock test leaderboard:', error);
+    return next(createError(500, 'Failed to fetch PYQ mock test leaderboard'));
+  }
+};
+
 module.exports = {
   getLeaderboard,
   getUserRank,
   getMockTestLeaderboard,
+  getPyqMockTestLeaderboard,
 };
 
 

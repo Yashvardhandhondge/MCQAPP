@@ -60,4 +60,8 @@ export type AppStackParamList = {
       subjects: string[];
     };
   };
+  PyqMockTestLeaderboard: {
+    title: string;
+    year?: string;
+  };
 };

@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { AppStackParamList } from '../navigation/types';
-import { startPyqMockTestSession } from '../services/mcq.service';
+import { startPyqMockTestSession, getTestReports } from '../services/mcq.service';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import BackHeader from '../components/ui/BackHeader';
 import { safeGoBack } from '../utils/navigation';
@@ -41,6 +41,13 @@ export default function PyqMockTestInstructionsScreen({
   const { test } = route.params;
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasAttempted, setHasAttempted] = useState(false);
+  const [lastAttempt, setLastAttempt] = useState<{
+    sessionId: string;
+    score: number;
+    total: number;
+    accuracy: string;
+  } | null>(null);
 
   const subjectsLabel = useMemo(() => {
     if (!Array.isArray(test.subjects) || test.subjects.length === 0) {
@@ -50,6 +57,47 @@ export default function PyqMockTestInstructionsScreen({
   }, [test.subjects]);
 
   const testTitle = test.year ? `${test.title} • ${test.year}` : test.title;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchAttemptStatus() {
+      try {
+        const response = await getTestReports({
+          testType: 'pyq-mocktest',
+          chapter: test.title,
+          year: test.year,
+        });
+
+        const reports = response.data || [];
+        if (!isMounted) return;
+
+        if (reports.length > 0) {
+          const latest = reports[0];
+          setHasAttempted(true);
+          setLastAttempt({
+            sessionId: latest.sessionId,
+            score: latest.score,
+            total: latest.total,
+            accuracy: String(latest.accuracy),
+          });
+        } else {
+          setHasAttempted(false);
+          setLastAttempt(null);
+        }
+      } catch {
+        if (!isMounted) return;
+        setHasAttempted(false);
+        setLastAttempt(null);
+      }
+    }
+
+    fetchAttemptStatus();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [test.title, test.year]);
 
   const handleStartTest = async () => {
     setStarting(true);
@@ -85,6 +133,39 @@ export default function PyqMockTestInstructionsScreen({
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}
         >
+          {hasAttempted && lastAttempt && (
+            <>
+              <View style={styles.attemptSummaryCard}>
+                <View style={styles.attemptSummaryHeader}>
+                  <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                  <Text style={styles.attemptSummaryTitle}>You have attempted this paper</Text>
+                </View>
+                <Text style={styles.attemptSummaryText}>
+                  Marks: {lastAttempt.score}/{lastAttempt.total} · Accuracy: {lastAttempt.accuracy}%
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() =>
+                  navigation.navigate('PyqMockTestLeaderboard', {
+                    title: test.title,
+                    year: test.year,
+                  })
+                }
+                style={styles.leaderboardButtonWrap}
+              >
+                <View style={styles.leaderboardButton}>
+                  <Ionicons name="trophy" size={18} color={colors.primary} />
+                  <Text style={styles.leaderboardButtonText}>
+                    View leaderboard for this paper
+                  </Text>
+                  <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+                </View>
+              </TouchableOpacity>
+            </>
+          )}
+
           <View style={styles.heroCard}>
             <View style={styles.heroTopRow}>
               <View style={styles.heroIconWrap}>
@@ -165,7 +246,9 @@ export default function PyqMockTestInstructionsScreen({
               ) : (
                 <>
                   <Ionicons name="play" size={18} color="#FFFFFF" />
-                  <Text style={styles.startButtonText}>Start Test</Text>
+                  <Text style={styles.startButtonText}>
+                    {hasAttempted ? 'Retest Again' : 'Start Test'}
+                  </Text>
                 </>
               )}
             </LinearGradient>
@@ -335,6 +418,56 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     flex: 1,
+  },
+  attemptSummaryCard: {
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: '#ECFEFF',
+    borderWidth: 1,
+    borderColor: '#22D3EE',
+  },
+  attemptSummaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  attemptSummaryTitle: {
+    ...typography.subtitle,
+    color: colors.primary,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  attemptSummaryText: {
+    ...typography.body,
+    color: colors.authText,
+    fontSize: 13,
+  },
+  leaderboardButtonWrap: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  leaderboardButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.lg,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  leaderboardButtonText: {
+    ...typography.subtitle,
+    color: colors.primary,
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: spacing.sm,
+    fontSize: 13,
   },
   startButtonWrap: {
     borderRadius: radius.xl,
