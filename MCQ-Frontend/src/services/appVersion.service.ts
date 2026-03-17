@@ -44,19 +44,15 @@ export function isVersionOutdated(
   currentVersionCode?: number,
   requiredVersionCode?: number
 ): boolean {
-  // If versionCode is available and provided, use it as primary check (more reliable for Android)
+  // STRICT MODE: require exact version match.
+  // If versionCode is available, ANY mismatch (older OR newer) is considered outdated.
   if (currentVersionCode !== undefined && requiredVersionCode !== undefined) {
-    if (currentVersionCode < requiredVersionCode) {
-      return true;
-    }
-    if (currentVersionCode > requiredVersionCode) {
-      return false;
-    }
-    // If versionCodes are equal, fall through to version string comparison
+    return currentVersionCode !== requiredVersionCode;
   }
-  
-  // Fall back to version string comparison
-  return compareVersions(currentVersion, requiredVersion) < 0;
+
+  // Fallback for platforms without versionCode (iOS/web):
+  // treat any semantic version difference as outdated.
+  return compareVersions(currentVersion, requiredVersion) !== 0;
 }
 
 /**

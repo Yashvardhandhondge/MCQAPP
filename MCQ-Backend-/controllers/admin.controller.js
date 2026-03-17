@@ -241,6 +241,79 @@ const getAllUsers = async (req, res, next) => {
 };
 
 /**
+ * Get premium users with pagination (Admin only)
+ * GET /api/mcq/admin/premium-users
+ */
+const getPremiumUsers = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const filter = { subscription: 'premium' };
+    if (req.query.group) {
+      filter.group = req.query.group;
+    }
+    if (req.query.role) {
+      filter.role = req.query.role;
+    }
+    if (req.query.search) {
+      const search = String(req.query.search).trim();
+      if (search) {
+        const regex = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        filter.$or = [
+          { fullName: regex },
+          { email: regex },
+          { phoneNumber: regex },
+        ];
+      }
+    }
+    if (req.query.startDate || req.query.endDate) {
+      filter.createdAt = {};
+      if (req.query.startDate) {
+        const start = new Date(req.query.startDate);
+        if (!Number.isNaN(start.getTime())) {
+          filter.createdAt.$gte = start;
+        }
+      }
+      if (req.query.endDate) {
+        const end = new Date(req.query.endDate);
+        if (!Number.isNaN(end.getTime())) {
+          end.setHours(23, 59, 59, 999);
+          filter.createdAt.$lte = end;
+        }
+      }
+    }
+
+    const users = await User.find(filter)
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const total = await User.countDocuments(filter);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        users,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalUsers: total,
+          hasNextPage: page < Math.ceil(total / limit),
+          hasPrevPage: page > 1,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Error getting premium users:', error);
+    return next(createError(500, 'Failed to fetch premium users'));
+  }
+};
+
+/**
  * Get payment/order event logs (Admin only)
  * GET /api/mcq/admin/payment-logs
  */
@@ -324,6 +397,7 @@ const updateUserSubscription = async (req, res, next) => {
 module.exports = {
   getUserStats,
   getAllUsers,
+  getPremiumUsers,
   exportAllUsersAsCsv,
   getPaymentLogs,
   updateUserSubscription,

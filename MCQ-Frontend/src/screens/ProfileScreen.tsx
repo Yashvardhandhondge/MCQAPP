@@ -93,6 +93,11 @@ export default function ProfileScreen() {
   const [paymentHistoryLoading, setPaymentHistoryLoading] = useState(false);
   const appState = useRef(AppState.currentState);
 
+  // Simple, always-visible app version info (no API calls)
+  const currentVersion = Constants.expoConfig?.version || '1.0.0';
+  const currentVersionCode =
+    Platform.OS === 'android' ? Constants.expoConfig?.android?.versionCode : undefined;
+
   useEffect(() => {
     // Entrance animations
     Animated.parallel([
@@ -571,61 +576,26 @@ export default function ProfileScreen() {
                   </View>
                 </TouchableOpacity>
 
-                {/* React Native Code - App Version row with update functionality commented out */}
-                {/* COMMENTED OUT - App Version card with update button
+                {/* App Version (display only) */}
                 <View style={styles.infoCard}>
                   <View style={styles.infoCardHeader}>
                     <LinearGradient
-                      colors={isUpdateAvailable ? ['#F59E0B', '#D97706'] : colors.gradientPrimary as [string, string, ...string[]]}
+                      colors={colors.gradientPrimary as [string, string, ...string[]]}
                       style={styles.infoIconContainer}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                     >
-                      <Ionicons name={isUpdateAvailable ? 'arrow-up-circle' : 'information-circle'} size={20} color="#FFFFFF" />
+                      <Ionicons name="information-circle" size={20} color="#FFFFFF" />
                     </LinearGradient>
                     <View style={styles.infoCardContent}>
                       <Text style={styles.infoCardLabel}>App Version</Text>
-                      {isVersionCheckLoading ? (
-                        <View style={styles.versionLoadingContainer}>
-                          <ActivityIndicator size="small" color={colors.primary} />
-                          <Text style={styles.infoCardSubtext}>Checking version...</Text>
-                        </View>
-                      ) : (
-                        <>
-                          <Text style={styles.infoCardValue}>Current: {currentVersion || '1.0.0'}</Text>
-                          {requiredVersion && (
-                            <Text style={[styles.infoCardSubtext, isUpdateAvailable && styles.updateAvailableText]}>
-                              Required: {requiredVersion}
-                            </Text>
-                          )}
-                          {isUpdateAvailable && (
-                            <TouchableOpacity
-                              onPress={handleUpdateClick}
-                              activeOpacity={0.8}
-                              style={styles.updateButtonInCard}
-                            >
-                              <LinearGradient
-                                colors={['#F59E0B', '#D97706']}
-                                style={styles.updateButtonGradient}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                              >
-                                <Ionicons name="arrow-down-circle" size={16} color="#FFFFFF" />
-                                <Text style={styles.updateButtonTextInCard}>Update Available</Text>
-                              </LinearGradient>
-                            </TouchableOpacity>
-                          )}
-                          {!isUpdateAvailable && !isVersionCheckLoading && requiredVersion && currentVersion === requiredVersion && (
-                            <Text style={[styles.infoCardSubtext, styles.versionUpToDateText]}>
-                              ✓ You're on the latest version
-                            </Text>
-                          )}
-                        </>
+                      <Text style={styles.infoCardValue}>v{currentVersion}</Text>
+                      {currentVersionCode != null && (
+                        <Text style={styles.infoCardSubtext}>Build code: {currentVersionCode}</Text>
                       )}
                     </View>
                   </View>
                 </View>
-                */}
 
                 {/* Contact us row */}
                 <View style={styles.infoCard}>

@@ -443,37 +443,32 @@ function AppWithVersionCheck() {
       setCurrentVersion(currentVer);
       setCurrentVersionCode(currentVerCode);
 
-      const updateInitiated = await AsyncStorage.getItem(UPDATE_INITIATED_KEY);
-      const lastUpdateVersion = await AsyncStorage.getItem(UPDATE_VERSION_KEY);
-
       const versionResponse = await getAppVersion();
 
       if (versionResponse.success && versionResponse.data.isUpdateRequired) {
         const { requiredVersion: reqVersion, requiredVersionCode, updateMessage: msg, playStoreUrl: url, updateUrl: update } = versionResponse.data;
 
-        const currentVersionCodeVal = Platform.OS === 'android'
-          ? Constants.expoConfig?.android?.versionCode
-          : undefined;
+        const isOutdated = isVersionOutdated(currentVer, reqVersion, currentVerCode, requiredVersionCode);
 
-        if (isVersionOutdated(currentVer, reqVersion, currentVerCode, requiredVersionCode)) {
-          if (!updateInitiated || lastUpdateVersion !== reqVersion) {
-            setUpdateMessage(msg);
-            setPlayStoreUrl(url || '');
-            setUpdateUrl(update || '');
-            setRequiredVersion(reqVersion);
-            setRequiredVersionCode(requiredVersionCode);
-            setShowUpdateModal(true);
-          } else {
-            setShowUpdateModal(false);
-          }
+        console.log('📦 [VERSION CHECK]', {
+          currentVersion: currentVer,
+          currentVersionCode: currentVerCode,
+          requiredVersion: reqVersion,
+          requiredVersionCode,
+          isOutdated,
+        });
+
+        if (isOutdated) {
+          setUpdateMessage(msg);
+          setPlayStoreUrl(url || '');
+          setUpdateUrl(update || '');
+          setRequiredVersion(reqVersion);
+          setRequiredVersionCode(requiredVersionCode);
+          setShowUpdateModal(true);
         } else {
-          await AsyncStorage.removeItem(UPDATE_INITIATED_KEY);
-          await AsyncStorage.removeItem(UPDATE_VERSION_KEY);
           setShowUpdateModal(false);
         }
       } else {
-        await AsyncStorage.removeItem(UPDATE_INITIATED_KEY);
-        await AsyncStorage.removeItem(UPDATE_VERSION_KEY);
         setShowUpdateModal(false);
       }
     } catch (error) {
@@ -535,7 +530,8 @@ function AppWithVersionCheck() {
         currentVersion={currentVersion}
         currentVersionCode={currentVersionCode}
         onUpdate={() => {
-          setShowUpdateModal(false);
+          // Keep modal visible; it will only disappear
+          // when the app restarts with a matching version.
         }}
       />
     </>

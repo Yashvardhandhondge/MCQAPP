@@ -1,4 +1,14 @@
-import { StyleSheet } from 'react-native';
+import React from 'react';
+import {
+  ActivityIndicator,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Linking,
+  Platform,
+} from 'react-native';
 import { colors, typography } from '../theme';
 
 /* ============================================
@@ -43,20 +53,18 @@ import { colors, typography } from '../theme';
 //   console.log('expo-file-system not available');
 // }
 
-// interface UpdateRequiredModalProps {
-//   visible: boolean;
-//   updateMessage: string;
-//   playStoreUrl?: string;
-//   updateUrl?: string;
-//   requiredVersion?: string;
-//   requiredVersionCode?: number;
-//   currentVersion?: string;
-//   currentVersionCode?: number;
-//   onUpdate: () => void;
-// }
+interface UpdateRequiredModalProps {
+  visible: boolean;
+  updateMessage: string;
+  playStoreUrl?: string;
+  updateUrl?: string;
+  requiredVersion?: string;
+  requiredVersionCode?: number;
+  currentVersion?: string;
+  currentVersionCode?: number;
+  onUpdate: () => void;
+}
 
-// React Native Code - Update Required Modal Component (Commented for launch)
-// This component handles the "Update Now" functionality and all update-related API calls
 export default function UpdateRequiredModal({
   visible,
   updateMessage,
@@ -67,10 +75,86 @@ export default function UpdateRequiredModal({
   currentVersion,
   currentVersionCode,
   onUpdate,
-}: any) {
-  // Update functionality commented out - will be re-enabled after launch
-  return null;
-  
+}: UpdateRequiredModalProps) {
+  const [updating, setUpdating] = React.useState(false);
+
+  const handleUpdatePress = async () => {
+    setUpdating(true);
+    try {
+      const targetUrl = updateUrl || playStoreUrl;
+      if (targetUrl && targetUrl.trim()) {
+        const canOpen = await Linking.canOpenURL(targetUrl);
+        if (canOpen) {
+          await Linking.openURL(targetUrl);
+        }
+      } else if (Platform.OS === 'android') {
+        // Fallback to market URL if no explicit URL provided
+        const marketUrl = 'market://details?id=com.mcqfrontend.app';
+        try {
+          const canOpenMarket = await Linking.canOpenURL(marketUrl);
+          if (canOpenMarket) {
+            await Linking.openURL(marketUrl);
+          }
+        } catch {
+          // ignore, we still keep the modal open
+        }
+      }
+      onUpdate();
+    } catch {
+      // keep modal open on error
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  if (!visible) {
+    return null;
+  }
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={() => {
+        // Block dismiss via back button; user must update
+      }}
+    >
+      <View style={styles.overlay}>
+        <View style={styles.container}>
+          <View style={styles.content}>
+            <Text style={styles.title}>Update Required</Text>
+            <Text style={styles.message}>{updateMessage}</Text>
+            {requiredVersion ? (
+              <Text style={styles.versionText}>
+                Required version code: {requiredVersionCode ?? '—'}
+              </Text>
+            ) : null}
+            {currentVersion ? (
+              <Text style={styles.versionText}>
+                Current version code: {currentVersionCode ?? '—'}
+              </Text>
+            ) : null}
+            <TouchableOpacity
+              style={[styles.updateButton, updating && styles.updateButtonDisabled]}
+              onPress={handleUpdatePress}
+              activeOpacity={0.8}
+              disabled={updating}
+            >
+              {updating ? (
+                <View style={styles.downloadingContainer}>
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                </View>
+              ) : (
+                <Text style={styles.updateButtonText}>Update Now</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
   /* COMMENTED OUT UPDATE FUNCTIONALITY - START
   const [updating, setUpdating] = useState(false);
   const [localVisible, setLocalVisible] = useState(visible);

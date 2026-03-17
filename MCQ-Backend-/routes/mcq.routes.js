@@ -72,7 +72,7 @@ const {
   resolveReport,
 } = require('../controllers/questionReport.controller');
 const { adminAuthGuard } = require('../middleware/admin.middleware');
-const { getUserStats, getAllUsers, exportAllUsersAsCsv, getPaymentLogs, updateUserSubscription } = require('../controllers/admin.controller');
+const { getUserStats, getAllUsers, getPremiumUsers, exportAllUsersAsCsv, getPaymentLogs, updateUserSubscription } = require('../controllers/admin.controller');
 const { getPremiumContent, updatePremiumContent } = require('../controllers/premiumContent.controller');
 const { getUserAchievements } = require('../controllers/achievement.controller');
 const { getAppVersion, setAppVersion, disableUpdateRequirement } = require('../controllers/appVersion.controller');
@@ -577,6 +577,17 @@ router.get('/admin/users/export', ...adminAuthGuard, exportAllUsersAsCsv);
  * @access  Private (requires admin role)
  */
 router.get('/admin/users', ...adminAuthGuard, getAllUsers);
+
+/**
+ * @route   GET /api/mcq/admin/premium-users
+ * @desc    Get premium users with pagination (Admin only)
+ * @query   {number} page - Page number (default: 1)
+ * @query   {number} limit - Items per page (default: 50)
+ * @query   {string} group - Filter by group (PCM/PCB/PCMB)
+ * @query   {string} role - Filter by role (student/admin)
+ * @access  Private (requires admin role)
+ */
+router.get('/admin/premium-users', ...adminAuthGuard, getPremiumUsers);
 
 /**
  * @route   GET /api/mcq/admin/payment-logs

@@ -17,6 +17,7 @@ const NAV_ITEMS: Array<
   { href: '/admin/premium-content', label: 'Edit Premium Content' },
   { href: '/admin/payment-logs', label: 'Payment Logs' },
   { href: '/admin/users', label: 'Users' },
+   { href: '/admin/premium-users', label: 'Premium Users' },
   { href: '/admin/classes', label: 'Classes' },
   { href: '/admin/tests', label: 'Tests' },
 ];
