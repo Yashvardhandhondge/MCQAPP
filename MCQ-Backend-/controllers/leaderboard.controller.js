@@ -16,48 +16,87 @@ const getLeaderboard = async (req, res, next) => {
     const userId = req.user._id.toString();
     const { timeframe = 'all-time' } = req.query; // 'month' or 'all-time'
 
-    // Calculate date filter
-    let dateFilter = {};
+    // Calculate date filters for attempts and tests
+    let attemptsDateFilter = {};
+    let testsDateFilter = {};
     if (timeframe === 'month') {
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
-      dateFilter = { answeredAt: { $gte: startOfMonth } };
+      attemptsDateFilter = { answeredAt: { $gte: startOfMonth } };
+      testsDateFilter = { completedAt: { $gte: startOfMonth } };
     }
 
-    // Aggregate user scores
-    // Optimized for large datasets: use allowDiskUse for large aggregations
-    const leaderboardData = await UserAttempt.aggregate([
-      { $match: dateFilter },
+    // Aggregate scores from individual attempts
+    const attemptsAgg = await UserAttempt.aggregate([
+      { $match: attemptsDateFilter },
       {
         $group: {
           _id: '$user',
+          totalAttempts: { $sum: 1 },
           totalCorrect: {
             $sum: {
               $cond: ['$isCorrect', 1, 0],
             },
           },
-          totalAttempts: { $sum: 1 },
+        },
+      },
+    ]).allowDiskUse(true);
+
+    // Aggregate scores from completed tests (excluding mock-style tests)
+    const testsAgg = await TestSession.aggregate([
+      {
+        $match: {
+          status: 'completed',
+          testType: { $nin: ['mocktest', 'pyq-mocktest'] },
+          ...testsDateFilter,
         },
       },
       {
-        $project: {
-          userId: '$_id',
-          score: {
-            $multiply: [
-              {
-                $divide: ['$totalCorrect', { $max: ['$totalAttempts', 1] }],
-              },
-              200, // Scale to 200 (MHT CET total marks)
-            ],
-          },
-          totalCorrect: 1,
-          totalAttempts: 1,
+        $group: {
+          _id: '$user',
+          totalAttempts: { $sum: '$totalQuestions' },
+          totalCorrect: { $sum: '$score' },
         },
       },
-      { $sort: { score: -1 } },
-      { $limit: 100 },
-    ]).allowDiskUse(true); // Allow disk use for large aggregations (30K+ users)
+    ]).allowDiskUse(true);
+
+    // Merge attempts and tests into a single per-user map
+    const userStatsMap = new Map();
+
+    attemptsAgg.forEach((stat) => {
+      if (!stat?._id) return;
+      const id = stat._id.toString();
+      userStatsMap.set(id, {
+        userId: id,
+        totalAttempts: stat.totalAttempts || 0,
+        totalCorrect: stat.totalCorrect || 0,
+      });
+    });
+
+    testsAgg.forEach((stat) => {
+      if (!stat?._id) return;
+      const id = stat._id.toString();
+      const existing = userStatsMap.get(id) || {
+        userId: id,
+        totalAttempts: 0,
+        totalCorrect: 0,
+      };
+      userStatsMap.set(id, {
+        userId: id,
+        totalAttempts: (existing.totalAttempts || 0) + (stat.totalAttempts || 0),
+        totalCorrect: (existing.totalCorrect || 0) + (stat.totalCorrect || 0),
+      });
+    });
+
+    // Build sorted leaderboard data (score = totalCorrect from attempts + tests)
+    const leaderboardData = Array.from(userStatsMap.values())
+      .map((entry) => ({
+        ...entry,
+        score: entry.totalCorrect || 0,
+      }))
+      .sort((a, b) => (b.score || 0) - (a.score || 0))
+      .slice(0, 100);
 
     // Get user details
     const userIds = leaderboardData.map((entry) => entry.userId);
@@ -100,46 +139,86 @@ const getUserRank = async (req, res, next) => {
     const userId = req.user._id.toString();
     const { timeframe = 'all-time' } = req.query;
 
-    // Calculate date filter
-    let dateFilter = {};
+    // Calculate date filters for attempts and tests
+    let attemptsDateFilter = {};
+    let testsDateFilter = {};
     if (timeframe === 'month') {
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
-      dateFilter = { answeredAt: { $gte: startOfMonth } };
+      attemptsDateFilter = { answeredAt: { $gte: startOfMonth } };
+      testsDateFilter = { completedAt: { $gte: startOfMonth } };
     }
 
-    // Aggregate user scores
-    const leaderboardData = await UserAttempt.aggregate([
-      { $match: dateFilter },
+    // Aggregate from attempts
+    const attemptsAgg = await UserAttempt.aggregate([
+      { $match: attemptsDateFilter },
       {
         $group: {
           _id: '$user',
+          totalAttempts: { $sum: 1 },
           totalCorrect: {
             $sum: {
               $cond: ['$isCorrect', 1, 0],
             },
           },
-          totalAttempts: { $sum: 1 },
+        },
+      },
+    ]).allowDiskUse(true);
+
+    // Aggregate from tests (excluding mock-style tests)
+    const testsAgg = await TestSession.aggregate([
+      {
+        $match: {
+          status: 'completed',
+          testType: { $nin: ['mocktest', 'pyq-mocktest'] },
+          ...testsDateFilter,
         },
       },
       {
-        $project: {
-          userId: '$_id',
-          score: {
-            $multiply: [
-              {
-                $divide: ['$totalCorrect', { $max: ['$totalAttempts', 1] }],
-              },
-              200,
-            ],
-          },
-          totalCorrect: 1,
-          totalAttempts: 1,
+        $group: {
+          _id: '$user',
+          totalAttempts: { $sum: '$totalQuestions' },
+          totalCorrect: { $sum: '$score' },
         },
       },
-      { $sort: { score: -1 } },
     ]).allowDiskUse(true);
+
+    // Merge into single map
+    const userStatsMap = new Map();
+
+    attemptsAgg.forEach((stat) => {
+      if (!stat?._id) return;
+      const id = stat._id.toString();
+      userStatsMap.set(id, {
+        userId: id,
+        totalAttempts: stat.totalAttempts || 0,
+        totalCorrect: stat.totalCorrect || 0,
+      });
+    });
+
+    testsAgg.forEach((stat) => {
+      if (!stat?._id) return;
+      const id = stat._id.toString();
+      const existing = userStatsMap.get(id) || {
+        userId: id,
+        totalAttempts: 0,
+        totalCorrect: 0,
+      };
+      userStatsMap.set(id, {
+        userId: id,
+        totalAttempts: (existing.totalAttempts || 0) + (stat.totalAttempts || 0),
+        totalCorrect: (existing.totalCorrect || 0) + (stat.totalCorrect || 0),
+      });
+    });
+
+    // Build sorted list to determine rank
+    const leaderboardData = Array.from(userStatsMap.values())
+      .map((entry) => ({
+        ...entry,
+        score: entry.totalCorrect || 0,
+      }))
+      .sort((a, b) => (b.score || 0) - (a.score || 0));
 
     // Find user's rank
     const userIndex = leaderboardData.findIndex(
