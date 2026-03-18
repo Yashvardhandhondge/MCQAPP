@@ -13,7 +13,8 @@
   
 ### 3. ✅ Subscription ID Access
 - Enhanced logging to debug subscription object structure
-- Added polling mechanism to check for subscription ID periodically
+- Added polling mechanism to check for subscription ID periodic  ally
+
 - Improved subscription change event handler to access ID from multiple locations
 
 ### 4. ✅ Initialization
