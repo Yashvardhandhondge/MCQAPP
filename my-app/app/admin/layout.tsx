@@ -30,6 +30,7 @@ export default function AdminLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [updateVersion, setUpdateVersion] = useState('');
   const [updateVersionCode, setUpdateVersionCode] = useState('');
   const [updateMessage, setUpdateMessage] = useState(
@@ -46,6 +47,21 @@ export default function AdminLayout({
       return;
     }
   }, [router]);
+
+  useEffect(() => {
+    // Close mobile drawer after route change.
+    setSidebarOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    // Prevent background scroll when drawer is open (mobile).
+    if (!sidebarOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [sidebarOpen]);
 
   const isActive = (href: string, exact?: boolean) => {
     if (exact) return pathname === href;
@@ -110,8 +126,22 @@ export default function AdminLayout({
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black flex">
+      {/* Backdrop (mobile) */}
+      {sidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-56 shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col">
+      <aside
+        className={`border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col
+          fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-200 ease-out md:static md:z-auto md:translate-x-0 md:w-56
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
+      >
         <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
           <h2 className="font-semibold text-black dark:text-zinc-50">Admin</h2>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Navigation</p>
@@ -150,8 +180,45 @@ export default function AdminLayout({
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto p-6 md:p-8">
-        {children}
+      <main className="flex-1 overflow-auto">
+        {/* Top bar (mobile) */}
+        <div className="sticky top-0 z-20 md:hidden bg-zinc-50/95 dark:bg-black/95 backdrop-blur border-b border-zinc-200 dark:border-zinc-800">
+          <div className="px-4 py-3 flex items-center gap-3">
+            <button
+              type="button"
+              aria-label="Open navigation"
+              onClick={() => setSidebarOpen(true)}
+              className="inline-flex items-center justify-center w-10 h-10 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="opacity-90"
+              >
+                <path
+                  d="M4 6h16M4 12h16M4 18h16"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-black dark:text-zinc-50 truncate">
+                Admin
+              </div>
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                {NAV_ITEMS.find((i) => 'href' in i && isActive(i.href, (i as any).exact))?.label ||
+                  'Navigation'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-6 md:p-8">{children}</div>
       </main>
 
       {/* Update App Modal */}

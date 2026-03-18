@@ -66,7 +66,7 @@ export default function AdminTestsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black p-8">
+    <div className="min-h-screen bg-zinc-50 dark:bg-black px-4 py-6 sm:px-6 sm:py-8">
       <div className="max-w-5xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-black dark:text-zinc-50 mb-2">
@@ -82,37 +82,81 @@ export default function AdminTestsPage() {
             <p className="text-zinc-600 dark:text-zinc-400">No PYQ tests found</p>
           </div>
         ) : (
-          <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-            <table className="w-full text-left">
-              <thead className="bg-zinc-50 dark:bg-zinc-800">
-                <tr>
-                  <th className="py-3 px-4 font-medium text-zinc-700 dark:text-zinc-300">Shift / Title</th>
-                  <th className="py-3 px-4 font-medium text-zinc-700 dark:text-zinc-300">Year</th>
-                  <th className="py-3 px-4 font-medium text-zinc-700 dark:text-zinc-300">Questions</th>
-                  <th className="py-3 px-4 font-medium text-zinc-700 dark:text-zinc-300">Subjects</th>
-                  <th className="py-3 px-4 font-medium text-zinc-700 dark:text-zinc-300">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tests.map((test) => (
-                  <tr key={test.id} className="border-t border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
-                    <td className="py-3 px-4 text-black dark:text-zinc-50">{test.title}</td>
-                    <td className="py-3 px-4 text-zinc-700 dark:text-zinc-300">{test.year || '—'}</td>
-                    <td className="py-3 px-4 text-zinc-700 dark:text-zinc-300">{test.questionCount}</td>
-                    <td className="py-3 px-4 text-zinc-600 dark:text-zinc-400">{test.subjects?.join(', ') || '—'}</td>
-                    <td className="py-3 px-4">
-                      <Link
-                        href={`/admin/tests/${encodeURIComponent(test.id)}/questions`}
-                        className="inline-flex px-3 py-1.5 rounded-lg bg-sky-600 text-white text-sm font-medium hover:bg-sky-700 transition-colors"
+          <>
+            {/* Mobile: card list */}
+            <div className="grid gap-3 md:hidden">
+              {tests.map((test) => (
+                <div
+                  key={test.id}
+                  className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-medium text-black dark:text-zinc-50 truncate">
+                        {test.title}
+                      </div>
+                      <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                        <span className="text-zinc-500 dark:text-zinc-500">Year:</span>{' '}
+                        {test.year || '—'}
+                        <span className="mx-2 text-zinc-300 dark:text-zinc-700">•</span>
+                        <span className="text-zinc-500 dark:text-zinc-500">Questions:</span>{' '}
+                        {test.questionCount}
+                      </div>
+                    </div>
+                    <Link
+                      href={`/admin/tests/${encodeURIComponent(test.id)}/questions`}
+                      className="shrink-0 inline-flex px-3 py-1.5 rounded-lg bg-sky-600 text-white text-sm font-medium hover:bg-sky-700 transition-colors"
+                    >
+                      View
+                    </Link>
+                  </div>
+
+                  <div className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
+                    <span className="text-zinc-500 dark:text-zinc-500">Subjects:</span>{' '}
+                    <span className="break-words">{test.subjects?.join(', ') || '—'}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop/tablet: table */}
+            <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+              <div className="w-full overflow-x-auto">
+                <table className="min-w-[760px] w-full text-left">
+                  <thead className="bg-zinc-50 dark:bg-zinc-800">
+                    <tr>
+                      <th className="py-3 px-4 font-medium text-zinc-700 dark:text-zinc-300">Shift / Title</th>
+                      <th className="py-3 px-4 font-medium text-zinc-700 dark:text-zinc-300">Year</th>
+                      <th className="py-3 px-4 font-medium text-zinc-700 dark:text-zinc-300">Questions</th>
+                      <th className="py-3 px-4 font-medium text-zinc-700 dark:text-zinc-300">Subjects</th>
+                      <th className="py-3 px-4 font-medium text-zinc-700 dark:text-zinc-300">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tests.map((test) => (
+                      <tr
+                        key={test.id}
+                        className="border-t border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
                       >
-                        View questions
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        <td className="py-3 px-4 text-black dark:text-zinc-50">{test.title}</td>
+                        <td className="py-3 px-4 text-zinc-700 dark:text-zinc-300">{test.year || '—'}</td>
+                        <td className="py-3 px-4 text-zinc-700 dark:text-zinc-300">{test.questionCount}</td>
+                        <td className="py-3 px-4 text-zinc-600 dark:text-zinc-400">{test.subjects?.join(', ') || '—'}</td>
+                        <td className="py-3 px-4">
+                          <Link
+                            href={`/admin/tests/${encodeURIComponent(test.id)}/questions`}
+                            className="inline-flex px-3 py-1.5 rounded-lg bg-sky-600 text-white text-sm font-medium hover:bg-sky-700 transition-colors"
+                          >
+                            View questions
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>

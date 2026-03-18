@@ -318,7 +318,7 @@ export default function AdminTestQuestionsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {questions.map((q) => {
+            {questions.map((q, idx) => {
               const isExpanded = expandedId === q._id;
               const wasFedToChapter = Boolean(q.isFedToChapter);
               return (
@@ -337,6 +337,7 @@ export default function AdminTestQuestionsPage() {
                         {q.shift && ` · Shift: ${q.shift}`}
                       </p>
                       <p className={`text-black dark:text-zinc-50 ${isExpanded ? '' : 'line-clamp-2'}`}>
+                        <span className="font-semibold mr-2">Q{idx + 1}.</span>
                         {q.question}
                       </p>
                     </div>
@@ -383,6 +384,7 @@ export default function AdminTestQuestionsPage() {
                           Full question
                         </p>
                         <p className="text-sm text-black dark:text-zinc-50 whitespace-pre-wrap">
+                          <span className="font-semibold mr-2">Q{idx + 1}.</span>
                           {q.question}
                         </p>
                       </div>

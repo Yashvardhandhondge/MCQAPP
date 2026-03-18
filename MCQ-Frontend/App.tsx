@@ -10,7 +10,9 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 const UPDATE_INITIATED_KEY = '@update_initiated';
 const UPDATE_VERSION_KEY = '@update_version';
 
-import { usePreventScreenCapture } from 'expo-screen-capture';
+// NOTE: Screenshots were previously blocked app-wide using expo-screen-capture.
+// We are allowing screenshots so users can share/report issues.
+// If you want to re-enable later, restore `usePreventScreenCapture()` usage.
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import type { AppStackParamList, AuthStackParamList, TabParamList } from './src/navigation/types';
 import ChapterDetailScreen from './src/screens/ChapterDetailScreen';
@@ -369,13 +371,6 @@ function AppStackNavigator() {
   );
 }
 
-// Prevents screenshots and screen recording when mounted (e.g. chapters, mock tests).
-// Keeps app content from being captured and leaked.
-function ScreenCaptureBlocker() {
-  usePreventScreenCapture();
-  return null;
-}
-
 function RootNavigator() {
   const { user, initializing } = useAuth();
   const [showUpgradePopup, setShowUpgradePopup] = useState(false);
@@ -402,10 +397,9 @@ function RootNavigator() {
     return <AuthStackNavigator />;
   }
 
-  // Block screenshots/recording app-wide for authenticated users (chapters, mock tests, etc.)
+  // Screenshots are allowed.
   return (
     <>
-      <ScreenCaptureBlocker />
       <AppStackNavigator />
       <FreeUserUpgradePopup
         visible={showUpgradePopup}

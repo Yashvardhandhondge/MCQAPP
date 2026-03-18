@@ -14,7 +14,7 @@ if (ENV_API_BASE_URL) {
     API_BASE_URL = ENV_API_BASE_URL;
   } else if (Platform.OS === 'android') {
     // Android Emulator default for local backend
-    API_BASE_URL = 'http://192.168.29.158:8000';
+    API_BASE_URL = 'http://192.168.1.15:8000';
     // API_BASE_URL = 'https://goldfish-app-vwvh7.ondigitalocean.app';
   } else {
     // iOS Simulator default for local backend
@@ -30,7 +30,7 @@ if (ENV_API_BASE_URL) {
     // API_BASE_URL ='https://mcqapp-nu.vercel.app';
     // API_BASE_URL = 'http://192.168.29.132:8000';
     // API_BASE_URL = 'http://10.228.232.180:8000';
-    API_BASE_URL = 'http://192.168.29.158:8000'; // Local URL - commented out
+    API_BASE_URL = 'http://192.168.1.15:8000'; // Local URL - commented out
     // API_BASE_URL = 'http://10.228.232.180:8000';
     // API_BASE_URL = 'https://goldfish-app-vwvh7.ondigitalocean.app';
     // API_BASE_URL = 'http://192.168.1.6:8000'; // Local URL - commented out

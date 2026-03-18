@@ -11,8 +11,8 @@ import {
   Alert,
   Animated,
   Image,
+  useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,6 +39,7 @@ export type CBTSimulatorScreenProps = NativeStackScreenProps<AppStackParamList, 
 export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorScreenProps) {
   const { testId, questions: questionIds, testType, mockTestNumber, testTitle } = route.params;
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -414,6 +415,11 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
 
   const answeredCount = questionStates.filter((s) => s.status === 'answered').length;
   const markedCount = markedForReview.size;
+  const imageBoxHeight = Math.min(Math.max(200, windowHeight * 0.28), 320);
+  const questionImageUrls = [currentQuestion?.image, currentQuestion?.addImage, ...(currentQuestion?.questionImages || [])]
+    .filter((u): u is string => typeof u === 'string' && !!u.trim())
+    .map((u) => u.trim());
+  const uniqueQuestionImageUrls = Array.from(new Set(questionImageUrls));
 
   return (
     <View style={[styles.safeArea, { paddingTop: insets.top }]}>
@@ -477,127 +483,102 @@ export default function CBTSimulatorScreen({ route, navigation }: CBTSimulatorSc
 
         {/* Main Question Area - Full Screen */}
         <View style={styles.content}>
-          <ScrollView
-            style={styles.questionArea}
-            contentContainerStyle={styles.questionAreaContent}
-            showsVerticalScrollIndicator={false}
-          >
+          <View style={styles.questionArea}>
             <Animated.View
               style={{
                 opacity: fadeAnim,
                 transform: [{ translateY: slideAnim }],
+                flex: 1,
+                minHeight: 0,
               }}
             >
-              <View style={styles.questionCard}>
-                <View style={styles.questionNumberContainer}>
-                  <View style={styles.questionNumberBadge}>
-                    <Text style={styles.questionNumberBadgeText}>{currentQuestionIndex + 1}</Text>
+              <ScrollView
+                style={styles.questionScroll}
+                contentContainerStyle={[
+                  styles.questionAreaContent,
+                  // Ensure content can scroll above bottom nav on small screens.
+                  { paddingBottom: spacing.xxxl + spacing.xxl + insets.bottom },
+                ]}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                <View style={styles.questionCard}>
+                  <View style={styles.questionNumberContainer}>
+                    <View style={styles.questionNumberBadge}>
+                      <Text style={styles.questionNumberBadgeText}>{currentQuestionIndex + 1}</Text>
+                    </View>
+                    <View style={styles.questionTextWrapper}>
+                      <MathText style={styles.questionText}>{currentQuestion.question}</MathText>
+                    </View>
                   </View>
-                  <View style={styles.questionTextWrapper}>
-                    <MathText style={styles.questionText}>{currentQuestion.question}</MathText>
-                    {(currentQuestion.addImage ||
-                      (currentQuestion.questionImages &&
-                        currentQuestion.questionImages.length > 0)) && (
-                      <View style={styles.questionImagesContainer}>
-                        {[currentQuestion.addImage, ...(currentQuestion.questionImages || [])]
-                          .filter((url): url is string => typeof url === 'string' && !!url.trim())
-                          .map((url, idx) => (
-                            <Image
-                              key={`${currentQuestion._id}-qi-${idx}`}
-                              source={{ uri: url }}
-                              style={styles.questionImage}
-                              resizeMode="contain"
-                            />
-                          ))}
-                      </View>
-                    )}
-                  </View>
-                </View>
 
-                <View style={styles.optionsContainer}>
-                  {currentQuestion.options.map((option, idx) => {
-                    const isSelected = selectedOption === option;
-                    const optionImage =
-                      Array.isArray(currentQuestion.optionImages) &&
-                      typeof currentQuestion.optionImages[idx] === 'string' &&
-                      currentQuestion.optionImages[idx]
-                        ? currentQuestion.optionImages[idx]
-                        : undefined;
-                    const optionLabel = String.fromCharCode(65 + idx); // A, B, C, D
-                    return (
-                      <Pressable
-                        key={idx}
-                        style={[
-                          styles.optionButton,
-                          isSelected && styles.optionSelected,
-                        ]}
-                        onPress={() => handleSelectOption(option)}
-                      >
-                        <View style={styles.optionContent}>
-                          <View
-                            style={[
-                              styles.optionLabel,
-                              isSelected && styles.optionLabelSelected,
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.optionLabelText,
-                                isSelected && styles.optionLabelTextSelected,
-                              ]}
-                            >
-                              {optionLabel}
-                            </Text>
+                  {/* Question image area (between question and options) */}
+                  {uniqueQuestionImageUrls.length > 0 && (
+                    <View style={[styles.questionImagesContainer, { height: imageBoxHeight }]}>
+                      <Image source={{ uri: uniqueQuestionImageUrls[0] }} style={styles.questionImageFixed} resizeMode="contain" />
+                    </View>
+                  )}
+
+                  <View style={styles.optionsContainer}>
+                    {currentQuestion.options.map((option, idx) => {
+                      const isSelected = selectedOption === option;
+                      const optionTextStyle = StyleSheet.flatten([
+                        styles.optionText,
+                        isSelected ? styles.optionTextSelected : null,
+                      ]);
+                      const optionImage =
+                        Array.isArray(currentQuestion.optionImages) &&
+                        typeof currentQuestion.optionImages[idx] === 'string' &&
+                        currentQuestion.optionImages[idx]
+                          ? currentQuestion.optionImages[idx]
+                          : undefined;
+                      const optionLabel = String.fromCharCode(65 + idx); // A, B, C, D
+                      return (
+                        <Pressable
+                          key={idx}
+                          style={[styles.optionButton, isSelected && styles.optionSelected]}
+                          onPress={() => handleSelectOption(option)}
+                        >
+                          <View style={styles.optionContent}>
+                            <View style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}>
+                              <Text style={[styles.optionLabelText, isSelected && styles.optionLabelTextSelected]}>{optionLabel}</Text>
+                            </View>
+                            <View style={styles.optionContentInner}>
+                              <MathText style={optionTextStyle}>{option}</MathText>
+                              {optionImage && (
+                                <Image source={{ uri: optionImage }} style={styles.optionImage} resizeMode="contain" />
+                              )}
+                            </View>
                           </View>
-                          <View style={styles.optionContentInner}>
-                            <MathText style={[styles.optionText, isSelected && styles.optionTextSelected]}>
-                              {option}
-                            </MathText>
-                            {optionImage && (
-                              <Image
-                                source={{ uri: optionImage }}
-                                style={styles.optionImage}
-                                resizeMode="contain"
-                              />
-                            )}
-                          </View>
-                        </View>
-                        {isSelected && (
-                          <View style={styles.selectedIconContainer}>
-                            <Ionicons name="checkmark-circle" size={26} color={colors.accent} />
-                          </View>
-                        )}
-                      </Pressable>
-                    );
-                  })}
-                </View>
-                
-                {/* Mark for Review Button */}
-                <TouchableOpacity
-                  style={[
-                    styles.markForReviewButton,
-                    markedForReview.has(currentQuestionIndex) && styles.markForReviewButtonActive,
-                  ]}
-                  onPress={handleMarkForReview}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons
-                    name={markedForReview.has(currentQuestionIndex) ? 'bookmark' : 'bookmark-outline'}
-                    size={20}
-                    color={markedForReview.has(currentQuestionIndex) ? '#FFFFFF' : colors.warning}
-                  />
-                  <Text
-                    style={[
-                      styles.markForReviewText,
-                      markedForReview.has(currentQuestionIndex) && styles.markForReviewTextActive,
-                    ]}
+                          {isSelected && (
+                            <View style={styles.selectedIconContainer}>
+                              <Ionicons name="checkmark-circle" size={26} color={colors.accent} />
+                            </View>
+                          )}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  {/* Mark for Review Button */}
+                  <TouchableOpacity
+                    style={[styles.markForReviewButton, markedForReview.has(currentQuestionIndex) && styles.markForReviewButtonActive]}
+                    onPress={handleMarkForReview}
+                    activeOpacity={0.8}
                   >
-                    {markedForReview.has(currentQuestionIndex) ? 'Marked for Review' : 'Mark for Review'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+                    <Ionicons
+                      name={markedForReview.has(currentQuestionIndex) ? 'bookmark' : 'bookmark-outline'}
+                      size={20}
+                      color={markedForReview.has(currentQuestionIndex) ? '#FFFFFF' : colors.warning}
+                    />
+                    <Text style={[styles.markForReviewText, markedForReview.has(currentQuestionIndex) && styles.markForReviewTextActive]}>
+                      {markedForReview.has(currentQuestionIndex) ? 'Marked for Review' : 'Mark for Review'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
             </Animated.View>
-          </ScrollView>
+          </View>
         </View>
 
         {/* Bottom Navigation */}
@@ -904,9 +885,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   questionAreaContent: {
+    flexGrow: 1,
     padding: spacing.xxl,
     paddingBottom: spacing.xxxl,
     paddingTop: spacing.xl + spacing.md,
+    minHeight: 0,
+  },
+  questionScroll: {
+    flex: 1,
+    minHeight: 0,
   },
   questionCard: {
     backgroundColor: colors.authSurface,
@@ -920,6 +907,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: spacing.xl,
     gap: spacing.md,
+    alignItems: 'flex-start',
   },
   questionNumberBadge: {
     width: 44,
@@ -951,12 +939,20 @@ const styles = StyleSheet.create({
   questionImagesContainer: {
     marginTop: spacing.xs,
     gap: spacing.xs,
+    borderRadius: radius.lg,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+    marginBottom: spacing.md,
   },
   questionImage: {
     width: '100%',
     height: 180,
     borderRadius: radius.lg,
     backgroundColor: '#FFFFFF',
+  },
+  questionImageFixed: {
+    width: '100%',
+    height: '100%',
   },
   questionNumber: {
     ...typography.h2,
@@ -1045,7 +1041,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   markForReviewButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

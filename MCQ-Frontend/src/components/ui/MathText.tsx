@@ -17,6 +17,64 @@ export default function MathText({ children, style, containerStyle }: MathTextPr
   const { width } = useWindowDimensions();
   const [webViewHeight, setWebViewHeight] = useState(50);
 
+  const replaceCommonGreekWords = (text: string): string => {
+    if (!text || typeof text !== 'string') return text;
+
+    const map: Record<string, string> = {
+      Alpha: 'Α',
+      alpha: 'α',
+      Beta: 'Β',
+      beta: 'β',
+      Gamma: 'Γ',
+      gamma: 'γ',
+      Delta: 'Δ',
+      delta: 'δ',
+      Epsilon: 'Ε',
+      epsilon: 'ε',
+      Zeta: 'Ζ',
+      zeta: 'ζ',
+      Eta: 'Η',
+      eta: 'η',
+      Theta: 'Θ',
+      theta: 'θ',
+      Iota: 'Ι',
+      iota: 'ι',
+      Kappa: 'Κ',
+      kappa: 'κ',
+      Lambda: 'Λ',
+      lambda: 'λ',
+      Mu: 'Μ',
+      mu: 'μ',
+      Nu: 'Ν',
+      nu: 'ν',
+      Xi: 'Ξ',
+      xi: 'ξ',
+      Omicron: 'Ο',
+      omicron: 'ο',
+      Pi: 'Π',
+      pi: 'π',
+      Rho: 'Ρ',
+      rho: 'ρ',
+      Sigma: 'Σ',
+      sigma: 'σ',
+      Tau: 'Τ',
+      tau: 'τ',
+      Upsilon: 'Υ',
+      upsilon: 'υ',
+      Phi: 'Φ',
+      phi: 'φ',
+      Chi: 'Χ',
+      chi: 'χ',
+      Psi: 'Ψ',
+      psi: 'ψ',
+      Omega: 'Ω',
+      omega: 'ω',
+    };
+
+    // Replace standalone Greek names only (sin(theta) -> sin(θ), but "thetan" unchanged)
+    return text.replace(/\b(Alpha|alpha|Beta|beta|Gamma|gamma|Delta|delta|Epsilon|epsilon|Zeta|zeta|Eta|eta|Theta|theta|Iota|iota|Kappa|kappa|Lambda|lambda|Mu|mu|Nu|nu|Xi|xi|Omicron|omicron|Pi|pi|Rho|rho|Sigma|sigma|Tau|tau|Upsilon|upsilon|Phi|phi|Chi|chi|Psi|psi|Omega|omega)\b/g, (m) => map[m] ?? m);
+  };
+
   // Convert matrix notation [[...], [...]] to LaTeX format
   const convertMatrixToLatex = (text: string): string => {
     if (!text || typeof text !== 'string') return text;
@@ -133,7 +191,9 @@ export default function MathText({ children, style, containerStyle }: MathTextPr
     const containsMath = hasDollarDelimiters || hasLatexCommands || matrixWasConverted;
     
     if (!containsMath) {
-      return { processedHTML: html, hasMath: false };
+      // For plain text (no LaTeX), normalize common Greek words to symbols (theta -> θ)
+      // so options like "sin(theta)" render correctly even without $...$.
+      return { processedHTML: replaceCommonGreekWords(html), hasMath: false };
     }
 
     // Escape HTML special characters
@@ -164,7 +224,8 @@ export default function MathText({ children, style, containerStyle }: MathTextPr
     }
 
     // Extract style properties
-    const textColor = (Array.isArray(style) ? style[0] : style)?.color || '#1E293B';
+    const textColorRaw = (Array.isArray(style) ? style[0] : style)?.color || '#1E293B';
+    const textColor = typeof textColorRaw === 'string' ? textColorRaw : String(textColorRaw);
     const fontSize = (Array.isArray(style) ? style[0] : style)?.fontSize || 15;
     const fontWeight = (Array.isArray(style) ? style[0] : style)?.fontWeight || '400';
     const lineHeight = (Array.isArray(style) ? style[0] : style)?.lineHeight || 22;
@@ -274,7 +335,7 @@ export default function MathText({ children, style, containerStyle }: MathTextPr
   if (!hasMath) {
     return (
       <Text style={style}>
-        {children}
+        {processedHTML}
       </Text>
     );
   }

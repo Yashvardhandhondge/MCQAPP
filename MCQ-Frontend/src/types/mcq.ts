@@ -70,6 +70,8 @@ export interface Question {
   isBlurred?: boolean;
   // Legacy single image URL for question (from PYQ migrations)
   addImage?: string;
+  // PYQ mock tests store question image under `image`
+  image?: string;
   // New: multiple question images and per-option images
   questionImages?: string[];
   optionImages?: string[];

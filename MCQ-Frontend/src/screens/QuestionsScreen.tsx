@@ -58,6 +58,14 @@ interface QuestionState {
   isSaving: boolean;
 }
 
+const getQuestionImageUrls = (q: Question): string[] => {
+  const urls = [q.image, q.addImage, ...(q.questionImages || [])]
+    .filter((u): u is string => typeof u === 'string' && !!u.trim())
+    .map((u) => u.trim());
+  // de-dupe but preserve order
+  return Array.from(new Set(urls));
+};
+
 export default function QuestionsScreen({ route, navigation }: QuestionsScreenProps) {
   const { subject, chapter, mode, year, randomQuestions } = route.params;
   const customYearLabelMap: Record<string, string> = {
@@ -754,19 +762,17 @@ export default function QuestionsScreen({ route, navigation }: QuestionsScreenPr
                               <MathText style={styles.questionText}>
                                 {question.question}
                               </MathText>
-                              {/* Question images (legacy addImage + new questionImages) */}
-                              {(question.addImage || (question.questionImages && question.questionImages.length > 0)) && (
+                              {/* Question images (supports PYQ `image`, legacy addImage + questionImages) */}
+                              {getQuestionImageUrls(question).length > 0 && (
                                 <View style={styles.questionImagesContainer}>
-                                  {[question.addImage, ...(question.questionImages || [])]
-                                    .filter((url): url is string => typeof url === 'string' && !!url.trim())
-                                    .map((url, idx) => (
-                                      <Image
-                                        key={`${question._id}-qi-${idx}`}
-                                        source={{ uri: url }}
-                                        style={styles.questionImage}
-                                        resizeMode="contain"
-                                      />
-                                    ))}
+                                  {getQuestionImageUrls(question).map((url, idx) => (
+                                    <Image
+                                      key={`${question._id}-qi-${idx}`}
+                                      source={{ uri: url }}
+                                      style={styles.questionImage}
+                                      resizeMode="contain"
+                                    />
+                                  ))}
                                 </View>
                               )}
                             </>
