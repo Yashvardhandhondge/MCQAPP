@@ -13,10 +13,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { AppStackParamList } from '../navigation/types';
+import { useAuth } from '../context/AuthContext';
 import { getPyqMockTests, getTestReports } from '../services/mcq.service';
 import { colors, radius, spacing, typography, shadow } from '../theme';
 import BackHeader from '../components/ui/BackHeader';
+import PremiumLockModal from '../components/ui/PremiumLockModal';
 import { safeGoBack } from '../utils/navigation';
+
+const FREE_PYQ_PAPERS_COUNT = 2;
 
 export type PyqMockTestSelectionScreenProps = NativeStackScreenProps<
   AppStackParamList,
@@ -34,11 +38,14 @@ interface PyqMockTest {
 export default function PyqMockTestSelectionScreen({
   navigation,
 }: PyqMockTestSelectionScreenProps) {
+  const { user } = useAuth();
+  const isPremium = user?.subscription === 'premium';
   const [tests, setTests] = useState<PyqMockTest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryTrigger, setRetryTrigger] = useState(0);
   const [attemptedIds, setAttemptedIds] = useState<Set<string>>(new Set());
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -180,59 +187,92 @@ export default function PyqMockTestSelectionScreen({
                 </Text>
               </View>
               <View style={styles.testList}>
-                {tests.map((test, index) => (
-                  <Animated.View
-                    key={test.id}
-                    style={{
-                      opacity: fadeAnim,
-                      transform: [
+                {tests.map((test, index) => {
+                  const isLocked = !isPremium && index >= FREE_PYQ_PAPERS_COUNT;
+                  const isAttempted = attemptedIds.has(`${test.title}__${test.year}`);
+
+                  return (
+                    <Animated.View
+                      key={test.id}
+                      style={[
                         {
-                          translateY: slideAnim.interpolate({
-                            inputRange: [0, 30],
-                            outputRange: [0, 30 + index * 10],
-                          }),
+                          opacity: fadeAnim,
+                          transform: [
+                            {
+                              translateY: slideAnim.interpolate({
+                                inputRange: [0, 30],
+                                outputRange: [0, 30 + index * 10],
+                              }),
+                            },
+                          ],
                         },
-                      ],
-                    }}
-                  >
-                    <TouchableOpacity
-                      onPress={() => navigation.navigate('PyqMockTestInstructions', { test })}
-                      activeOpacity={0.7}
-                      style={styles.testCard}
+                        isLocked && styles.testCardLocked,
+                      ]}
                     >
-                      <View style={styles.cardContent}>
-                        <View style={styles.cardLeft}>
-                          <View style={styles.iconContainer}>
-                            <Ionicons name="calendar" size={24} color={colors.primary} />
-                          </View>
-                          <View style={styles.cardInfo}>
-                            <Text style={styles.testTitle}>{test.title}</Text>
-                            <Text style={styles.testSubtitle}>
-                              {test.year ? `Year ${test.year}` : 'Previous Year Paper'} ·{' '}
-                              {test.questionCount} questions
-                            </Text>
-                          </View>
-                        </View>
-                        <View style={styles.cardRight}>
-                          {attemptedIds.has(`${test.title}__${test.year}`) && (
-                            <View style={styles.attemptBadge}>
-                              <Ionicons name="checkmark-circle" size={18} color="#22C55E" />
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (isLocked) {
+                            setPremiumModalVisible(true);
+                            return;
+                          }
+                          navigation.navigate('PyqMockTestInstructions', { test });
+                        }}
+                        activeOpacity={0.7}
+                        style={styles.testCard}
+                      >
+                        <View style={styles.cardContent}>
+                          <View style={styles.cardLeft}>
+                            <View style={[styles.iconContainer, isLocked && styles.iconContainerLocked]}>
+                              <Ionicons
+                                name={isLocked ? 'lock-closed' : 'calendar'}
+                                size={24}
+                                color={isLocked ? colors.authTextMuted : colors.primary}
+                              />
                             </View>
-                          )}
-                          <Ionicons
-                            name="chevron-forward"
-                            size={20}
-                            color={colors.authTextMuted}
-                          />
+                            <View style={styles.cardInfo}>
+                              <View style={styles.titleRow}>
+                                <Text style={[styles.testTitle, isLocked && styles.testTitleLocked]}>
+                                  {test.title}
+                                </Text>
+                              </View>
+                              <Text style={[styles.testSubtitle, isLocked && styles.testSubtitleLocked]}>
+                                {test.year ? `Year ${test.year}` : 'Previous Year Paper'} ·{' '}
+                                {test.questionCount} questions
+                                {isLocked ? ' • Unlock with Premium' : ''}
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={styles.cardRight}>
+                            {!isLocked && isAttempted && (
+                              <View style={styles.attemptBadge}>
+                                <Ionicons name="checkmark-circle" size={18} color="#22C55E" />
+                              </View>
+                            )}
+                            <Ionicons
+                              name={isLocked ? 'lock-closed' : 'chevron-forward'}
+                              size={20}
+                              color={colors.authTextMuted}
+                            />
+                          </View>
                         </View>
-                      </View>
-                    </TouchableOpacity>
-                  </Animated.View>
-                ))}
+                      </TouchableOpacity>
+                    </Animated.View>
+                  );
+                })}
               </View>
             </View>
           )}
         </ScrollView>
+        <PremiumLockModal
+          visible={premiumModalVisible}
+          onClose={() => setPremiumModalVisible(false)}
+          onBuyPremium={() => {
+            setPremiumModalVisible(false);
+            navigation.navigate('PremiumPurchase');
+          }}
+          title="Premium PYQ Papers"
+          message="Free users get access to 2 PYQ papers. Unlock all PYQ papers with Premium."
+        />
       </View>
     </SafeAreaView>
   );
@@ -340,6 +380,9 @@ const styles = StyleSheet.create({
     borderColor: colors.authBorder,
     ...shadow.sm,
   },
+  testCardLocked: {
+    opacity: 0.9,
+  },
   cardContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -359,8 +402,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: spacing.md,
   },
+  iconContainerLocked: {
+    backgroundColor: colors.authInputBg,
+  },
   cardInfo: {
     flex: 1,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
   },
   testTitle: {
     ...typography.h3,
@@ -368,11 +420,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 17,
   },
+  testTitleLocked: {
+    color: colors.authTextSecondary,
+  },
   testSubtitle: {
     ...typography.body,
     color: colors.authTextSecondary,
     fontSize: 13,
     marginTop: spacing.xs,
+  },
+  testSubtitleLocked: {
+    color: colors.authTextMuted,
   },
   cardRight: {
     marginLeft: spacing.md,
