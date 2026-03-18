@@ -39,17 +39,14 @@ export default function AdminTestQuestionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [testTitle, setTestTitle] = useState('');
   const [testYear, setTestYear] = useState('');
-  const [modalQuestion, setModalQuestion] = useState<PyqQuestion | null>(null);
-  const [subject, setSubject] = useState('');
-  const [chapter, setChapter] = useState('');
-  const [chapters, setChapters] = useState<string[]>([]);
-  const [chaptersLoading, setChaptersLoading] = useState(false);
-  const [classOption, setClassOption] = useState<string>('12');
-  const [yearInput, setYearInput] = useState('');
-  const [feeding, setFeeding] = useState(false);
-  const [feedError, setFeedError] = useState<string | null>(null);
-  const [feedSuccess, setFeedSuccess] = useState<string | null>(null);
-  const [selectedCorrectAnswer, setSelectedCorrectAnswer] = useState<string>('');
+  const [chapterById, setChapterById] = useState<Record<string, string>>({});
+  const [chaptersById, setChaptersById] = useState<Record<string, string[]>>({});
+  const [chaptersLoadingById, setChaptersLoadingById] = useState<Record<string, boolean>>({});
+  const [yearById, setYearById] = useState<Record<string, string>>({});
+  const [feedingId, setFeedingId] = useState<string | null>(null);
+  const [feedErrorId, setFeedErrorId] = useState<string | null>(null);
+  const [feedSuccessId, setFeedSuccessId] = useState<string | null>(null);
+  const [selectedCorrectById, setSelectedCorrectById] = useState<Record<string, string>>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [imageModalQuestion, setImageModalQuestion] = useState<PyqQuestion | null>(null);
   const [imageUploading, setImageUploading] = useState(false);
@@ -102,57 +99,12 @@ export default function AdminTestQuestionsPage() {
     }
   };
 
-  useEffect(() => {
-    if (!subject) {
-      setChapters([]);
-      setChapter('');
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      setChaptersLoading(true);
-      try {
-        const res = await fetchWithAuth(`/api/mcq/admin/subjects/${encodeURIComponent(subject)}/chapters`);
-        if (!res.ok || cancelled) return;
-        const data = await res.json();
-        if (!cancelled && data.data) setChapters(data.data);
-      } catch {
-        if (!cancelled) setChapters([]);
-      } finally {
-        if (!cancelled) setChaptersLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [subject]);
-
-  const openModal = (q: PyqQuestion) => {
-    setModalQuestion(q);
-    setSubject(q.subject || '');
-    setChapter(q.chapter || '');
-    setYearInput(q.year || testYear || '');
-    setSelectedCorrectAnswer((q.correctAnswer ?? '').toString().trim());
-    setChapters([]);
-    setFeedError(null);
-    setFeedSuccess(null);
-  };
-
-  const closeModal = () => {
-    setModalQuestion(null);
-    setSubject('');
-    setChapter('');
-    setChapters([]);
-    setSelectedCorrectAnswer('');
-    setFeedError(null);
-    setFeedSuccess(null);
-  };
-
-  /** True when this question has no correct answer and admin must select one before adding */
-  const needCorrectAnswer = Boolean(
-    modalQuestion &&
-    Array.isArray(modalQuestion.options) &&
-    modalQuestion.options.length > 0 &&
-    !(modalQuestion.correctAnswer ?? '').toString().trim()
-  );
+  const needCorrectAnswerFor = (q: PyqQuestion) =>
+    Boolean(
+      Array.isArray(q.options) &&
+      q.options.length > 0 &&
+      !(q.correctAnswer ?? '').toString().trim()
+    );
 
   const handleImageFileChange = async (q: PyqQuestion, file: File | null) => {
     if (!file || !file.type.startsWith('image/')) {
@@ -243,20 +195,50 @@ export default function AdminTestQuestionsPage() {
     }
   };
 
-  const handleFeedToChapter = async () => {
-    if (!modalQuestion || !subject || !chapter) return;
-    const correctToSend = (modalQuestion.correctAnswer ?? '').toString().trim() || selectedCorrectAnswer.trim();
-    if (needCorrectAnswer && !correctToSend) return;
-    setFeeding(true);
-    setFeedError(null);
-    setFeedSuccess(null);
+  const loadChaptersForQuestion = async (q: PyqQuestion) => {
+    const subject = (q.subject || '').trim();
+    if (!subject) {
+      setChaptersById((prev) => ({ ...prev, [q._id]: [] }));
+      return;
+    }
+    // If we already loaded once, skip
+    if (Array.isArray(chaptersById[q._id]) && chaptersById[q._id].length > 0) return;
+    setChaptersLoadingById((prev) => ({ ...prev, [q._id]: true }));
     try {
-      const yearToSend = yearInput.trim() || modalQuestion.year || testYear || undefined;
+      const res = await fetchWithAuth(
+        `/api/mcq/admin/subjects/${encodeURIComponent(subject)}/chapters`
+      );
+      if (!res.ok) {
+        setChaptersById((prev) => ({ ...prev, [q._id]: [] }));
+        return;
+      }
+      const data = await res.json();
+      setChaptersById((prev) => ({ ...prev, [q._id]: data.data || [] }));
+    } catch {
+      setChaptersById((prev) => ({ ...prev, [q._id]: [] }));
+    } finally {
+      setChaptersLoadingById((prev) => ({ ...prev, [q._id]: false }));
+    }
+  };
+
+  const handleFeedToChapter = async (q: PyqQuestion) => {
+    const subject = (q.subject || '').trim();
+    const chapter = chapterById[q._id]?.trim();
+    const yearInput = yearById[q._id]?.trim() || '';
+    if (!subject || !chapter) return;
+    const selectedCorrect = selectedCorrectById[q._id]?.trim() || '';
+    const correctToSend = (q.correctAnswer ?? '').toString().trim() || selectedCorrect;
+    if (needCorrectAnswerFor(q) && !correctToSend) return;
+    setFeedingId(q._id);
+    setFeedErrorId(null);
+    setFeedSuccessId(null);
+    try {
+      const yearToSend = yearInput || q.year || testYear || undefined;
       const res = await fetchWithAuth('/api/mcq/admin/pyq-mock-tests/feed-to-chapter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          pyqQuestionId: modalQuestion._id,
+          pyqQuestionId: q._id,
           subject,
           chapter,
           ...(yearToSend ? { year: yearToSend } : {}),
@@ -265,16 +247,15 @@ export default function AdminTestQuestionsPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setFeedError(data.message || `Failed (${res.status})`);
+        setFeedErrorId(q._id);
         return;
       }
-      setFeedSuccess('Question added to chapter-based PYQ.');
+      setFeedSuccessId(q._id);
       fetchQuestions(testTitle, testYear);
-      setTimeout(closeModal, 1500);
     } catch (err) {
-      setFeedError(err instanceof Error ? err.message : 'Request failed');
+      setFeedErrorId(q._id);
     } finally {
-      setFeeding(false);
+      setFeedingId(null);
     }
   };
 
@@ -349,7 +330,13 @@ export default function AdminTestQuestionsPage() {
                       )}
                       <button
                         type="button"
-                        onClick={() => setExpandedId(isExpanded ? null : q._id)}
+                        onClick={() => {
+                          const nextId = isExpanded ? null : q._id;
+                          setExpandedId(nextId);
+                          if (!isExpanded) {
+                            loadChaptersForQuestion(q);
+                          }
+                        }}
                         className="px-3 py-2 rounded-lg bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-medium hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors"
                       >
                         {isExpanded ? 'Hide options' : 'View options'}
@@ -363,18 +350,7 @@ export default function AdminTestQuestionsPage() {
                           {q.image || (q.addImage && q.addImage.startsWith('http')) ? 'Change image' : 'Add image'}
                         </button>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => !wasFedToChapter && openModal(q)}
-                        disabled={wasFedToChapter}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          wasFedToChapter
-                            ? 'bg-zinc-300 dark:bg-zinc-600 text-zinc-500 dark:text-zinc-400 cursor-not-allowed'
-                            : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                        }`}
-                      >
-                        {wasFedToChapter ? 'Already added' : 'Add to chapter-based PYQ'}
-                      </button>
+                      {/* Save button moved to bottom of expanded section */}
                     </div>
                   </div>
                   {isExpanded && (
@@ -446,7 +422,30 @@ export default function AdminTestQuestionsPage() {
                           </ul>
                         </div>
                       )}
-                      {q.correctAnswer && (
+                      {needCorrectAnswerFor(q) ? (
+                        <div className="mt-3">
+                          <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-1">
+                            Select correct option before saving
+                          </p>
+                          <select
+                            value={selectedCorrectById[q._id] ?? ''}
+                            onChange={(e) =>
+                              setSelectedCorrectById((prev) => ({
+                                ...prev,
+                                [q._id]: e.target.value,
+                              }))
+                            }
+                            className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50"
+                          >
+                            <option value="">Select correct option</option>
+                            {q.options.map((opt, i) => (
+                              <option key={i} value={opt}>
+                                {String.fromCharCode(65 + i)}. {opt}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : q.correctAnswer ? (
                         <div>
                           <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-1">
                             Correct answer
@@ -454,6 +453,63 @@ export default function AdminTestQuestionsPage() {
                           <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
                             {q.correctAnswer}
                           </p>
+                        </div>
+                      ) : null}
+                      <div className="mt-4 grid gap-3 md:grid-cols-3">
+                        <div>
+                          <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                            Chapter *
+                          </label>
+                          <select
+                            value={chapterById[q._id] ?? ''}
+                            onChange={(e) =>
+                              setChapterById((prev) => ({ ...prev, [q._id]: e.target.value }))
+                            }
+                            disabled={chaptersLoadingById[q._id]}
+                            className="w-full px-2 py-1.5 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-xs text-black dark:text-zinc-50 disabled:opacity-50"
+                          >
+                            <option value="">Select chapter</option>
+                            {(chaptersById[q._id] || []).map((c) => (
+                              <option key={c} value={c}>
+                                {c}
+                              </option>
+                            ))}
+                          </select>
+                          {chaptersLoadingById[q._id] && (
+                            <p className="text-[10px] text-zinc-500 mt-0.5">Loading chapters…</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                            Year (optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={yearById[q._id] ?? ''}
+                            onChange={(e) =>
+                              setYearById((prev) => ({ ...prev, [q._id]: e.target.value }))
+                            }
+                            placeholder={q.year || testYear || 'e.g. 2025'}
+                            className="w-full px-2 py-1.5 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-xs text-black dark:text-zinc-50"
+                          />
+                        </div>
+                      </div>
+                      {!wasFedToChapter && (
+                        <div className="mt-4 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => handleFeedToChapter(q)}
+                            disabled={
+                              !chapterById[q._id]?.trim() ||
+                              (needCorrectAnswerFor(q) &&
+                                !(selectedCorrectById[q._id]?.trim() ||
+                                  (q.correctAnswer ?? '').toString().trim())) ||
+                              feedingId === q._id
+                            }
+                            className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {feedingId === q._id ? 'Saving…' : 'Save to chapter-based PYQ'}
+                          </button>
                         </div>
                       )}
                       {q.shift && (
@@ -591,149 +647,7 @@ export default function AdminTestQuestionsPage() {
         </div>
       )}
 
-      {/* Modal: Add to chapter-based PYQ */}
-      {modalQuestion && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl max-w-md w-full max-h-[90vh] overflow-auto">
-            <div className="p-6">
-              <h2 className="text-xl font-semibold text-black dark:text-zinc-50 mb-2">
-                Add to chapter-based PYQ
-              </h2>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4 line-clamp-2">
-                {modalQuestion.question}
-              </p>
-              {modalQuestion.shift && (
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
-                  Shift: {modalQuestion.shift}
-                </p>
-              )}
-
-              {needCorrectAnswer && (
-                <div className="mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
-                    This question has no correct answer set. Please select the correct option before adding.
-                  </p>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    Correct answer *
-                  </label>
-                  <select
-                    value={selectedCorrectAnswer}
-                    onChange={(e) => setSelectedCorrectAnswer(e.target.value)}
-                    className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50"
-                  >
-                    <option value="">Select correct option</option>
-                    {modalQuestion.options?.map((opt, i) => (
-                      <option key={i} value={opt}>
-                        {String.fromCharCode(65 + i)}. {opt}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {!needCorrectAnswer && modalQuestion.correctAnswer && (
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
-                  Correct answer: {modalQuestion.correctAnswer}
-                </p>
-              )}
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    Class (optional)
-                  </label>
-                  <select
-                    value={classOption}
-                    onChange={(e) => setClassOption(e.target.value)}
-                    className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50"
-                  >
-                    <option value="11">11th</option>
-                    <option value="12">12th</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    Subject *
-                  </label>
-                  <select
-                    value={subject}
-                    onChange={(e) => { setSubject(e.target.value); setChapter(''); }}
-                    className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50"
-                  >
-                    <option value="">Select subject</option>
-                    {SUBJECTS.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    Chapter *
-                  </label>
-                  <select
-                    value={chapter}
-                    onChange={(e) => setChapter(e.target.value)}
-                    disabled={chaptersLoading || !subject}
-                    className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 disabled:opacity-50"
-                  >
-                    <option value="">Select chapter</option>
-                    {chapters.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                  {chaptersLoading && (
-                    <p className="text-xs text-zinc-500 mt-1">Loading chapters…</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    Year *
-                  </label>
-                  <input
-                    type="text"
-                    value={yearInput}
-                    onChange={(e) => setYearInput(e.target.value)}
-                    placeholder="e.g. 2025"
-                    className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50"
-                  />
-                </div>
-              </div>
-
-              {feedError && (
-                <p className="mt-3 text-sm text-red-600 dark:text-red-400">{feedError}</p>
-              )}
-              {feedSuccess && (
-                <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-400">{feedSuccess}</p>
-              )}
-
-              <div className="mt-6 flex gap-3 justify-end">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  disabled={feeding}
-                  className="px-4 py-2 rounded-lg bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleFeedToChapter}
-                  disabled={
-                    feeding ||
-                    !subject ||
-                    !chapter ||
-                    !yearInput.trim() ||
-                    (needCorrectAnswer && !selectedCorrectAnswer.trim())
-                  }
-                  className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {feeding ? 'Saving…' : 'Save'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* No separate "add to chapter" modal anymore */}
     </div>
   );
 }
