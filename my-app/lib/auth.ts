@@ -1,6 +1,4 @@
-const API_URL =
-  (process.env.NEXT_PUBLIC_API_URL || '').trim() ||
-  'https://goldfish-app-vwvh7.ondigitalocean.app';
+const API_URL ='https://goldfish-app-vwvh7.ondigitalocean.app';
 
 //
 export interface User {
