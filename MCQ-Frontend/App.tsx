@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React, { useEffect, useState, useRef } from 'react';
 import Constants from 'expo-constants';
+import { usePreventScreenCapture } from 'expo-screen-capture';
 import { AppState, AppStateStatus, Platform, Modal, StyleSheet, View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -10,9 +11,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 const UPDATE_INITIATED_KEY = '@update_initiated';
 const UPDATE_VERSION_KEY = '@update_version';
 
-// NOTE: Screenshots were previously blocked app-wide using expo-screen-capture.
-// We are allowing screenshots so users can share/report issues.
-// If you want to re-enable later, restore `usePreventScreenCapture()` usage.
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import type { AppStackParamList, AuthStackParamList, TabParamList } from './src/navigation/types';
 import ChapterDetailScreen from './src/screens/ChapterDetailScreen';
@@ -426,6 +424,8 @@ function AuthAwareRoot() {
 }
 
 function AppWithVersionCheck() {
+  usePreventScreenCapture();
+
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateMessage, setUpdateMessage] = useState('A new version of the app is available. Please update to continue.');
   const [playStoreUrl, setPlayStoreUrl] = useState('');

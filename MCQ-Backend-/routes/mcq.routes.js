@@ -39,6 +39,8 @@ const {
   getAvailablePyqMockTests,
   startPyqMockTestSession,
   adminGetPyqMockTestQuestions,
+  adminGetPyqMockTestStats,
+  adminAddPyqMockTestQuestion,
   feedPyqQuestionToChapter,
   updatePyqQuestionImage,
   updatePyqOptionImage,
@@ -648,6 +650,8 @@ router.delete('/admin/app-version', ...adminAuthGuard, disableUpdateRequirement)
  */
 router.get('/admin/pyq-mock-tests', ...adminAuthGuard, getAvailablePyqMockTests);
 router.get('/admin/pyq-mock-tests/questions', ...adminAuthGuard, adminGetPyqMockTestQuestions);
+router.get('/admin/pyq-mock-tests/stats', ...adminAuthGuard, adminGetPyqMockTestStats);
+router.post('/admin/pyq-mock-tests/questions', ...adminAuthGuard, adminAddPyqMockTestQuestion);
 router.put('/admin/pyq-mock-tests/questions/:questionId/image', ...adminAuthGuard, updatePyqQuestionImage);
 router.put('/admin/pyq-mock-tests/questions/:questionId/options/:optionIndex/image', ...adminAuthGuard, updatePyqOptionImage);
 router.post('/admin/pyq-mock-tests/feed-to-chapter', ...adminAuthGuard, feedPyqQuestionToChapter);

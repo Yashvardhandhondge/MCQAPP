@@ -1778,6 +1778,148 @@ const adminGetPyqMockTestQuestions = async (req, res, next) => {
 };
 
 /**
+ * Admin: Get subject-wise stats for a PYQ mock test by title and optional year
+ * GET /api/mcq/admin/pyq-mock-tests/stats?title=...&year=...
+ */
+const adminGetPyqMockTestStats = async (req, res, next) => {
+  try {
+    const { title, year } = req.query;
+    if (!title || typeof title !== 'string' || !title.trim()) {
+      return next(createError(400, 'Query parameter title is required'));
+    }
+    const normalizedTitle = title.trim();
+
+    let yearFilter = {};
+    if (year !== undefined && year !== null && String(year).trim() !== '') {
+      const normalizedYear = String(year).trim();
+      const yearNum = parseInt(normalizedYear, 10);
+      if (!Number.isNaN(yearNum)) {
+        yearFilter = {
+          $or: [
+            { year: normalizedYear },
+            { year: yearNum },
+            { $expr: { $eq: [{ $toString: '$year' }, normalizedYear] } },
+          ],
+        };
+      } else {
+        yearFilter = {
+          $or: [
+            { year: normalizedYear },
+            { $expr: { $eq: [{ $toString: '$year' }, normalizedYear] } },
+          ],
+        };
+      }
+    }
+
+    const rows = await PyqMockTestModel.aggregate([
+      { $match: { Title: normalizedTitle, ...yearFilter } },
+      { $group: { _id: '$subject', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+    ]);
+
+    const subjectCounts = {};
+    let total = 0;
+    rows.forEach((r) => {
+      const key = r._id ? String(r._id) : 'Unknown';
+      const count = r.count || 0;
+      subjectCounts[key] = count;
+      total += count;
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        title: normalizedTitle,
+        year: year !== undefined && year !== null ? String(year).trim() : '',
+        total,
+        subjectCounts,
+      },
+    });
+  } catch (error) {
+    console.error('Error getting PYQ mock test stats for admin:', error);
+    return next(createError(500, 'Failed to fetch PYQ mock test stats'));
+  }
+};
+
+/**
+ * Admin: Add one question JSON into PYQ Mocktests collection
+ * POST /api/mcq/admin/pyq-mock-tests/questions
+ * Body: { question: <object> } OR raw question object
+ */
+const adminAddPyqMockTestQuestion = async (req, res, next) => {
+  try {
+    const payload = req.body && typeof req.body === 'object' ? req.body : {};
+    const q = payload.question && typeof payload.question === 'object' ? payload.question : payload;
+
+    const Title = (q.Title ?? q.title ?? q.shift ?? '').toString().trim();
+    const question = (q.question ?? '').toString().trim();
+    const subjectRaw = (q.subject ?? '').toString().trim();
+    const subject = subjectRaw === 'Mathematics' ? 'Maths' : subjectRaw;
+    const year = q.year !== undefined ? q.year : (q.Year ?? q.YEAR);
+    const chapter = (q.chapter ?? '').toString().trim();
+
+    const options = Array.isArray(q.options) ? q.options.map((x) => String(x)) : [];
+    const correctAnswer = (q.correctAnswer ?? q.correctanswrs ?? '').toString().trim();
+
+    const validSubjects = ['Chemistry', 'Physics', 'Maths', 'Biology'];
+    if (!Title) return next(createError(400, 'Title is required'));
+    if (!question) return next(createError(400, 'question is required'));
+    if (!Array.isArray(options) || options.length === 0) return next(createError(400, 'options must be a non-empty array'));
+    if (!correctAnswer) return next(createError(400, 'correctAnswer is required'));
+    if (!subject || !validSubjects.includes(subject)) {
+      return next(createError(400, 'Invalid subject. Must be one of: Chemistry, Physics, Maths, Biology'));
+    }
+    if (!options.some((o) => String(o).trim() === correctAnswer)) {
+      return next(createError(400, 'correctAnswer must exactly match one of the options'));
+    }
+
+    const image = (q.image ?? '').toString().trim();
+    const questionImages = Array.isArray(q.questionImages) ? q.questionImages.map(String) : [];
+    const optionImages = Array.isArray(q.optionImages) ? q.optionImages.map(String) : [];
+
+    const dupFilter = {
+      Title,
+      question,
+      ...(year !== undefined && year !== null && String(year).trim() !== '' ? { year } : {}),
+    };
+    const existing = await PyqMockTestModel.findOne(dupFilter).select('_id').lean();
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: 'This question already exists in PYQ Mocktests for the same Title/year/question',
+        data: { existingId: existing._id },
+      });
+    }
+
+    const created = await PyqMockTestModel.create({
+      Title,
+      question,
+      options,
+      correctAnswer,
+      subject,
+      ...(chapter ? { chapter } : {}),
+      ...(year !== undefined ? { year } : {}),
+      ...(image ? { image } : {}),
+      ...(questionImages.length ? { questionImages } : {}),
+      ...(optionImages.length ? { optionImages } : {}),
+      ...(q.AddImage || q['Add image'] ? { AddImage: q.AddImage ?? q['Add image'] } : {}),
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Question added to PYQ Mocktests',
+      data: { _id: created._id },
+    });
+  } catch (error) {
+    if (error?.name === 'ValidationError') {
+      return next(createError(400, error.message));
+    }
+    console.error('Error adding PYQ mock test question (admin):', error);
+    return next(createError(500, 'Failed to add PYQ mock test question'));
+  }
+};
+
+/**
  * Admin: Feed one PYQ question into chapter-based DB (copy, keep in PYQ Mocktests)
  * POST /api/mcq/admin/pyq-mock-tests/feed-to-chapter
  * Body: { pyqQuestionId, subject, chapter, year? }
@@ -2042,6 +2184,8 @@ module.exports = {
   getAvailablePyqMockTests,
   startPyqMockTestSession,
   adminGetPyqMockTestQuestions,
+  adminGetPyqMockTestStats,
+  adminAddPyqMockTestQuestion,
   feedPyqQuestionToChapter,
   updatePyqQuestionImage,
   updatePyqOptionImage,
