@@ -83,7 +83,7 @@ export default function PremiumPurchaseScreen() {
     },
     {
       question: 'How is this different from free content?',
-      answer: 'Free users get 25 questions per day, 3 free chapters per subject, and 2 full-length free mock tests. Premium unlocks the complete question bank (20K+), all previous year questions from 2015, AI-analyzed step-by-step solutions, advanced performance analytics, unlimited mock tests, and all chapter access. Think of it as getting a complete coaching institute\'s question bank at a fraction of the cost!',
+      answer: 'Free users get 15 questions per day, 3 free chapters per subject, and 2 full-length free mock tests. Premium unlocks the complete question bank (20K+), all previous year questions from 2015, AI-analyzed step-by-step solutions, advanced performance analytics, unlimited mock tests, and all chapter access. Think of it as getting a complete coaching institute\'s question bank at a fraction of the cost!',
       icon: 'star',
     },
     {

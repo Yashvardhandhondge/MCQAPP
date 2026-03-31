@@ -406,13 +406,20 @@ const getPyqMockTestLeaderboard = async (req, res, next) => {
     };
 
     if (year !== undefined && year !== null && String(year).trim() !== '') {
-      filter.year = String(year).trim();
+      const normalizedYear = String(year).trim();
+      const yearNum = parseInt(normalizedYear, 10);
+      if (!Number.isNaN(yearNum)) {
+        filter.$or = [{ year: normalizedYear }, { year: yearNum }];
+      } else {
+        filter.year = normalizedYear;
+      }
     }
 
+    // Load all completions for this paper so every user gets a fair rank (do not limit raw sessions;
+    // .limit(100) here excluded many users so "my row" never reached the client for free-tier UI).
     const sessions = await TestSession.find(filter)
       .select('user score totalQuestions completedAt')
       .sort({ score: -1, completedAt: 1 })
-      .limit(100)
       .lean();
 
     if (sessions.length === 0) {
@@ -437,29 +444,39 @@ const getPyqMockTestLeaderboard = async (req, res, next) => {
       }
     });
 
-    const leaderboardData = Array.from(userScoreMap.values())
-      .sort((a, b) => {
-        if (b.score !== a.score) {
-          return b.score - a.score;
-        }
-        return new Date(a.completedAt) - new Date(b.completedAt);
-      })
-      .slice(0, 100);
+    const sortedUsers = Array.from(userScoreMap.values()).sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      return new Date(a.completedAt) - new Date(b.completedAt);
+    });
 
-    const userIds = leaderboardData.map((entry) => entry.userId);
+    const ranked = sortedUsers.map((entry, index) => ({
+      ...entry,
+      rank: index + 1,
+    }));
+
+    const top100 = ranked.slice(0, 100);
+    const userRow = ranked.find((e) => e.userId === userId);
+    let displayRanked = top100;
+    if (userRow && !top100.some((e) => e.userId === userId)) {
+      displayRanked = [...top100, userRow];
+    }
+
+    const userIds = displayRanked.map((entry) => entry.userId);
     const users = await User.find({ _id: { $in: userIds } })
       .select('fullName email')
       .lean();
 
     const userMap = new Map(users.map((u) => [u._id.toString(), u]));
 
-    const leaderboard = leaderboardData.map((entry, index) => {
-      const user = userMap.get(entry.userId);
+    const leaderboard = displayRanked.map((entry) => {
+      const userDoc = userMap.get(entry.userId);
       return {
         id: entry.userId,
-        name: user?.fullName || 'Anonymous',
+        name: userDoc?.fullName || 'Anonymous',
         score: parseFloat((entry.score || 0).toFixed(1)),
-        rank: index + 1,
+        rank: entry.rank,
         isCurrentUser: entry.userId === userId,
         totalCorrect: Math.round(entry.score || 0),
         totalAttempts: entry.totalQuestions || 0,

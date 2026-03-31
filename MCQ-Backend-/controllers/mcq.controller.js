@@ -1022,7 +1022,7 @@ const revealQuestion = async (req, res, next) => {
 
     // Get today's date string
     const today = DailyQuestionView.getTodayDateString();
-    const DAILY_LIMIT = 25;
+    const DAILY_LIMIT = 15;
 
     // Check today's view count
     const todayViews = await DailyQuestionView.countDocuments({
@@ -1102,7 +1102,7 @@ const getDailyViews = async (req, res, next) => {
     }
 
     const today = DailyQuestionView.getTodayDateString();
-    const DAILY_LIMIT = 25;
+    const DAILY_LIMIT = 15;
 
     const todayViews = await DailyQuestionView.countDocuments({
       user: userId,

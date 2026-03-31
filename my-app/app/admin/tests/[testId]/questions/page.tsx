@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { isAuthenticated, fetchWithAuth, logout } from '@/lib/auth';
+import ReactCrop, { Crop as ReactCropType, PixelCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 
 interface PyqQuestion {
   _id: string;
@@ -23,11 +25,54 @@ interface PyqQuestion {
   optionImages?: string[];
 }
 
+type CropTarget =
+  | { kind: 'question'; question: PyqQuestion }
+  | { kind: 'option'; question: PyqQuestion; optionIndex: number };
+
 const SUBJECTS = ['Chemistry', 'Physics', 'Maths', 'Biology'];
 
 // Image upload is now allowed for all questions (Cloudinary-backed)
 function isAddImageEnabled(q: PyqQuestion): boolean {
   return true;
+}
+
+function createImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener('load', () => resolve(image));
+    image.addEventListener('error', (err) => reject(err));
+    image.crossOrigin = 'anonymous';
+    image.src = url;
+  });
+}
+
+async function getCroppedFile(imageSrc: string, pixelCrop: PixelCrop, mimeType: string): Promise<File> {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement('canvas');
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('Could not get canvas context');
+  }
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+  const type = mimeType && mimeType.startsWith('image/') ? mimeType : 'image/jpeg';
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, 0.92));
+  if (!blob) {
+    throw new Error('Failed to crop image');
+  }
+  const extension = type.split('/')[1] || 'jpg';
+  return new File([blob], `cropped-${Date.now()}.${extension}`, { type });
 }
 
 export default function AdminTestQuestionsPage() {
@@ -54,6 +99,11 @@ export default function AdminTestQuestionsPage() {
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const optionImageInputRef = useRef<HTMLInputElement | null>(null);
   const [optionImageTarget, setOptionImageTarget] = useState<{ questionId: string; optionIndex: number } | null>(null);
+  const [cropSource, setCropSource] = useState<string | null>(null);
+  const [cropTarget, setCropTarget] = useState<CropTarget | null>(null);
+  const [crop, setCrop] = useState<ReactCropType>({ unit: '%', width: 80, height: 80, x: 10, y: 10 });
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop | null>(null);
+  const [pendingMimeType, setPendingMimeType] = useState<string>('image/jpeg');
 
   const parseTestId = useCallback((id: string) => {
     const decoded = decodeURIComponent(id);
@@ -105,6 +155,59 @@ export default function AdminTestQuestionsPage() {
       q.options.length > 0 &&
       !(q.correctAnswer ?? '').toString().trim()
     );
+
+  const resetCropper = () => {
+    setCropSource(null);
+    setCropTarget(null);
+    setCompletedCrop(null);
+    setCrop({ unit: '%', width: 80, height: 80, x: 10, y: 10 });
+    setPendingMimeType('image/jpeg');
+  };
+
+  const startCropFlow = (target: CropTarget, file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setImageError('Please select an image file');
+      return;
+    }
+    setImageError(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropSource(reader.result as string);
+      setCropTarget(target);
+      setPendingMimeType(file.type || 'image/jpeg');
+      setCrop({ unit: '%', width: 80, height: 80, x: 10, y: 10 });
+      setCompletedCrop(null);
+    };
+    reader.onerror = () => setImageError('Unable to read image');
+    reader.readAsDataURL(file);
+  };
+
+  const onCropComplete = useCallback((_: ReactCropType, pixels: PixelCrop) => {
+    setCompletedCrop(pixels);
+  }, []);
+
+  const handleCropCancel = () => {
+    resetCropper();
+    if (imageInputRef.current) imageInputRef.current.value = '';
+    if (optionImageInputRef.current) optionImageInputRef.current.value = '';
+    setOptionImageTarget(null);
+  };
+
+  const handleCropConfirm = async () => {
+    if (!cropSource || !cropTarget || !completedCrop) return;
+    try {
+      const file = await getCroppedFile(cropSource, completedCrop, pendingMimeType);
+      if (cropTarget.kind === 'question') {
+        await handleImageFileChange(cropTarget.question, file);
+      } else {
+        await handleOptionImageFileChange(cropTarget.question, cropTarget.optionIndex, file);
+      }
+      resetCropper();
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : 'Failed to crop image');
+    }
+  };
 
   const handleImageFileChange = async (q: PyqQuestion, file: File | null) => {
     if (!file || !file.type.startsWith('image/')) {
@@ -581,7 +684,7 @@ export default function AdminTestQuestionsPage() {
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (imageModalQuestion && file) {
-            handleImageFileChange(imageModalQuestion, file);
+            startCropFlow({ kind: 'question', question: imageModalQuestion }, file);
           }
         }}
       />
@@ -597,7 +700,7 @@ export default function AdminTestQuestionsPage() {
           if (optionImageTarget && file) {
             const targetQuestion = questions.find((qq) => qq._id === optionImageTarget.questionId);
             if (targetQuestion) {
-              handleOptionImageFileChange(targetQuestion, optionImageTarget.optionIndex, file);
+              startCropFlow({ kind: 'option', question: targetQuestion, optionIndex: optionImageTarget.optionIndex }, file);
             }
           }
         }}
@@ -641,6 +744,68 @@ export default function AdminTestQuestionsPage() {
                 className="px-4 py-2 rounded-lg bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-50"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cropSource && cropTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl max-w-4xl w-full p-6 space-y-4">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <h3 className="text-lg font-semibold text-black dark:text-zinc-50">Crop image</h3>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  {cropTarget.kind === 'question'
+                    ? 'Question image'
+                    : `Option ${String.fromCharCode(65 + cropTarget.optionIndex)} image`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCropCancel}
+                className="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+              >
+                Cancel
+              </button>
+            </div>
+            <div className="relative w-full bg-black rounded-lg overflow-hidden">
+              <ReactCrop
+                crop={crop}
+                onChange={(_, percentCrop) => setCrop(percentCrop)}
+                onComplete={onCropComplete}
+                keepSelection
+              >
+                <img
+                  src={cropSource}
+                  alt="Crop source"
+                  className="max-h-[70vh] object-contain mx-auto"
+                />
+              </ReactCrop>
+            </div>
+            {imageError && (
+              <p className="text-sm text-red-600 dark:text-red-400">{imageError}</p>
+            )}
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={handleCropCancel}
+                className="px-4 py-2 rounded-lg bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-medium hover:bg-zinc-300 dark:hover:bg-zinc-600"
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                onClick={handleCropConfirm}
+                disabled={!completedCrop || imageUploading}
+                className={`px-4 py-2 rounded-lg text-sm font-medium text-white ${
+                  !completedCrop || imageUploading
+                    ? 'bg-sky-300 dark:bg-sky-700 cursor-not-allowed'
+                    : 'bg-sky-600 hover:bg-sky-700'
+                }`}
+              >
+                {imageUploading ? 'Uploading…' : 'Upload cropped image'}
               </button>
             </div>
           </div>

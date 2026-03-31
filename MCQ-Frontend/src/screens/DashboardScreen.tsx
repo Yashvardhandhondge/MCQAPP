@@ -450,7 +450,7 @@ export default function DashboardScreen() {
                   <Text style={styles.freePlanTitle}>You're on Free Plan</Text>
                   <View style={styles.freePlanBenefitRow}>
                     <Ionicons name="checkmark-circle" size={14} color="#10B981" />
-                    <Text style={styles.freePlanBenefitText}>25 questions / day</Text>
+                    <Text style={styles.freePlanBenefitText}>15 questions / day</Text>
                   </View>
                   <View style={styles.freePlanBenefitRow}>
                     <Ionicons name="checkmark-circle" size={14} color="#10B981" />

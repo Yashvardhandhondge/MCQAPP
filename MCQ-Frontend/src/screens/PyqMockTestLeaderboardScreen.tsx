@@ -170,9 +170,13 @@ export default function PyqMockTestLeaderboardScreen({
             }}
           >
             {(() => {
+              const isRowCurrentUser = (entry: LeaderboardEntry) =>
+                entry.isCurrentUser ||
+                (user?._id != null && String(entry.id) === String(user._id));
+
               const displayLeaderboard = isPremium
                 ? leaderboard
-                : leaderboard.filter((entry) => entry.isCurrentUser);
+                : leaderboard.filter(isRowCurrentUser);
 
               if (displayLeaderboard.length === 0) {
                 return (
@@ -219,7 +223,7 @@ export default function PyqMockTestLeaderboardScreen({
                   <View style={styles.leaderboardList}>
                     {displayLeaderboard.map((entry, index) => {
                       const gradient = getRankGradient(entry.rank, entry.isCurrentUser);
-                      const shouldHideRank = !isPremium && entry.isCurrentUser;
+                      const shouldHideRank = !isPremium && isRowCurrentUser(entry);
                       const rankIcon =
                         entry.rank === 1
                           ? 'trophy'

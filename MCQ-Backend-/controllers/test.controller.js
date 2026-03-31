@@ -1660,10 +1660,15 @@ const startPyqMockTestSession = async (req, res, next) => {
         ? String(allQuestions[0].year).trim()
         : undefined;
 
+    const sessionYear =
+      year !== undefined && year !== null && String(year).trim() !== ''
+        ? String(year).trim()
+        : firstQuestionYear;
+
     const session = new TestSession({
       user: userId,
       testType: 'pyq-mocktest',
-      year: firstQuestionYear,
+      year: sessionYear,
       chapter: normalizedTitle, // reuse chapter field to show title in reports
       questions: questionIds,
       questionModel: 'PyqMockTest',

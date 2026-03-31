@@ -34,7 +34,7 @@ const CONFIG = {
     iconColor: '#F59E0B',
     gradientColors: ['#FEF3C7', '#FDE68A'] as [string, string],
     title: 'Daily Limit Reached',
-    subtitle: "You've used all 25 free questions for today.",
+    subtitle: "You've used all 15 free questions for today.",
     resetNote: 'Resets at midnight',
     benefits: [
       { icon: 'infinity-outline', text: 'Unlimited questions every day' },
